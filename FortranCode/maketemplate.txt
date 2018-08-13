@@ -1,0 +1,10 @@
+#FC = /opt/intel/bin/ifort #gfortran 
+#LD = /opt/intel/bin/ifort #gfortran 
+FC = gfortran 
+LD = gfortran 
+CPPFLAGS = -macro_expand
+#FFLAGS = -O0 -g -gen-interfaces -warn interfaces -real_size 64 -traceback -check bounds -c  ##for ifort debugging
+#FFLAGS =  -c -O3 -gen-interfaces -real_size 64  ##for release run, ifort compiler
+FFLAGS = -c  -O3 -fbounds-check -ffree-line-length-none  -fdefault-real-8 -fdefault-double-8 -Wconversion  ##for use with gfortran compiler
+LDFLAGS = $(LIBS)
+LIST = -listing

@@ -1,0 +1,4 @@
+Below is the Terminal command line to produce a Makefile using the Perl script 
+on a Linux machine (when located in the Fortran code folder).
+
+perl mkmf.pl -t maketemplate.txt  -p AIOMFAC-web.out
