@@ -412,11 +412,11 @@ IF (fileexists .AND. filevalid) THEN
         fname = TRIM(filepathout)//TRIM(filename)
         CALL OutputTXT(fname, VersionNo, cpnameinp(1:nspecmax), nspecmax, npoints, watercompno, T_K(1:npoints), px(1:nspecmax), out_data)
         !--
-        !>> write output HTML-file
-        i = LEN_TRIM(filename)
-        filename = filename(1:i-3)//"html"
-        fname = TRIM(filepathout)//TRIM(filename)
-        CALL OutputHTML(fname, VersionNo, cpnameinp(1:nspecmax), nspecmax, npoints, watercompno, T_K(1:npoints), px(1:nspecmax), out_data)
+        !!>> write output HTML-file
+        !i = LEN_TRIM(filename)
+        !filename = filename(1:i-3)//"html"
+        !fname = TRIM(filepathout)//TRIM(filename)
+        !CALL OutputHTML(fname, VersionNo, cpnameinp(1:nspecmax), nspecmax, npoints, watercompno, T_K(1:npoints), px(1:nspecmax), out_data)
         !
         !==== TERMINATION section ==========================================================
         !
