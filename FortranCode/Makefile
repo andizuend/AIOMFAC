@@ -1,4 +1,4 @@
-# Makefile created by mkmf2.pl $Id: mkmf,v 18.0 2010/03/02 23:26:08 fms Exp $ 
+# Makefile created by mkmf.pl $Id: mkmf,v 18.0 2010/03/02 23:26:08 fms Exp $ 
 
 
 
@@ -28,8 +28,6 @@ ModSubgroupProp.o: ./ModSubgroupProp.f90 ModSystemProp.o
 	$(FC) $(FFLAGS) $(OTHERFLAGS) -c	./ModSubgroupProp.f90
 ModSystemProp.o: ./ModSystemProp.f90
 	$(FC) $(FFLAGS) $(OTHERFLAGS) -c	./ModSystemProp.f90
-OutputHTML.o: ./OutputHTML.f90 ModSystemProp.o ModSubgroupProp.o
-	$(FC) $(FFLAGS) $(OTHERFLAGS) -c	./OutputHTML.f90
 OutputTXT.o: ./OutputTXT.f90 ModSystemProp.o ModSubgroupProp.o
 	$(FC) $(FFLAGS) $(OTHERFLAGS) -c	./OutputTXT.f90
 RepErrorWarning.o: ./RepErrorWarning.f90
@@ -40,8 +38,8 @@ brent.o: ./brent.f90
 	$(FC) $(FFLAGS) $(OTHERFLAGS) -c	./brent.f90
 zerobracket_inwards.o: ./zerobracket_inwards.f90
 	$(FC) $(FFLAGS) $(OTHERFLAGS) -c	./zerobracket_inwards.f90
-SRC = ./RepErrorWarning.f90 ./ModSRunifac.f90 ./OutputHTML.f90 ./OutputTXT.f90 ./ModComponentNames.f90 ./ModMRpart.f90 ./SubModDefSystem.f90 ./AIOMFAC_inout.f90 ./Main_IO_driver.f90 ./ModCalcActCoeff.f90 ./brent.f90 ./ModSubgroupProp.f90 ./zerobracket_inwards.f90 ./ModSystemProp.f90 ./ModAIOMFACvar.f90 ./ModCompScaleConversion.f90
-OBJ = RepErrorWarning.o ModSRunifac.o OutputHTML.o OutputTXT.o ModComponentNames.o ModMRpart.o SubModDefSystem.o AIOMFAC_inout.o Main_IO_driver.o ModCalcActCoeff.o brent.o ModSubgroupProp.o zerobracket_inwards.o ModSystemProp.o ModAIOMFACvar.o ModCompScaleConversion.o
+SRC = ./AIOMFAC_inout.f90 ./ModCalcActCoeff.f90 ./ModCompScaleConversion.f90 ./SubModDefSystem.f90 ./ModMRpart.f90 ./ModSystemProp.f90 ./Main_IO_driver.f90 ./RepErrorWarning.f90 ./ModSubgroupProp.f90 ./OutputTXT.f90 ./ModAIOMFACvar.f90 ./ModSRunifac.f90 ./brent.f90 ./ModComponentNames.f90 ./zerobracket_inwards.f90
+OBJ = AIOMFAC_inout.o ModCalcActCoeff.o ModCompScaleConversion.o SubModDefSystem.o ModMRpart.o ModSystemProp.o Main_IO_driver.o RepErrorWarning.o ModSubgroupProp.o OutputTXT.o ModAIOMFACvar.o ModSRunifac.o brent.o ModComponentNames.o zerobracket_inwards.o
 clean: neat
 	-rm -f .AIOMFAC-web.out.cppdefs $(OBJ) AIOMFAC-web.out
 neat:
