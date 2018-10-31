@@ -45,7 +45,7 @@ INTEGER(4),INTENT(OUT) :: nspecies, errorflag, warningflag
 CHARACTER(LEN=60),DIMENSION(NKNpNGS) :: outnames
 !--
 !local variable declarations:
-CHARACTER(LEN=2) :: cn
+CHARACTER(LEN=2) :: cn  !this assumes a maximum two-digit component number in the system (max. 99); to be adjusted otherwise.
 CHARACTER(LEN=3) :: cino
 INTEGER(4) :: i, ion_no, ion_indic, nc, NKSinput, NKSinputp1
 REAL(8),PARAMETER :: DEPS = 1.1D1*(EPSILON(DEPS))
