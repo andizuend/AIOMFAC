@@ -54,13 +54,13 @@ IMPLICIT NONE
 INTEGER(4),PARAMETER :: maxpoints = 1000  !limit maximum number of composition points for web-version
 INTEGER(4),PARAMETER :: ninpmax = 50      !set the maximum number of mixture components allowed (preliminary parameter)
 !local variables:
-CHARACTER(LEN=2) :: cn
+CHARACTER(LEN=2) :: cn  !this assumes a maximum two-digit component number in the system (max. 99); to be adjusted otherwise.
 CHARACTER(LEN=4) :: dashes, equalsigns, pluses, VersionNo
 CHARACTER(LEN=20) :: dummy
 CHARACTER(LEN=50) :: subntxt, txtcheck
 CHARACTER(LEN=150) :: horizline, tablehead, tformat, txtn
 CHARACTER(LEN=3000) :: errlogfile, filename, filepath, filepathout, fname, &
-    &mixturestring, txtfilein, txtsubs  
+    & mixturestring, txtfilein, txtsubs  
 CHARACTER(LEN=20),DIMENSION(ninpmax) :: txtarray
 CHARACTER(LEN=60),DIMENSION(ninpmax) :: cpnameinp   !list of assigned component names (from input file)
 CHARACTER(LEN=60),DIMENSION(:),ALLOCATABLE :: outnames
