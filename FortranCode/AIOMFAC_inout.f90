@@ -12,7 +12,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2011                                                            *
-!*   -> latest changes: 2018/06/28                                                      *
+!*   -> latest changes: 2019/01/23                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -36,15 +36,15 @@ USE ModCalcActCoeff, ONLY : AIOMFAC_calc
 USE ModSubgroupProp, ONLY : SMWA, SMWC
 
 IMPLICIT NONE
-!interface variables declarations 
+!interface variables: 
 REAL(8),DIMENSION(nindcomp),INTENT(IN) :: inputconc      !inputconc = the concentration of a given input point (e.g., at an experimental data point)
 REAL(8),DIMENSION(6,NKNpNGS),INTENT(OUT) :: outputvars   !2-D output array with computed compositions and activities for each species; structure is:  | mass-frac., mole-frac., molality, act.coeff., activity, ion-indicator | species-no |
 REAL(8),INTENT(IN) :: TKelvin                            !the input temperature [K]
 LOGICAL(4),INTENT(IN) :: xinputtype
 INTEGER(4),INTENT(OUT) :: nspecies, errorflag, warningflag
-CHARACTER(LEN=60),DIMENSION(NKNpNGS) :: outnames
+CHARACTER(LEN=60),DIMENSION(NKNpNGS),INTENT(OUT) :: outnames
 !--
-!local variable declarations:
+!local variables:
 CHARACTER(LEN=2) :: cn  !this assumes a maximum two-digit component number in the system (max. 99); to be adjusted otherwise.
 CHARACTER(LEN=3) :: cino
 INTEGER(4) :: i, ion_no, ion_indic, nc, NKSinput, NKSinputp1
@@ -73,23 +73,26 @@ mixingratio(NKSinputp1:) = 0.0D0
 nspecies = NKNpNGS
 
 IF (nneutral < 1) THEN  !leave the subroutine and indicate a problem to the calling routine
-    errorflag = 8 !there must be at least one neutral component in the mixture!
-    RETURN
+    errorflag = 8       !there must be at least one neutral component in the mixture!
+ELSE
+    !weight (mass) fractions of the data point:
+    CALL Inputconc_to_wtf(inputconc, mixingratio, wtfdry, xinputtype, wtf)
+    IF (nneutral > 0 .AND. SUM(wtf(1:nneutral)) < DEPS) THEN
+        errorflag = 3
+    ENDIF
+    IF (nindcomp > 0 .AND. ANY(wtf(1:nindcomp) < -DEPS)) THEN
+        errorflag = 4
+    ENDIF
+    IF (ANY(ISNaN(wtf(1:nindcomp)))) THEN
+        errorflag = 5
+    ENDIF
 ENDIF
-
-!weight (mass) fractions of the data point:
-CALL Inputconc_to_wtf(inputconc, mixingratio, wtfdry, xinputtype, wtf)  !convert input concentrations to wtf
-IF (nneutral > 0 .AND. SUM(wtf(1:nneutral)) < DEPS) THEN  !leave the subroutine and indicate a problem to the calling routine
-    errorflag = 3
-    RETURN
-ENDIF
-IF (nindcomp > 0 .AND. ANY(wtf(1:nindcomp) < -DEPS)) THEN  !leave the subroutine and indicate a problem to the calling routine
-    errorflag = 4
-    RETURN
-ENDIF
-IF (ANY(ISNaN(wtf(1:nindcomp)))) THEN  !leave the subroutine and indicate a problem to the calling routine
-    errorflag = 5
-    RETURN
+IF (errorflag /= 0) THEN
+    outnames = ""
+    IF (nspecies > nneutral) THEN
+        outputvars(6,nneutral+1:) = REAL(ElectSubs(1:), KIND=8)
+    ENDIF
+    RETURN  !leave the subroutine and indicate a problem to the calling routine
 ENDIF
 !.....
 CALL MassFrac2MoleFracMolality(wtf, XrespSalt, mrespSalt)

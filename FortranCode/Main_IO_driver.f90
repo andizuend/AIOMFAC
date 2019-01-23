@@ -23,7 +23,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
 !*                                                                                      *
 !*   -> created:        2011  (this file)                                               *
-!*   -> latest changes: 2018/08/10                                                      *
+!*   -> latest changes: 2019/01/23                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -54,7 +54,7 @@ IMPLICIT NONE
 INTEGER(4),PARAMETER :: maxpoints = 1000  !limit maximum number of composition points for web-version
 INTEGER(4),PARAMETER :: ninpmax = 50      !set the maximum number of mixture components allowed (preliminary parameter)
 !local variables:
-CHARACTER(LEN=2) :: cn  !this assumes a maximum two-digit component number in the system (max. 99); to be adjusted otherwise.
+CHARACTER(LEN=2) :: cn   !this assumes a maximum two-digit component number in the system (max. 99); to be adjusted otherwise.
 CHARACTER(LEN=4) :: dashes, equalsigns, pluses, VersionNo
 CHARACTER(LEN=20) :: dummy
 CHARACTER(LEN=50) :: subntxt, txtcheck
@@ -80,6 +80,7 @@ LOGICAL(4) :: ext, fileexists, fileopened, filevalid, verbose, xinputtype
 !
 !==== INITIALIZATION section =======================================================
 !
+VersionNo = "2.21"  !AIOMFAC-web version number (change here if minor or major changes require a version number change)
 ncp = 0
 nspecmax = 0
 cpsubg = 0
@@ -90,7 +91,6 @@ T_K = 298.15D0      !default temperature in [K]
 dashes = "----"
 equalsigns = "===="
 pluses = "++++"
-VersionNo = "2.20"  !AIOMFAC-web version number (change here if minor or major changes require a version number change)
 unito = errlogout
 errorind = 0        !0 means no error found
 warningind = 0      !0 means no warnings found
@@ -103,7 +103,7 @@ verbose = .true.    !if true, some debugging information will be printed to the 
 !read command line for text-file name (which contains the input parameters to run the AIOMFAC progam):
 CALL GET_COMMAND_ARGUMENT(1, txtfilein)
 !---
-!txtfilein = './Inputfiles/input_0985.txt' !just use this for debugging, otherwise comment out
+!txtfilein = './Inputfiles/input_0008.txt' !just use this for debugging with a specific input file, otherwise comment out
 !---
 filepath = ADJUSTL(TRIM(txtfilein))
 WRITE(*,*) ""
@@ -339,7 +339,7 @@ IF (fileexists .AND. filevalid) THEN
         WRITE(unito,*) ""
     ENDIF
     !load the MR and SR interaction parameter data:
-    CALL MRdata()         !initialize the MRdata for the interaction coeff. calculations
+    CALL MRdata()         !initialize the MR data for the interaction coeff. calculations
     CALL SRdata()         !initialize data for the SR part coefficient calculations
     CALL SubgroupNames()  !initialize the subgroup names for the construction of component subgroup strings
     CALL SubgroupAtoms()
@@ -353,11 +353,11 @@ IF (fileexists .AND. filevalid) THEN
         watercompno = MAXLOC(cpsubg(1:ncp,16), DIM=1) !usually = 1
     ENDIF
     
-    IF (errorflagmix /= 0) THEN !some mixture related error occured:
+    IF (errorflagmix /= 0) THEN !a mixture-related error occured:
         CALL RepErrorWarning(unito, errorflagmix, warningflag, errorflagcalc, i, errorind, warningind)
     ENDIF
 
-    IF (errorind == 0) THEN !go ahead and perform calculations, else jump to termination section
+    IF (errorind == 0) THEN !perform AIOMFAC calculations; else jump to termination section
         !--
         ALLOCATE(inputconc(nindcomp), outputvars(6,NKNpNGS), outnames(NKNpNGS), out_data(7,npoints,NKNpNGS), STAT=allocstat)
         inputconc = 0.0D0
@@ -382,7 +382,7 @@ IF (fileexists .AND. filevalid) THEN
                 !$OMP END CRITICAL errwriting
             ENDIF
             nspecmax = MAX(nspecmax, nspecies) !figure out the maximum number of different species in mixture (accounting for the 
-                !possibility of HSO4- dissoc. and different species at different data points due to zero mole fractions).
+                                               !possibility of HSO4- dissoc. and different species at different data points due to zero mole fractions).
             DO nc = 1,nspecmax !loop over species (ions dissociated and treated as individual species):
                 out_data(1:6,pointi,nc) = outputvars(1:6,nc) !out_data general structure: | data columns 1:7 | data point | component no.|
                 out_data(7,pointi,nc) = REAL(errorflagcalc, KIND=8)
@@ -412,11 +412,11 @@ IF (fileexists .AND. filevalid) THEN
         fname = TRIM(filepathout)//TRIM(filename)
         CALL OutputTXT(fname, VersionNo, cpnameinp(1:nspecmax), nspecmax, npoints, watercompno, T_K(1:npoints), px(1:nspecmax), out_data)
         !--
-        !!>> write output HTML-file
-        !i = LEN_TRIM(filename)
-        !filename = filename(1:i-3)//"html"
-        !fname = TRIM(filepathout)//TRIM(filename)
-        !CALL OutputHTML(fname, VersionNo, cpnameinp(1:nspecmax), nspecmax, npoints, watercompno, T_K(1:npoints), px(1:nspecmax), out_data)
+        !>> write output HTML-file
+        i = LEN_TRIM(filename)
+        filename = filename(1:i-3)//"html"
+        fname = TRIM(filepathout)//TRIM(filename)
+        CALL OutputHTML(fname, VersionNo, cpnameinp(1:nspecmax), nspecmax, npoints, watercompno, T_K(1:npoints), px(1:nspecmax), out_data)
         !
         !==== TERMINATION section ==========================================================
         !

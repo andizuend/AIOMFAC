@@ -1,4 +1,9 @@
-Below is the Terminal command line to produce a Makefile using the Perl script 
-on a Linux machine (when located in the Fortran code folder).
+# Below is the Terminal command line to produce a Makefile using the Perl script 
+# on a Linux machine (when located in the Fortran code folder).
+
+# Also: on CentOS 7 (i.e. RedHat-based, but not on Debian-based linux), execute the following command first:  
+scl enable devtoolset-7 bash
+# this is necessary if otherwise an older gfortran version is used (often version 4.8.5); 
+# with the above command, you get a much more recent gfortran version (7.x), which is what we need.
 
 perl mkmf.pl -t maketemplate.txt  -p AIOMFAC-web.out
