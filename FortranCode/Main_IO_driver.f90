@@ -411,12 +411,6 @@ IF (fileexists .AND. filevalid) THEN
         !create an output ASCII text file with an overall mixture header and individual tables for all components / species (in case of ions)
         fname = TRIM(filepathout)//TRIM(filename)
         CALL OutputTXT(fname, VersionNo, cpnameinp(1:nspecmax), nspecmax, npoints, watercompno, T_K(1:npoints), px(1:nspecmax), out_data)
-        !--
-        !>> write output HTML-file
-        i = LEN_TRIM(filename)
-        filename = filename(1:i-3)//"html"
-        fname = TRIM(filepathout)//TRIM(filename)
-        CALL OutputHTML(fname, VersionNo, cpnameinp(1:nspecmax), nspecmax, npoints, watercompno, T_K(1:npoints), px(1:nspecmax), out_data)
         !
         !==== TERMINATION section ==========================================================
         !
