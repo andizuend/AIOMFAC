@@ -2,7 +2,7 @@
 
 This public repository provides the AIOMFAC model Fortran code (AIOMFAC-web, version 2.20 or newer) and additional information about building and running the model on your own system. May it be of use to you.
 
-### Licence
+### License
 All files presented here are covered under the GNU GPL license v3.0. For more information, please read the license file. A brief overview of the viable permissions can be found here: http://choosealicense.com/licenses/.
 
 ## About AIOMFAC
