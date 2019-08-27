@@ -36,7 +36,7 @@
 !****************************************************************************************
 MODULE ModSRunifac
 
-USE ModAIOMFACvar, ONLY : lastTK
+USE ModAIOMFACvar, ONLY : lastTK, eta0
 USE ModSystemProp, ONLY : nd, nneutral, NG, NGN, Allsubs, ITABsr, Nmaingroups, topsubno, &
     & maingrindexofsubgr, Imaingroup, isPEGsystem, calcviscosity, solvmixrefnd, COMPN
 
@@ -196,6 +196,7 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
     
     SUBROUTINE SRunifac(NK, T_K, X, XN, refreshgref, lnGaSR)
 
+	USE ModAIOMFACvar, ONLY : etamix, eta_cpn											   
     IMPLICIT NONE
 
     INTEGER(4),INTENT(IN) :: NK
@@ -206,24 +207,48 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
     !local variables:
     INTEGER(4) :: J
     REAL(8) :: RSS, expon 
-    REAL(8),DIMENSION(NK) :: lnGaC, lnGaR, phi
+    REAL(8),DIMENSION(NK) :: lnGaC, lnGaR, XieC, XieR, phi
     !.......................................................
 
     !Determine the reference values (lnGaRref, XieRref) for the residual part:
-    IF (refreshgref .OR. solvmixrefnd) THEN
-        CALL SRgref(NK, T_K, XN, refreshgref, lnGaRref)
+    IF (refreshgref .OR. solvmixrefnd .OR. calcviscosity) THEN
+        CALL SRgref(NK, T_K, XN, refreshgref, lnGaRref, XieRref)
     ENDIF
     !Residual part:
-    CALL SRgres(X, lnGaR, NK)
+    CALL SRgres(X, lnGaR, NK, XieR)
     !Combinatorial part:
-    CALL SRgcomb(X, lnGaC, NK)
+    CALL SRgcomb(X, lnGaC, NK, XieC)
 
+    IF (calcviscosity) THEN !calculate the component's volume fraction phi
+        RSS = SUM(RS(:)*X(:))
+        phi(1:NK) = X(:)*RS(:)/RSS
+    ENDIF
+    etamix = 0.0D0
     DO J = 1,NK
         lnGaSR(J) = lnGaC(J) + lnGaR(J) - lnGaRref(J)
         IF (J > nneutral) THEN !ion component, so normalize by reference state of infinite dilution in reference solvent
             lnGaSR(J) = lnGaSR(J) - lnGaCinf(J)
         ENDIF
+        IF (calcviscosity) THEN
+            !sum up liquid mixture viscosity contributions from different components:
+            eta_cpn(J) = XieC(J) +phi(J)*(XieR(J)-XieRref(J))
+            etamix = etamix + eta_cpn(J)
+        ENDIF
     ENDDO
+    IF (calcviscosity) THEN
+        IF (etamix > -5.5D3) THEN !real calculation with valid parameters was performed
+            IF (etamix > 690.0D0) THEN !check and deal with floating point overflow issue
+                expon = DINT(etamix)
+                etamix = EXP(690.0D0 + 5.0D0*(etamix-expon))
+            ELSE
+                etamix = EXP(etamix) !"liquid" mixture viscosity in [Pa.s]
+            ENDIF
+        ELSE
+            etamix = -888.8D0 !indicate "not valid" calculation
+        ENDIF
+    ELSE
+        etamix = -999.9D0 !indicate "not calculated"
+    ENDIF	
 
     END SUBROUTINE SRunifac
 !==========================================================================================================================
@@ -244,7 +269,10 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
     !*   -> latest changes: 2018/05/23                                                      *
     !*                                                                                      *
     !****************************************************************************************
-    SUBROUTINE SRgref(NK, T_K, XN, grefresh, lnGaRrefer)
+    SUBROUTINE SRgref(NK, T_K, XN, grefresh, lnGaRrefer, XieRrefer)
+    
+    USE ModAIOMFACvar, ONLY : Tglass0, fragil  ! public variable to hold pure component viscosity 
+    USE Mod_PureViscosPar, ONLY : PureCompViscosity
 
     IMPLICIT NONE
     !interface variables:
@@ -252,20 +280,12 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
     REAL(8),INTENT(IN) :: T_K
     REAL(8),DIMENSION(:),INTENT(IN) :: XN
     LOGICAL(4),INTENT(IN) :: grefresh
-    REAL(8),DIMENSION(:),INTENT(OUT) :: lnGaRrefer
-    !interface to PureCompViscosity:
-    INTERFACE
-        PURE SUBROUTINE PureCompViscosity(compn, TempK, eta, iflag)
-        INTEGER(4),INTENT(IN) :: compn
-        REAL(8),INTENT(IN) :: TempK
-        REAL(8),INTENT(OUT) :: eta
-        INTEGER(4),INTENT(OUT) :: iflag
-        END SUBROUTINE PureCompViscosity
-    END INTERFACE
+    REAL(8),DIMENSION(:),INTENT(OUT) :: lnGaRrefer, XieRrefer
     !local variables:
-    INTEGER(4) :: I, iflag, cpn, K
+    INTEGER(4) :: I, iflag, K
     REAL(8),PARAMETER :: T0 = 298.15D0  !room temperature as the reference temperature for the calculation of the PsiT array
-    REAL(8),DIMENSION(NK) :: Xrefsp, lnGaRX
+    REAL(8),DIMENSION(NK) :: Xrefsp, lnGaRX, XieX
+    REAL(8) :: eta, Tglass, D ! pure component viscosity, glass transition temperature, fragility																								 
     !...................................................
 
     !Check / set temperature-dependent parameters:
@@ -285,14 +305,16 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
         !reference residual contributions of pure components (and also hypothetical pure ions) are always 1.0 (i.e. for water)
         Xrefsp = 0.0D0
         lnGaRrefer = 0.0D0
+        XieRrefer = 0.0D0
         DO I = 1,nneutral
             !check if number of subgroups in component is greater than 1:
             K = SUM(SRNY_dimflip(1:NGN,I))
             IF (K > 1) THEN !more than one subgroup
                 Xrefsp(1:nneutral) = 0.0D0
                 Xrefsp(I) = 1.0D0 !set all other mole fractions but this (I) to 0.0. Thus reference state conditions of x(i) = 1
-                CALL SRgres(Xrefsp, lnGaRX, NK)
+                CALL SRgres(Xrefsp, lnGaRX, NK, XieX)
                 lnGaRrefer(I) = lnGaRX(I) !this line is necessary since the other values (not only I) get overwritten in call to SRgres
+				XieRrefer(I) = XieX(I)					  
             ENDIF
         ENDDO
     ENDIF
@@ -302,9 +324,47 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
         DO I = nneutral+1,NK
             Xrefsp(1:nneutral) = XN(1:nneutral) !solvent
             Xrefsp(nneutral+1:) = 0.0D0         !ions
-            CALL SRgres(Xrefsp, lnGaRX, NK)
+            CALL SRgres(Xrefsp, lnGaRX, NK, XieX)
             lnGaRrefer(I) = lnGaRX(I)
+            XieRrefer(I) = XieX(I)
         ENDDO
+    ENDIF
+	
+	!---- calculate pure component viscosity of non-electrolytes at given temperature
+    IF (calcviscosity) THEN
+        DO I = 1,nneutral
+            CALL PureCompViscosity(I, T_K, eta, iflag, Tglass, D) !calculate pure component dynamic viscosity eta
+            IF (iflag == 0) THEN
+                Tglass0(I) = Tglass
+                fragil(I) = D
+                eta0(I) = eta !eta in SI units of [Pa s]
+            ELSE
+                eta0(I) = -777.7D0 !to indicate a problem
+                SELECT CASE(nd)
+                CASE(500:799,2000:2500)
+                    !do nothing for now....
+                CASE DEFAULT
+                    !$OMP CRITICAL
+                    WRITE(*,*) ""
+                    WRITE(*,*) "WARNING: a pure compound viscosity for component",I,"could not be set due to missing parameters or a temperature outside the available bounds!"
+                    WRITE(*,*) "Dataset is nd = ", nd
+                    !READ(*,*)
+                    !$OMP END CRITICAL
+                END SELECT
+            ENDIF
+        ENDDO
+        IF (NK > nneutral) THEN !calculate viscosity of (hypothetical) individual ions
+            !for electrolytes / ions:
+            !pure water as reference value
+            CALL PureCompViscosity(-1, T_K, eta, iflag, Tglass, D) !argument "-1" indicating water.
+            IF (iflag /= 0) THEN
+                eta = 1.0D-3 !eta in SI units of [Pa s]
+            ENDIF
+            !ions / electrolyte components:
+            eta0(nneutral+1:NK) = eta*100.0D0 !empirical value for dissolved ions (here set as 100 times the value of pure water viscosity)
+        ENDIF
+    ELSE
+        eta0(1:NK) = -999.9D0 !an impossible value to indicate uninitialized eta0
     ENDIF
 
     END SUBROUTINE SRgref
@@ -327,12 +387,12 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
     !*   -> latest changes: 2018/05/18                                                      *
     !*                                                                                      *
     !****************************************************************************************
-    PURE SUBROUTINE SRgres(Xr, lnGaR, NK)
+    PURE SUBROUTINE SRgres(Xr, lnGaR, NK, XieR)
 
     IMPLICIT NONE
     !interface variables:
     INTEGER(4),INTENT(IN) :: NK
-    REAL(8),DIMENSION(:),INTENT(OUT) :: lnGaR
+    REAL(8),DIMENSION(:),INTENT(OUT) :: lnGaR, XieR
     REAL(8),DIMENSION(:),INTENT(IN) :: Xr
     !local variables:
     INTEGER(4) :: I, k
@@ -359,6 +419,28 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
         lnGaR(I) = SUM(SRNY_dimflip(1:NG,I)*GAML(1:NG))
     ENDDO
 
+	!--------------------------------------------------------
+    !Viscosity of mixture calculation; residual part.
+    !(electrolyte effects could be considered within the pure-component eta0 contribution from water as the main solvent of ions).
+    IF (calcviscosity) THEN
+        DO k = 1,NG !k
+            DO I = 1,NG !m
+                S4(I) = SUM(TH(1:NG)*PsiT(1:NG,I))
+                THmn(k,I) = TH(k)*PsiT_dimflip(I,k)/S4(I) !TH(k)*PsiT(k,I)/S4(I)
+            ENDDO
+        ENDDO
+        !sum up the number of subgroups and their contributions to XieR in compound I:
+        DO I = 1,NK
+            !calculate viscosity contributions by individual subgroups:
+            DO k = 1,NG
+                Xiek(k) = (-1.0D0)*(-Q(k)/R(k))*Nvis(k,I)*SUM(THmn(1:NG,k)*LOG(PsiT(1:NG,k)))
+            ENDDO
+            XieR(I) = SUM(SRNY_dimflip(1:NG,I)*Xiek(1:NG))
+        ENDDO
+    ELSE !a default value indicating "NO viscosity calc."
+        XieR = 0.0D0
+    ENDIF
+    !--------------------------------------------------------
     END SUBROUTINE SRgres
 !==========================================================================================================================
     
@@ -378,13 +460,13 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
     !*   -> latest changes: 2018/05/18                                                      *
     !*                                                                                      *
     !****************************************************************************************
-    SUBROUTINE SRgcomb(X, lnGaC, NK)
+    SUBROUTINE SRgcomb(X, lnGaC, NK, XieC)
 
     IMPLICIT NONE
     !interface variables:
     INTEGER(4),INTENT(IN) :: NK
     REAL(8),DIMENSION(:),INTENT(IN) :: X
-    REAL(8),DIMENSION(:),INTENT(OUT) :: lnGaC
+    REAL(8),DIMENSION(:),INTENT(OUT) :: lnGaC, XieC
     !local variables:
     INTEGER(4) :: nnp1  
     REAL(8) :: QSSref, RSSref, QSS, RSS, Xsolvtot, XLSref
@@ -417,6 +499,23 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
         gcombrefresh = .false.
     ENDIF
 
+    !--------------------------------------------------------
+    !Viscosity of mixture calculation; combinatorial part.
+    !(electrolyte effects could be considered within the pure-component eta0 contribution from water as the main solvent of ions).
+    IF (calcviscosity) THEN
+        phi = X*ViV !volume based component fraction
+        QiQ = QS(1:NK)/QSS
+        phiQ = X*QiQ
+        !undefined eta0 would contain negative values and cause error below
+        IF (ALL(eta0(1:NK) > 0.0D0)) THEN !pure component values available
+			XieC(1:NK) = (EXP(lnGaC(1:NK))*X(1:NK))*LOG(eta0(1:NK))
+        ELSE
+            XieC = -55555.5D0
+        ENDIF
+    ELSE !a default value indicating "NO viscosity calc."
+        XieC = -99999.9D0
+    ENDIF
+    !--------------------------------------------------------
     END SUBROUTINE SRgcomb
 !==========================================================================================================================
     

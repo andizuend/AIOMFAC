@@ -33,22 +33,22 @@ MODULE ModAIOMFACvar
 
 IMPLICIT NONE
 !Public module variables:
-REAL(8),PUBLIC :: alphaHSO4, diffKHSO4, ionicstrength, lastTK, meanSolventMW, &
+REAL(8),PUBLIC :: alphaHSO4, deltaetamix, diffKHSO4, etamix, ionicstrength, lastTK, meanSolventMW, &
     & SumIonMolalities, T_K, Tmolal, TmolalSolvMix, Xwdissoc
-REAL(8),DIMENSION(:),ALLOCATABLE,PUBLIC :: actcoeff_a, actcoeff_c, actcoeff_n, activity, galrln, gamrln, &
+REAL(8),DIMENSION(:),ALLOCATABLE,PUBLIC :: actcoeff_a, actcoeff_c, actcoeff_n, activity, eta0, eta_cpn, fragil, galrln, gamrln, &
     & gasrln, gclrln, gcmrln, gcsrln, gnlrln, gnmrln, gnsrln, ionactivityprod, lnactcoeff_a, &
     & lnactcoeff_c, lnactcoeff_n, lnmeanmactcoeff, meanmolalactcoeff, mrespSalt, SMA, SMC, solvmixcorrMRa, &
-    & solvmixcorrMRc, wtf, X, XN, XrespSalt
+    & solvmixcorrMRc, Tglass0, wtf, X, XN, XrespSalt
 REAL(8),DIMENSION(201:261),PUBLIC :: actcoeff_ion, molality_ion
 LOGICAL(4),PUBLIC :: DebyeHrefresh
 !..................................................
 
 !make all variables of this module threadprivate for use in parallel execution with openMP:
-!$OMP THREADPRIVATE( alphaHSO4, diffKHSO4, lastTK, meanSolventMW, SumIonMolalities, &
-    !$OMP & T_K, Xwdissoc, actcoeff_a, actcoeff_c, actcoeff_n, activity, galrln, gamrln, gasrln, &
+!$OMP THREADPRIVATE( alphaHSO4, deltaetamix, diffKHSO4, etamix, lastTK, meanSolventMW, SumIonMolalities, &
+    !$OMP & T_K, Xwdissoc, actcoeff_a, actcoeff_c, actcoeff_n, activity, eta0, eta_cpn, fragil, galrln, gamrln, gasrln, &
     !$OMP & gclrln, gcmrln, gcsrln, gnlrln, gnmrln, gnsrln, ionactivityprod, ionicstrength, lnactcoeff_a, &
     !$OMP & lnactcoeff_c, lnactcoeff_n, lnmeanmactcoeff, meanmolalactcoeff, mrespSalt, SMA, SMC, &
-    !$OMP & solvmixcorrMRa, solvmixcorrMRc, Tmolal, TmolalSolvMix, wtf, X, XN, XrespSalt, DebyeHrefresh )
+    !$OMP & solvmixcorrMRa, solvmixcorrMRc, Tglass0, Tmolal, TmolalSolvMix, wtf, X, XN, XrespSalt, DebyeHrefresh )
 
 !==========================================================================================================================
     CONTAINS
@@ -64,13 +64,14 @@ LOGICAL(4),PUBLIC :: DebyeHrefresh
     !-- allocate several composition-dependent variables:
     IF (ALLOCATED(wtf)) THEN
         DEALLOCATE ( sma, smc, wtf, X, XN, solvmixcorrMRc, solvmixcorrMRa, XrespSalt, mrespSalt, &
-        & activity, meanmolalactcoeff, actcoeff_n, actcoeff_c, actcoeff_a, ionactivityprod, &
+        & activity, meanmolalactcoeff, actcoeff_n, actcoeff_c, actcoeff_a, ionactivityprod, eta0, eta_cpn, fragil, &
         & gnlrln, gclrln, galrln, gnmrln, gcmrln, gamrln, gnsrln, gcsrln, gasrln, lnactcoeff_n, lnactcoeff_c, &
-        & lnactcoeff_a, lnmeanmactcoeff )
+        & lnactcoeff_a, lnmeanmactcoeff, Tglass0 )
     ENDIF
     ALLOCATE( sma(NGI), smc(NGI), wtf(nindcomp), X(NKNpNGS), XN(NKNpNGS), XrespSalt(nindcomp), &
         & mrespSalt(nindcomp), activity(nindcomp), meanmolalactcoeff(nelectrol), actcoeff_n(nneutral), actcoeff_c(NGI), &
-        & actcoeff_a(NGI), ionactivityprod(nelectrol), solvmixcorrMRc(NGI), solvmixcorrMRa(NGI), &
+        & actcoeff_a(NGI), ionactivityprod(nelectrol), solvmixcorrMRc(NGI), solvmixcorrMRa(NGI), eta0(NKNpNGS),   fragil(nindcomp), &
+		& eta_cpn(nindcomp), Tglass0(nindcomp), &
         & lnactcoeff_n(nneutral), gnlrln(nneutral), gnmrln(nneutral), gnsrln(nneutral), &
         & lnactcoeff_c(NGI), gclrln(NGI), gcmrln(NGI), gcsrln(NGI), lnmeanmactcoeff(nelectrol), &
         & lnactcoeff_a(NGI), galrln(NGI), gamrln(NGI), gasrln(NGI) )

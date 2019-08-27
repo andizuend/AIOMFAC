@@ -127,9 +127,20 @@ ELSE
             WRITE(unito,*) "AIOMFAC WARNING 11: Temperature range related."
             WRITE(unito,*) "At least one data point has a set temperature outside of"
             WRITE(unito,*) "the recommended range for model calculations of "
-            WRITE(unito,*) "electrolyte-free organic mixtures. This may be intended, "
+            WRITE(unito,*) "electrolyte-free organic mixtures. This may be intended,"
             WRITE(unito,*) "but caution is advised as AIOMFAC is not designed to "
             WRITE(unito,*) "perform well at this temperature."
+            WRITE(unito,*) "Data point no.: ", pointi
+            WRITE(unito,*) "======================================================="
+            WRITE(unito,*) ""
+        CASE(16)
+            WRITE(unito,*) ""
+            WRITE(unito,*) "======================================================="
+            WRITE(unito,*) "AIOMFAC-VISC WARNING 16: Mixture viscosity issue.      "
+            WRITE(unito,*) "Note that mixture viscosity is currently not computed  " 
+            WRITE(unito,*) "for electrolyte-containing mixtures. Therefore, an     "
+            WRITE(unito,*) "unrealistic mixture viscosity of                       "
+            WRITE(unito,*) "log_10(eta/[Pa.s]) = -999.999 is output.               "
             WRITE(unito,*) "Data point no.: ", pointi
             WRITE(unito,*) "======================================================="
             WRITE(unito,*) ""

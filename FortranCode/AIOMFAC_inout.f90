@@ -1,8 +1,8 @@
 !****************************************************************************************
 !*   :: Purpose ::                                                                      *
 !*   Subroutine providing an interface to AIOMFAC for computing specific liquid phase   *
-!*   activity coefficients and phase compositions with consideration of a single liquid * 
-!*   phase as solution.                                                                 *  
+!*   activity coefficients and phase compositions with consideration of a single liquid *
+!*   phase as solution.                                                                 *
 !*   Input is a specific composition point and temperature for a previously initialized *
 !*   system. Output is listed in outputvars.                                            *
 !*                                                                                      *
@@ -27,30 +27,32 @@
 !*   program. If not, see <http://www.gnu.org/licenses/>.                               *
 !*                                                                                      *
 !**************************************************************************************** 
-SUBROUTINE AIOMFAC_inout(inputconc, xinputtype, TKelvin, nspecies, outputvars, outnames, errorflag, warningflag)
+SUBROUTINE AIOMFAC_inout(inputconc, xinputtype, TKelvin, nspecies, outputvars, outputviscvars, outnames, errorflag, warningflag)
 
 USE ModSystemProp
 USE ModAIOMFACvar
 USE ModCompScaleConversion
-USE ModCalcActCoeff, ONLY : AIOMFAC_calc
+USE ModCalcActCoeff, ONLY : AIOMFAC_calc, DeltaActivities
 USE ModSubgroupProp, ONLY : SMWA, SMWC
 
 IMPLICIT NONE
 !interface variables: 
 REAL(8),DIMENSION(nindcomp),INTENT(IN) :: inputconc      !inputconc = the concentration of a given input point (e.g., at an experimental data point)
 REAL(8),DIMENSION(6,NKNpNGS),INTENT(OUT) :: outputvars   !2-D output array with computed compositions and activities for each species; structure is:  | mass-frac., mole-frac., molality, act.coeff., activity, ion-indicator | species-no |
+REAL(8),DIMENSION(2),INTENT(OUT) :: outputviscvars !output array for viscosity related values: | viscosity | model sensitivity |
 REAL(8),INTENT(IN) :: TKelvin                            !the input temperature [K]
 LOGICAL(4),INTENT(IN) :: xinputtype
 INTEGER(4),INTENT(OUT) :: nspecies, errorflag, warningflag
-CHARACTER(LEN=60),DIMENSION(NKNpNGS),INTENT(OUT) :: outnames
+CHARACTER(LEN=*),DIMENSION(NKNpNGS),INTENT(OUT) :: outnames
 !--
 !local variables:
 CHARACTER(LEN=2) :: cn  !this assumes a maximum two-digit component number in the system (max. 99); to be adjusted otherwise.
 CHARACTER(LEN=3) :: cino
 INTEGER(4) :: i, ion_no, ion_indic, nc, NKSinput, NKSinputp1
 REAL(8),PARAMETER :: DEPS = 1.1D1*(EPSILON(DEPS))
-REAL(8) :: wtf_cp, xi_cp, mi_cp, actcoeff_cp, a_cp, sum_ms, sum_mions, sum_miMi
+REAL(8) :: wtf_cp, xi_cp, mi_cp, actcoeff_cp, a_cp, sum_ms, sum_miMi, xtolviscosity !, sum_mions
 REAL(8),DIMENSION(nelectrol) :: mixingratio, wtfdry
+REAL(8),DIMENSION(nindcomp) :: xinp, dact, dactcoeff, wfrac
 !------------------------------------------------------------------------------------------- 
 
 !check for debugging:
@@ -64,6 +66,7 @@ ENDIF
 errorflag = 0  
 warningflag = 0
 outputvars = 0.0D0
+outputviscvars = 0.0D0
 NKSinput = ninput -nneutral
 NKSinputp1 = NKSinput+1
 wtfdry(1:NKSinput) = 1.0D0
@@ -71,6 +74,12 @@ wtfdry(NKSinputp1:) = 0.0D0
 mixingratio(1:NKSinput) = 1.0D0
 mixingratio(NKSinputp1:) = 0.0D0
 nspecies = NKNpNGS
+xtolviscosity = 0.0D0
+IF (nneutral < nspecies) THEN
+    calcviscosity = .false. !currently switched off in presence of electrolytes
+ELSE
+    calcviscosity = .true.
+ENDIF
 
 IF (nneutral < 1) THEN  !leave the subroutine and indicate a problem to the calling routine
     errorflag = 8       !there must be at least one neutral component in the mixture!
@@ -97,6 +106,16 @@ ENDIF
 !.....
 CALL MassFrac2MoleFracMolality(wtf, XrespSalt, mrespSalt)
 CALL AIOMFAC_calc(wtf, TKelvin) !calculate at given mass fraction and temperature
+
+IF (calcviscosity) THEN
+    xinp(1:nindcomp) = XrespSalt(1:nindcomp)
+    CALL DeltaActivities(xinp, TKelvin, dact, dactcoeff)
+    wfrac = wtf
+    wfrac(1) = wfrac(1) + 0.02D0
+    wfrac = wfrac/(1.0D0 + 0.02D0)
+    CALL MassFrac2MoleFracMolality(wfrac, XrespSalt, mrespSalt)
+    xtolviscosity = XrespSalt(1) - xinp(1)
+ENDIF
 !.....
 
 !Output of the AIOMFAC calculated values species-wise to array outputvars (ions separately):
@@ -173,20 +192,34 @@ DO nc = 1,nspecies !loop over components
     outputvars(6,nc) = REAL(ion_indic, KIND=8) !the indicator if this species is an inorg. ion or not: 0 = not ion, a number > 200 indicates the ion ID from the list
 ENDDO
 
+! viscosity output
+IF (calcviscosity) THEN
+    outputviscvars(1) = LOG10(etamix)
+    outputviscvars(2) = xtolviscosity*deltaetamix*0.4342944819D0  !the factor 0.4342944.. for conversion from deltaetamix which is an ln() value to log_10().
+ELSE
+    outputviscvars(1) = -999.999D0  !negative/unphysical values to signal "property not calculated"
+    outputviscvars(2) = -999.999D0
+ENDIF
+
 !check applicable temperature range and state a warning "errorflag" if violated:
 !applicable range for electrolyte-containing mixtures (approx.): 288.0 to 309.0 K (298.15 +- 10 K); (strictly valid range would be 298.15 K only)
 !applicable range for electrlyte-free mixtures (approx.): 280.0 to 400.0 K
 IF (NGS > 0) THEN !electrolyte-containing
     IF (TKelvin > 309.0D0 .OR. TKelvin < 288.0D0) THEN !set warning flag
-        IF (warningflag == 0) THEN !don't overwrite an existing warning if non-zero
+        IF (warningflag == 0) THEN !do not overwrite an existing warning when non-zero
             warningflag = 10
         ENDIF
     ENDIF
 ELSE
     IF (TKelvin > 400.0D0 .OR. TKelvin < 280.0D0) THEN !set warning flag
-        IF (warningflag == 0) THEN !don't overwrite an existing warning if non-zero
+        IF (warningflag == 0) THEN
             warningflag = 11
         ENDIF
+    ENDIF
+ENDIF
+IF (.NOT. calcviscosity) THEN
+    IF (warningflag == 0) THEN
+        warningflag = 16
     ENDIF
 ENDIF
 

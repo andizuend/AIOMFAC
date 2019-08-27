@@ -66,7 +66,7 @@ IMPLICIT NONE
     LOGICAL(4),INTENT(IN) :: datafromfile  !set .true. if the system components are provided from an input file
     INTEGER(4),INTENT(IN) :: ninp  !value known at input only in the case of input from a file
     !optional input arguments:
-    CHARACTER(LEN=60),DIMENSION(ninp),INTENT(IN),   OPTIONAL :: cpnameinp
+    CHARACTER(LEN=200),DIMENSION(ninp),INTENT(IN),  OPTIONAL :: cpnameinp
     INTEGER(4),DIMENSION(ninp,topsubno),INTENT(IN), OPTIONAL :: cpsubginp
     !...
     !local variables
@@ -233,7 +233,6 @@ IMPLICIT NONE
     INTEGER(4),DIMENSION(200) :: SolvSubs2 !temporary array for solvent subgroups (we allow a maximum of 200)
     INTEGER(4),DIMENSION(ninputcomp*2) :: ElectSubs2
     INTEGER(4),DIMENSION(201:topsubno) :: ElectPos
-    CHARACTER(LEN=3) :: cn
     LOGICAL(4) :: already1, already2
     !--------------------------------------
 

@@ -29,6 +29,7 @@
 !*   -  SUBROUTINE SubgroupNames                                                        *
 !*   -  SUBROUTINE MaingroupNames                                                       *
 !*   -  SUBROUTINE cpsubgrstring                                                        *
+!*   -  SUBROUTINE O2C_H2C_component                                                    *	
 !*   -  SUBROUTINE OtoCandHtoCmix                                                       *
 !*                                                                                      *
 !****************************************************************************************
@@ -540,52 +541,119 @@ DATA IonO2Cequiv(261) / 4.0D0 / !SO4--
     !=================================================================================================================================
     
     
-    !***********************************************************************************************************
-    !*                                                                                                         *
-    !*  Subroutine to calculate the average (organic) elemental O:C and H:C ratios of a given mixture.         *
-    !*                                                                                                         *   
-    !*  (c) Andi Zuend, Div. Chemistry & Chemical Engineering, California Institute of Technology, 2012        *
-    !***********************************************************************************************************
-    PURE SUBROUTINE OtoCandHtoCmix(n, x, OtoCorgmix, HtoCorgmix)
+    !****************************************************************************************
+    !*   :: Purpose ::                                                                      *
+    !*   Subroutine to calculate the sum of carbons, hydrogens, and oxygens in a            * 
+    !*   component of a system containing organics. Also includes the calculation of O:C    *
+    !*   and H:C ratios of the pure components.                                             *
+    !*                                                                                      *
+    !*   :: Authors & Copyright ::                                                          *
+    !*   Natalie Gervasi, Andi Zuend,                                                       *
+    !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
+    !*                                                                                      *   
+    !*   -> created:        2012                                                            *
+    !*   -> latest changes: 2018/09/14                                                      * 
+    !*                                                                                      *                                   
+    !****************************************************************************************
+    PURE SUBROUTINE O2C_H2C_component(ind, compC, compH, compO, O2C, H2C)
 
-    USE ModSystemProp, ONLY : ITAB, nneutral, SolvSubs, NGN
+    USE ModSystemProp, ONLY : ITAB, SolvSubs, NGN
 
     IMPLICIT NONE
-    !interface variables:
-    INTEGER(4),INTENT(IN) :: n !number of species in mixture (potentially with electrolytes dissociated into ions)
-    REAL(8),DIMENSION(n),INTENT(IN) :: x !mole fractions of species in mixture
-    REAL(8),INTENT(OUT) :: OtoCorgmix, HtoCorgmix
-    !..
+						 															  
+												 
+    !..................................
+    !interface input:
+    INTEGER(4),INTENT(IN) :: ind  !the component index number in current mixture (e.g. index location of component in ITAB)
+    REAL(8),INTENT(OUT) :: compC, compH, compO, O2C, H2C
     !local variables:
-    INTEGER(4) :: i, k, isub
-    REAL(8) :: sumO, sumH, sumC, subamount
-    !...........................................................
-    !initialize:
-    sumO = 0.0D0
-    sumH = 0.0D0
-    sumC = 0.0D0
-    !loop over compounds and subgroups to count the O, H, and C atoms 
-    !present in the mixture at given composition (mole fraction x):
+    INTEGER(4) :: isub, k
+    !..................................    
+    
+    !(1) determine number of oxygen, hydrogen and carbon for a given compound
+    compO = 0.0D0
+    compH = 0.0D0
+    compC = 0.0D0
+    !loop over subgroups to count the O, H, and C atoms:
+																   
     DO k = 1,NGN !loop over organic subgroups (SolvSubs excl. water)
         isub = SolvSubs(k) !subgoup
         IF (isub /= 16) THEN !exclude water (= subgroup 16) from the calculations
-            DO i = 1,nneutral !loop over neutral components
-                IF (ITAB(i,isub) > 0) THEN !subgroup is present
-                    subamount = REAL(ITAB(i,isub), KIND=8)*x(i)
-                    sumO = sumO +subamount*REAL(subgO(isub), KIND=8)
-                    sumH = sumH +subamount*REAL(subgH(isub), KIND=8)
-                    sumC = sumC +subamount*REAL(subgC(isub), KIND=8)
-                ENDIF
-            ENDDO
+														   
+            IF (ITAB(ind,isub) > 0) THEN !subgroup is present
+															   
+                compO = compO +REAL(ITAB(ind,isub)*subgO(isub), KIND=8)
+                compH = compH +REAL(ITAB(ind,isub)*subgH(isub), KIND=8)
+                compC = compC +REAL(ITAB(ind,isub)*subgC(isub), KIND=8)
+            ENDIF
+				 
         ENDIF
     ENDDO
-    !calculate ratios from the sums:
+    
+    !(2) compute O:C and H:C of this pure component:
+    IF (compC > 0.0D0) THEN
+        O2C = compO/compC
+        H2C = compH/compC
+    ELSE !O:C and H:C are undefined, labeled as negative numbers.
+        O2C = -77.77777D0
+        H2C = -77.77777D0
+    ENDIF
+
+    END SUBROUTINE O2C_H2C_component
+    !=================================================================================================================================
+    
+    
+    !****************************************************************************************
+    !*                                                                                      *
+    !*  Subroutine to calculate the average (organic) elemental O:C and H:C ratios of a     *
+    !*  given mixture.                                                                      *
+    !*                                                                                      *
+    !*   :: Author & Copyright ::                                                           *
+    !*   Andi Zuend,                                                                        *
+    !*   Dept. Chem. Engineering, California Institute of Technology (2009 - 2012)          *
+    !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
+    !*                                                                                      *
+    !*   -> created:        2012                                                            *
+    !*   -> latest changes: 2018/09/14                                                      *
+    !*                                                                                      *
+    !****************************************************************************************
+    PURE SUBROUTINE OtoCandHtoCmix(n, x, OtoCorgmix, HtoCorgmix)
+
+    USE ModSystemProp, ONLY : waterpresent
+
+    IMPLICIT NONE
+    !interface variables:
+    INTEGER(4),INTENT(IN) :: n           !number of species in mixture (potentially with electrolytes dissociated into ions)
+    REAL(8),DIMENSION(n),INTENT(IN) :: x !mole fractions of the species in the mixture
+    REAL(8),INTENT(OUT) :: OtoCorgmix, HtoCorgmix
+    !local variables:
+    INTEGER(4) :: ind, istart
+    REAL(8) :: compO, compH, compC, sumO, sumH, sumC, O2C, H2C
+    !...........................................................
+  
+    sumC = 0.0D0
+    sumH = 0.0D0
+    sumO = 0.0D0
+    !loop over organic components and sum up the contributions to total oxygen, carbon and hydrogen atoms for given mole fractions in mixture:
+    IF (waterpresent) THEN
+        istart = 2
+    ELSE
+        istart = 1
+    ENDIF
+    DO ind = istart,n 
+        CALL O2C_H2C_component(ind, compC, compH, compO, O2C, H2C)
+        sumC = sumC + x(ind)*compC
+        sumH = sumH + x(ind)*compH
+        sumO = sumO + x(ind)*compO
+    ENDDO
+
+    !calculate organic O:C and H:C ratios for the present mixture:
     IF (sumC > 0.0D0) THEN !the ratios are defined
         OtoCorgmix = sumO/sumC 
         HtoCorgmix = sumH/sumC
     ELSE
-        OtoCorgmix = -77.77777D0 !indicate not defined O:C
-        HtoCorgmix = -77.77777D0 !indicate not defined H:C
+        OtoCorgmix = -77.77777D0  !indicate O:C not defined 
+        HtoCorgmix = -77.77777D0  !indicate H:C not defined
     ENDIF
 
     END SUBROUTINE OtoCandHtoCmix

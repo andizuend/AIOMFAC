@@ -776,8 +776,8 @@ CHARACTER(LEN=30),DIMENSION(40,40),PUBLIC :: electname, electnameTeX !ion combin
     INTEGER(4),INTENT(IN) :: ncomp, nneutral  !the component number (internal numbering as the compN in definemixtures, LRdata, etc.)
     INTEGER(4),DIMENSION(ncomp),INTENT(IN) :: CompN
     REAL(8),DIMENSION(ncomp),INTENT(OUT) :: OtoCratio, HtoCratio
-    CHARACTER(LEN=60),DIMENSION(ncomp),INTENT(OUT) :: compname, compnameTeX
-    CHARACTER(LEN=16),DIMENSION(NGS),INTENT(OUT) :: ionname, ionnameTeX
+    CHARACTER(LEN=*),DIMENSION(ncomp),INTENT(OUT) :: compname, compnameTeX
+    CHARACTER(LEN=*),DIMENSION(NGS),INTENT(OUT) :: ionname, ionnameTeX
     !local vars:
     CHARACTER(LEN=16) :: txt
     INTEGER(4) :: i, k, cnt, cn, an

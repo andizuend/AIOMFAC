@@ -69,7 +69,7 @@ REAL(8),DIMENSION(201:240, 241:topsubno),PUBLIC :: KVLE_298K
 REAL(8),DIMENSION(:),ALLOCATABLE :: K_el, nuestoich, SubGroupMW
 REAL(8),DIMENSION(:),ALLOCATABLE :: Mmass  !component molar mass in order of neutrals then electrolytes
 !--
-CHARACTER(LEN=60),DIMENSION(:),ALLOCATABLE,PUBLIC :: cpname, compname, compnameTeX  !component names in order of mixture components
+CHARACTER(LEN=200),DIMENSION(:),ALLOCATABLE,PUBLIC :: cpname, compname, compnameTeX  !component names in order of mixture components
 CHARACTER(LEN=16),DIMENSION(:),ALLOCATABLE,PUBLIC :: ionname, ionnameTeX
 CHARACTER(LEN=3000),DIMENSION(:),ALLOCATABLE,PUBLIC :: compsubgroups, compsubgroupsTeX, compsubgroupsHTML
 !--
@@ -84,7 +84,7 @@ INTERFACE
         LOGICAL(4),INTENT(IN) :: datafromfile
         INTEGER(4),INTENT(IN) :: ninp
         !optional arguments at call:
-        CHARACTER(LEN=60),DIMENSION(ninp),INTENT(IN),   OPTIONAL :: cpnameinp
+        CHARACTER(LEN=200),DIMENSION(ninp),INTENT(IN),   OPTIONAL :: cpnameinp
         INTEGER(4),DIMENSION(ninp,topsubno),INTENT(IN), OPTIONAL :: cpsubginp
     END SUBROUTINE SetSystem
     !--

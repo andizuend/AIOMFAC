@@ -23,7 +23,7 @@
 !*   program. If not, see <http://www.gnu.org/licenses/>.                               *
 !*                                                                                      *
 !****************************************************************************************
-SUBROUTINE OutputTXT(fname, VersionNo, cpnameinp, nspecmax, npoints, watercompno, T_K, px, out_data)
+SUBROUTINE OutputTXT(fname, VersionNo, cpnameinp, nspecmax, npoints, watercompno, T_K, px, out_data, out_viscdata)
 
 !module variables:
 USE ModSystemProp, ONLY : compname, compsubgroups, compsubgroupsTeX, NGS, NKNpNGS, ninput, nneutral
@@ -33,17 +33,18 @@ IMPLICIT NONE
 !interface variables:
 CHARACTER(LEN=*),INTENT(IN) :: fname 
 CHARACTER(LEN=*),INTENT(IN) :: VersionNo
-CHARACTER(LEN=60),DIMENSION(nspecmax),INTENT(IN) :: cpnameinp   !list of assigned component names (from input file)
+CHARACTER(LEN=*),DIMENSION(nspecmax),INTENT(IN) :: cpnameinp   !list of assigned component names (from input file)
 INTEGER(4),INTENT(IN) ::  nspecmax, npoints, watercompno
 REAL(8),DIMENSION(npoints),INTENT(IN) :: T_K
 INTEGER(4),DIMENSION(nspecmax),INTENT(INOUT) :: px
 REAL(8),DIMENSION(7,npoints,NKNpNGS),INTENT(IN) :: out_data
+REAL(8),DIMENSION(3,npoints),INTENT(IN) :: out_viscdata
 !--
 !local variables:
-CHARACTER(LEN=2) :: cn
+CHARACTER(LEN=:),ALLOCATABLE :: cn
 CHARACTER(LEN=5) :: tlen
 CHARACTER(LEN=50) :: subntxt
-CHARACTER(LEN=150) :: horizline, tablehead, tformat, txtn
+CHARACTER(LEN=150) :: cnformat, horizline, tablehead, tformat, txtn
 CHARACTER(LEN=3000) :: txtsubs, mixturestring
 INTEGER(4) ::  i, k, pointi, qty, unitx
 REAL(8) :: RH
@@ -100,6 +101,9 @@ WRITE(unitx,'(A100)') '                   with reference state of infinite dilut
 WRITE(unitx,'(A100)') 'a_x(j) [-]       : activity of "j", defined on mole fraction basis (pure component reference state);'
 WRITE(unitx,'(A100)') 'a_m(j) [-]       : activity of "j", defined on molality basis (used for inorg. ions) with reference '
 WRITE(unitx,'(A100)') '                   state of infinite dilution of "j" in pure water;                                 '
+WRITE(unitx,'(A100)') 'log_10(eta/[Pa.s]): base-10 log of the dynamic viscosity of the mixture;                            '
+WRITE(unitx,'(A100)') 'log_10(s_eta/[Pa.s]): base-10 log of the estimated sensitivity of the dynamic viscosity; see details'
+WRITE(unitx,'(A100)') '                   on the "Hints & Examples" webpage;                                               '
 WRITE(unitx,'(A100)') 'flag             : error/warning flag, a non-zero value (error/warning number) indicates that a     '
 WRITE(unitx,'(A100)') '                   numerical issue or a warning occurred at this data point, suggesting evaluation  '
 WRITE(unitx,'(A100)') '                   with caution (warnings) or exclusion (errors) of this data point.                '
@@ -108,9 +112,36 @@ WRITE(unitx,*) ''
 WRITE(unitx,*) ''
 !--
 horizline = "-----------------------------------------------------------------------------------------------------------"
+!--
+!data table for mixture viscosity output
+WRITE(unitx,'(A44)') "Properties of this phase: mixture viscosity"
+!write table column headers:
+WRITE(unitx,'(A107)') ADJUSTL(horizline)
+tablehead = "no.   T_[K]     RH_[%]   log_10(eta/[Pa.s])   log_10(s_eta/[Pa.s])        flag "
+WRITE(unitx,'(2X, A105)') ADJUSTL(tablehead)
+!write data to viscosity table
+DO pointi = 1,npoints  !loop over composition points
+    IF (watercompno > 0) THEN
+        RH = out_data(5,pointi,watercompno)*100.0D0 !RH in %
+        IF (RH > 1000.0D0 .OR. RH < 0.0D0) THEN
+            RH = -99.99D0
+        ENDIF
+    ELSE
+        RH = 0.0D0
+    ENDIF
+    WRITE(unitx,'(I5.3,2X,F7.2,2X,F7.2,3X,2(ES12.5,10X),3X,I2)') pointi, T_K(pointi), RH, out_viscdata(1,pointi), out_viscdata(2,pointi), INT(out_viscdata(3,pointi))
+ENDDO !pointi
+WRITE(unitx,'(A107)') ADJUSTL(horizline)
+WRITE(unitx,*) ""
+!--
+k = MAX(2, CEILING(LOG10(REAL(nspecmax))) )  
+WRITE(tlen,'(I0)') k
+cnformat = "(I"//TRIM(tlen)//"."//TRIM(tlen)//")" !variable format specifier
+ALLOCATE(CHARACTER(LEN=k) :: cn)
+
 !write individual data tables for each component / ionic species:
 DO i = 1,nspecmax
-    WRITE(cn,'(I2.2)') i !component / species number as character string
+    WRITE(cn,cnformat) i !component / species number as character string
     WRITE(unitx,*) ""
     !distinguish between neutral components and ionic species:
     IF (INT(out_data(6,px(i),i)) == 0) THEN !neutral component
@@ -198,6 +229,8 @@ DO i = 1,nspecmax
     WRITE(unitx,'(A107)') ADJUSTL(horizline)
     WRITE(unitx,*) ""
 ENDDO
+WRITE(unitx,*) ""
+!--
 WRITE(unitx,*) ""
 WRITE(unitx,'(A107)') "==========================================================================================================="
 CLOSE(unitx)
