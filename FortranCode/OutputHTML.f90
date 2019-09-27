@@ -9,7 +9,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
 !*                                                                                      *
 !*   -> created:        2011                                                            *
-!*   -> latest changes: 2018/08/10                                                      *
+!*   -> latest changes: 2019/09/24                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -24,7 +24,7 @@
 !*   program. If not, see <http://www.gnu.org/licenses/>.                               *
 !*                                                                                      *
 !****************************************************************************************
-SUBROUTINE OutputHTML(fname, VersionNo, cpnameinp, nspecmax, npoints, watercompno, T_K, px, out_data, out_viscdata)
+SUBROUTINE OutputHTML(fname, VersionNo, nspecmax, npoints, watercompno, cpnameinp, T_K, px, out_data, out_viscdata)
 
 !module variables:
 USE ModSystemProp, ONLY : compname, compsubgroupsHTML, NGS, NKNpNGS, ninput, nneutral
@@ -34,8 +34,8 @@ IMPLICIT NONE
 !interface variables:
 CHARACTER(LEN=*),INTENT(IN) :: fname 
 CHARACTER(LEN=*),INTENT(IN) :: VersionNo
-CHARACTER(LEN=*),DIMENSION(nspecmax),INTENT(IN) :: cpnameinp   !list of assigned component names (from input file)
 INTEGER(4),INTENT(IN) ::  nspecmax, npoints, watercompno
+CHARACTER(LEN=200),DIMENSION(nspecmax),INTENT(IN) :: cpnameinp   !list of assigned component names (from input file)
 REAL(8),DIMENSION(npoints),INTENT(IN) :: T_K
 INTEGER(4),DIMENSION(nspecmax),INTENT(INOUT) :: px
 REAL(8),DIMENSION(7,npoints,NKNpNGS),INTENT(IN) :: out_data
@@ -44,18 +44,25 @@ REAL(8),DIMENSION(3,npoints),INTENT(IN) :: out_viscdata
 !local variables:
 CHARACTER(LEN=:),ALLOCATABLE :: cn
 CHARACTER(LEN=5) :: tlen
-CHARACTER(LEN=50) :: subntxt
+CHARACTER(LEN=50) :: subntxt, Iformat
 CHARACTER(LEN=150) :: cnformat, tformat, txtn
 CHARACTER(LEN=400) :: outtxtleft
 CHARACTER(LEN=3000) :: txtsubs, mixturestring
-INTEGER(4) ::  i, k, pointi, qty, unitx
+INTEGER(4) ::  i, k, kms, pointi, qty, unitx
 REAL(8) :: RH
 !...................................................................................
 
+k = MAX(2, CEILING(LOG10(REAL(nspecmax))) )
+WRITE(tlen,'(I0)') k
+Iformat = "I"//TRIM(tlen)//"."//TRIM(tlen)  !variable integer specifier
+cnformat = "("//Iformat//")"                !constructed format specifier
+ALLOCATE(CHARACTER(LEN=k) :: cn)
+!--
 OPEN (NEWUNIT = unitx, FILE = fname, STATUS = "UNKNOWN")
 outtxtleft = ADJUSTL("<h3>AIOMFAC-web, version "//VersionNo//"</h3>")
 WRITE(unitx,'(A400)') outtxtleft
 !create a character string of the mixture as a series of its components and add links to the components:
+kms = LEN(mixturestring)
 mixturestring = '<a href="#'//TRIM(ADJUSTL(compname(1)))//'">'//TRIM(ADJUSTL(compname(1)))//'</a>' !first component
 !loop over all further components / species:
 DO i = 2,nspecmax
@@ -64,15 +71,24 @@ DO i = 2,nspecmax
     ELSE !ion (with its own link)
         txtn = '<a href="#'//TRIM(ADJUSTL(subgrnameHTML(INT(out_data(6,px(i),i)))))//'">'//TRIM(ADJUSTL(subgrnameHTML(INT(out_data(6,px(i),i) ))))//'</a>'
     ENDIF
-    mixturestring = TRIM(mixturestring)//' + '//TRIM(ADJUSTL(txtn))
+    k = LEN_TRIM(mixturestring) +LEN_TRIM(' + '//TRIM(txtn) )
+    IF (k < kms - 50) THEN
+        mixturestring = TRIM(mixturestring)//' + '//TRIM(ADJUSTL(txtn))
+    ELSE
+        qty = nspecmax -i
+        WRITE(subntxt,'(I0)') qty
+        mixturestring = TRIM(mixturestring)//' + '//TRIM(subntxt)//' additional components ...'
+        EXIT
+    ENDIF
 ENDDO
 mixturestring = ADJUSTL(TRIM(mixturestring))
 WRITE(tlen,'(I5.5)') LEN_TRIM(mixturestring)
 tformat = '(A24, A'//tlen//')'  !dynamic format specifier
 WRITE(unitx, tformat) "<p>Mixture name: &nbsp;", ADJUSTL(mixturestring)
-WRITE(unitx,'(A45, I2.2)') "<br> Number of independent input components: ", ninput
-WRITE(unitx,'(A45, I2.2)') "<br> Number of different neutral components: ", nneutral
-WRITE(unitx,'(A45, I2.2)') "<br> Number of different inorganic ions    : ", NGS
+tformat = '(A45,' //TRIM(Iformat)//')'
+WRITE(unitx, tformat) "<br> Number of independent input components: ", ninput
+WRITE(unitx, tformat) "<br> Number of different neutral components: ", nneutral
+WRITE(unitx, tformat) "<br> Number of different inorganic ions    : ", NGS
 WRITE(unitx,*) "</p>"
 outtxtleft = ADJUSTL('<p> The AIOMFAC output is tabulated for each component/species individually below. </p>')
 WRITE(unitx,'(A400)') outtxtleft
@@ -152,11 +168,6 @@ WRITE(unitx,*) '</table>'
 WRITE(unitx,*) '<a href="#top">&uarr; Top</a>'
 WRITE(unitx,*) "<br>"
 WRITE(unitx,*) "<br>"
-!--
-k = MAX(2, CEILING(LOG10(REAL(nspecmax))) )
-WRITE(tlen,'(I0)') k
-cnformat = "(I"//TRIM(tlen)//"."//TRIM(tlen)//")" !variable format specifier
-ALLOCATE(CHARACTER(LEN=k) :: cn)
 
 !write individual data tables for each component / ionic species:
 DO i = 1,nspecmax
@@ -169,7 +180,8 @@ DO i = 1,nspecmax
         outtxtleft = ADJUSTL('<table class="datatabname">')
         WRITE(unitx,'(A400)') outtxtleft
         WRITE(unitx,*) '<tbody>'
-        WRITE(unitx,'(A73,I2.2,A10)') "<tr><td> Mixture's component, #  </td> <td> &nbsp; : &nbsp; ", i ,"</td></tr>"
+        tformat = '(A73,'//TRIM(Iformat)//',A10)'
+        WRITE(unitx,tformat) "<tr><td> Mixture's component, #  </td> <td> &nbsp; : &nbsp; ", i ,"</td></tr>"
         txtn = TRIM(ADJUSTL(compname(i)))
         txtn = TRIM(txtn)//"</td></tr>"
         WRITE(tlen,'(I5.5)') LEN_TRIM(txtn)
@@ -197,7 +209,8 @@ DO i = 1,nspecmax
         outtxtleft = ADJUSTL('<table class="datatabname">')
         WRITE(unitx,'(A400)') outtxtleft
         WRITE(unitx,*) '<tbody>'
-        WRITE(unitx,'(A71,I2.2,A10)') "<tr><td> Mixture's species, # </td> <td> &nbsp; : &nbsp; ", i ,"</td></tr>"
+        tformat = '(A71,'//TRIM(Iformat)//',A10)'
+        WRITE(unitx,tformat) "<tr><td> Mixture's species, # </td> <td> &nbsp; : &nbsp; ", i ,"</td></tr>"
         subntxt = TRIM(ADJUSTL(subgrnameHTML(INT(out_data(6,px(i),i)))))
         qty = LEN_TRIM(subntxt)
         txtn = ADJUSTL(subntxt(2:qty-1)) !to print the ion name without the enclosing parathesis ()
@@ -229,7 +242,8 @@ DO i = 1,nspecmax
         outtxtleft = ADJUSTL('<table class="datatabname">')
         WRITE(unitx,'(A400)') outtxtleft
         WRITE(unitx,*) '<tbody>'
-        WRITE(unitx,'(A71,I2.2,A10)') "<tr><td> Mixture's species, # </td> <td> &nbsp; : &nbsp; ", i ,"</td></tr>"
+        tformat = '(A71,'//TRIM(Iformat)//',A10)'
+        WRITE(unitx,tformat) "<tr><td> Mixture's species, # </td> <td> &nbsp; : &nbsp; ", i ,"</td></tr>"
         subntxt = TRIM(ADJUSTL(subgrnameHTML(INT(out_data(6,px(i),i)))))
         qty = LEN_TRIM(subntxt)
         txtn = ADJUSTL(subntxt(2:qty-1)) !to print the ion name without the enclosing parathesis ()

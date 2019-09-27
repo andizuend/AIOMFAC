@@ -10,7 +10,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2018 (based on non-module version from 2004)                    *
-!*   -> latest changes: 2018/05/25                                                      *
+!*   -> latest changes: 2019/09/17                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -44,6 +44,7 @@ IMPLICIT NONE
 !public module variables:
 REAL(8),DIMENSION(Nmaingroups,Nmaingroups),PUBLIC :: ARR, BRR, CRR
 !private module variables
+INTEGER(4),PRIVATE :: grefcallID
 INTEGER(4),DIMENSION(:,:),ALLOCATABLE,PRIVATE :: SRNY, SRNY_dimflip
 REAL(8),DIMENSION(topsubno),PRIVATE :: SR_RR, SR_QQ
 REAL(8),DIMENSION(:),ALLOCATABLE,PRIVATE :: RS, QS, R, Q, XL, lnGaCinf, lnGaRref, XieRref
@@ -51,7 +52,7 @@ REAL(8),DIMENSION(:,:),ALLOCATABLE,PRIVATE :: parA, parB, parC, PsiT, PsiT_dimfl
 REAL(8),DIMENSION(:,:),ALLOCATABLE,PRIVATE :: Nvis
 LOGICAL(4),PRIVATE :: gcombrefresh
 
-!$OMP THREADPRIVATE(parA, parB, parC, PsiT, PsiT_dimflip, SRNY, SRNY_dimflip, R, Q, RS, QS, XL, Nvis, &
+!$OMP THREADPRIVATE(parA, parB, parC, PsiT, PsiT_dimflip, grefcallID, SRNY, SRNY_dimflip, R, Q, RS, QS, XL, Nvis, &
    !$OMP & lnGaCinf, lnGaRref, XieRref, gcombrefresh) 
 
 !.... initialize module data arrays:
@@ -183,7 +184,7 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2004                                                            *
-    !*   -> latest changes: 2018/05/23                                                      *
+    !*   -> latest changes: 2019/09/17                                                      *
     !*                                                                                      *
     !****************************************************************************************
     
@@ -196,7 +197,8 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
     
     SUBROUTINE SRunifac(NK, T_K, X, XN, refreshgref, lnGaSR)
 
-	USE ModAIOMFACvar, ONLY : etamix, eta_cpn											   
+    USE ModAIOMFACvar, ONLY : etamix, lneta_cpn
+
     IMPLICIT NONE
 
     INTEGER(4),INTENT(IN) :: NK
@@ -207,10 +209,11 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
     !local variables:
     INTEGER(4) :: J
     REAL(8) :: RSS, expon 
-    REAL(8),DIMENSION(NK) :: lnGaC, lnGaR, XieC, XieR, phi
+    REAL(8),DIMENSION(NK) :: lnGaC, lnGaR, XieC, XieR, phi, volfrac, SAfrac
     !.......................................................
 
     !Determine the reference values (lnGaRref, XieRref) for the residual part:
+    grefcallID = 0
     IF (refreshgref .OR. solvmixrefnd .OR. calcviscosity) THEN
         CALL SRgref(NK, T_K, XN, refreshgref, lnGaRref, XieRref)
     ENDIF
@@ -224,6 +227,7 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
         phi(1:NK) = X(:)*RS(:)/RSS
     ENDIF
     etamix = 0.0D0
+
     DO J = 1,NK
         lnGaSR(J) = lnGaC(J) + lnGaR(J) - lnGaRref(J)
         IF (J > nneutral) THEN !ion component, so normalize by reference state of infinite dilution in reference solvent
@@ -231,14 +235,14 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
         ENDIF
         IF (calcviscosity) THEN
             !sum up liquid mixture viscosity contributions from different components:
-            eta_cpn(J) = XieC(J) +phi(J)*(XieR(J)-XieRref(J))
-            etamix = etamix + eta_cpn(J)
+            lneta_cpn(J) = XieC(J) +phi(J)*(XieR(J)-XieRref(J)) !orig. !the component contribution to the log(dynamic viscosity of the mixture)																															  
+            etamix = etamix + lneta_cpn(J) !here it is still the ln(etamix); exponentiation below
         ENDIF
     ENDDO
     IF (calcviscosity) THEN
         IF (etamix > -5.5D3) THEN !real calculation with valid parameters was performed
             IF (etamix > 690.0D0) THEN !check and deal with floating point overflow issue
-                expon = DINT(etamix)
+                expon = AINT(etamix)
                 etamix = EXP(690.0D0 + 5.0D0*(etamix-expon))
             ELSE
                 etamix = EXP(etamix) !"liquid" mixture viscosity in [Pa.s]
@@ -248,7 +252,7 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
         ENDIF
     ELSE
         etamix = -999.9D0 !indicate "not calculated"
-    ENDIF	
+    ENDIF
 
     END SUBROUTINE SRunifac
 !==========================================================================================================================
@@ -271,7 +275,7 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
     !****************************************************************************************
     SUBROUTINE SRgref(NK, T_K, XN, grefresh, lnGaRrefer, XieRrefer)
     
-    USE ModAIOMFACvar, ONLY : Tglass0, fragil  ! public variable to hold pure component viscosity 
+    USE ModAIOMFACvar, ONLY : Tglass0, fragil 
     USE Mod_PureViscosPar, ONLY : PureCompViscosity
 
     IMPLICIT NONE
@@ -285,11 +289,11 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
     INTEGER(4) :: I, iflag, K
     REAL(8),PARAMETER :: T0 = 298.15D0  !room temperature as the reference temperature for the calculation of the PsiT array
     REAL(8),DIMENSION(NK) :: Xrefsp, lnGaRX, XieX
-    REAL(8) :: eta, Tglass, D ! pure component viscosity, glass transition temperature, fragility																								 
+    REAL(8) :: eta, Tglass, D ! pure component viscosity, glass transition temperature, fragility
     !...................................................
 
     !Check / set temperature-dependent parameters:
-    IF (grefresh) THEN !detected a change in temperature --> PsiT needs to be updated
+    IF (grefresh) THEN !detected a change in temperature => PsiT needs to be updated
         SELECT CASE(nd)
         CASE(500:799,2000:2500)
             !new equation for UNIFAC/AIOMFAC 3-parameter version for larger temperature range; see Ganbavale et al. (2015, ACP, doi:10.5194/acp-15-447-2015)
@@ -302,35 +306,39 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
         ENDDO
         !------
         !loop over neutral components and calculate the residual reference contributions from the different subgroups
-        !reference residual contributions of pure components (and also hypothetical pure ions) are always 1.0 (i.e. for water)
+        !reference residual contributions of pure components (and also hypothetical pure ions) are always 1.0 (i.e. for water) and
+        !the calculations can therefore be omitted for components consisting of one subgroup only.
         Xrefsp = 0.0D0
         lnGaRrefer = 0.0D0
         XieRrefer = 0.0D0
         DO I = 1,nneutral
             !check if number of subgroups in component is greater than 1:
-            K = SUM(SRNY_dimflip(1:NGN,I))
+            K = SUM(SRNY_dimflip(1:NGN,I)) !SUM(SRNY(I,1:NGN))
             IF (K > 1) THEN !more than one subgroup
+                grefcallID = I
                 Xrefsp(1:nneutral) = 0.0D0
                 Xrefsp(I) = 1.0D0 !set all other mole fractions but this (I) to 0.0. Thus reference state conditions of x(i) = 1
                 CALL SRgres(Xrefsp, lnGaRX, NK, XieX)
-                lnGaRrefer(I) = lnGaRX(I) !this line is necessary since the other values (not only I) get overwritten in call to SRgres
-				XieRrefer(I) = XieX(I)					  
+                lnGaRrefer(I) = lnGaRX(I) !this line is necessary since the other values (not only I) get overwritten in call to SRgres!
+                XieRrefer(I) = XieX(I)
+                grefcallID = 0
             ENDIF
         ENDDO
     ENDIF
 
     !Check for solvent mixture reference state and potentially calculate the reference of the residual part for ions in solvent mixture reference state.
-    IF (solvmixrefnd) THEN
+    IF (solvmixrefnd) THEN  !solvent mixture as reference
+        grefcallID = 0
         DO I = nneutral+1,NK
             Xrefsp(1:nneutral) = XN(1:nneutral) !solvent
-            Xrefsp(nneutral+1:) = 0.0D0         !ions
+            Xrefsp(nneutral+1:) = 0.0D0 !ions
             CALL SRgres(Xrefsp, lnGaRX, NK, XieX)
-            lnGaRrefer(I) = lnGaRX(I)
+            lnGaRrefer(I) = lnGaRX(I) !this line is necessary since the other values (not only I) get overwritten in call to SRgres!
             XieRrefer(I) = XieX(I)
         ENDDO
     ENDIF
-	
-	!---- calculate pure component viscosity of non-electrolytes at given temperature
+
+    !---- calculate pure component viscosity of non-electrolytes at given temperature
     IF (calcviscosity) THEN
         DO I = 1,nneutral
             CALL PureCompViscosity(I, T_K, eta, iflag, Tglass, D) !calculate pure component dynamic viscosity eta
@@ -401,9 +409,33 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
     REAL(8),DIMENSION(NG,NG) :: THmn
     !...................................................
 
-    DO CONCURRENT (I = 1:NG)
-        S1(I) = SUM(SRNY(1:NK,I)*Xr(1:NK))
-    ENDDO
+    !!DO CONCURRENT (I = 1:NG) !DO I = 1,NG
+    !!    S1(I) = SUM(SRNY(1:NK,I)*Xr(1:NK))
+    !!ENDDO
+    !!S2 = SUM(S1)
+    !!XG = S1/S2
+    !!S3 = SUM(Q(1:NG)*XG)
+    !!TH = Q(1:NG)*XG/S3
+    !!DO CONCURRENT (I = 1:NG) !DO I = 1,NG
+    !!    S4(I) = SUM(TH*PsiT(1:NG,I))
+    !!ENDDO
+    !!THbyS4 = TH/S4
+    !!DO CONCURRENT (I = 1:NG) !DO I = 1,NG
+    !!    GAML(I) = Q(I)*( 1.0D0-LOG(S4(I)) -SUM(THbyS4*PsiT_dimflip(1:NG,I)) ) !Q(I)*( 1.0D0-LOG(S4(I)) -SUM(THbyS4*PsiT(I,1:NG)) )
+    !!ENDDO
+    !!DO CONCURRENT (I = 1:NK) !DO I = 1,NK
+    !!    lnGaR(I) = SUM(SRNY_dimflip(1:NG,I)*GAML(1:NG)) !SUM(SRNY(I,1:NG)*GAML(1:NG))
+    !!ENDDO
+    
+    IF (grefcallID > 0) THEN !this is only the case when called from SRgref
+        DO CONCURRENT (I = 1:NG)
+            S1(I) = SRNY(grefcallID,I) !only this because all Xr other than that of grefcallID are zero in this reference case
+        ENDDO
+    ELSE !typical case
+        DO CONCURRENT (I = 1:NG)
+            S1(I) = SUM(SRNY(1:NK,I)*Xr(1:NK))
+        ENDDO
+    ENDIF
     S2 = SUM(S1)
     XG = S1/S2
     S3 = SUM(Q(1:NG)*XG)
@@ -415,32 +447,44 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
     DO CONCURRENT (I = 1:NG)
         GAML(I) = Q(I)*( 1.0D0-LOG(S4(I)) -SUM(THbyS4*PsiT_dimflip(1:NG,I)) )
     ENDDO
-    DO CONCURRENT (I = 1:NK)
-        lnGaR(I) = SUM(SRNY_dimflip(1:NG,I)*GAML(1:NG))
-    ENDDO
+    IF (grefcallID > 0) THEN !this is only the case when called from SRgref
+        lnGaR(grefcallID) = SUM(SRNY_dimflip(1:NG,grefcallID)*GAML(1:NG))
+    ELSE
+        DO CONCURRENT (I = 1:NK)
+            lnGaR(I) = SUM(SRNY_dimflip(1:NG,I)*GAML(1:NG))
+        ENDDO
+    ENDIF
 
-	!--------------------------------------------------------
+    !--------------------------------------------------------
     !Viscosity of mixture calculation; residual part.
     !(electrolyte effects could be considered within the pure-component eta0 contribution from water as the main solvent of ions).
     IF (calcviscosity) THEN
-        DO k = 1,NG !k
-            DO I = 1,NG !m
+        DO CONCURRENT (k = 1:NG) !k
+            DO CONCURRENT (I = 1:NG) !m
                 S4(I) = SUM(TH(1:NG)*PsiT(1:NG,I))
-                THmn(k,I) = TH(k)*PsiT_dimflip(I,k)/S4(I) !TH(k)*PsiT(k,I)/S4(I)
+                THmn(k,I) = TH(k)*PsiT_dimflip(I,k)/S4(I)
             ENDDO
         ENDDO
         !sum up the number of subgroups and their contributions to XieR in compound I:
-        DO I = 1,NK
-            !calculate viscosity contributions by individual subgroups:
-            DO k = 1,NG
-                Xiek(k) = (-1.0D0)*(-Q(k)/R(k))*Nvis(k,I)*SUM(THmn(1:NG,k)*LOG(PsiT(1:NG,k)))
+        IF (grefcallID > 0) THEN !this is only the case when called from SRgref
+            DO CONCURRENT (k = 1:NG)
+                Xiek(k) = (Q(k)/R(k))*Nvis(k,grefcallID)*SUM(THmn(1:NG,k)*LOG(PsiT(1:NG,k))) !Natalie mod 4
             ENDDO
-            XieR(I) = SUM(SRNY_dimflip(1:NG,I)*Xiek(1:NG))
-        ENDDO
+            XieR(grefcallID) = SUM(SRNY_dimflip(1:NG,grefcallID)*Xiek(1:NG))
+        ELSE
+            DO CONCURRENT (I = 1:NK)
+                !calculate viscosity contributions by individual subgroups:
+                DO CONCURRENT (k = 1:NG)
+                    Xiek(k) = (Q(k)/R(k))*Nvis(k,I)*SUM(THmn(1:NG,k)*LOG(PsiT(1:NG,k))) !Natalie mod 4
+                ENDDO
+                XieR(I) = SUM(SRNY_dimflip(1:NG,I)*Xiek(1:NG))
+            ENDDO
+        ENDIF
     ELSE !a default value indicating "NO viscosity calc."
         XieR = 0.0D0
     ENDIF
     !--------------------------------------------------------
+
     END SUBROUTINE SRgres
 !==========================================================================================================================
     
@@ -491,11 +535,11 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
         RSSref = SUM(RS(1:nneutral)*Xsolv(1:nneutral))
         XLSref = SUM(XL(1:nneutral)*Xsolv(1:nneutral))
         B(nnp1:NK) = 5.0D0*QS(nnp1:NK)*LOG(QS(nnp1:NK)/QSSref*RSSref/RS(nnp1:NK)) +XL(nnp1:NK) -RS(nnp1:NK)/RSSref*XLSref
-        lnGaCinf(nnp1:NK) = LOG(RS(nnp1:NK)/RSSref) +B(nnp1:NK)
-    ELSE IF (gcombrefresh) THEN !water is the reference solvent for solutes (ions); lnGaCinf is a constant for the ions of the system and needs to be calculated only at the first call.
+        lnGaCinf(nnp1:NK) = LOG(RS(nnp1:NK)/RSSref) +B(nnp1:NK)  !GAMCinf(nnp1:NK) = RS(nnp1:NK)/RSSref*EXP(B(nnp1:NK))
+    ELSE IF (gcombrefresh) THEN !water is the reference solvent for solutes (ions); GAMCinf is a constant for the ions of the system and needs to be calculated only at the first call.
         lnGaCinf = 0.0D0
         B(nnp1:NK) = 5.0D0*QS(nnp1:NK)*LOG(QS(nnp1:NK)/1.40D0*0.92D0/RS(nnp1:NK)) +XL(nnp1:NK) -RS(nnp1:NK)/0.92D0*(-2.32D0)
-        lnGaCinf(nnp1:NK) = LOG(RS(nnp1:NK)/0.92D0) +B(nnp1:NK) 
+        lnGaCinf(nnp1:NK) = LOG(RS(nnp1:NK)/0.92D0) +B(nnp1:NK) !GAMCinf(nnp1:NK) = RS(nnp1:NK)/0.92D0*EXP(B(nnp1:NK))
         gcombrefresh = .false.
     ENDIF
 
@@ -508,7 +552,7 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
         phiQ = X*QiQ
         !undefined eta0 would contain negative values and cause error below
         IF (ALL(eta0(1:NK) > 0.0D0)) THEN !pure component values available
-			XieC(1:NK) = (EXP(lnGaC(1:NK))*X(1:NK))*LOG(eta0(1:NK))
+            XieC(1:NK) = (EXP(lnGaC(1:NK))*X(1:NK))*LOG(eta0(1:NK))
         ELSE
             XieC = -55555.5D0
         ENDIF
@@ -516,6 +560,7 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
         XieC = -99999.9D0
     ENDIF
     !--------------------------------------------------------
+
     END SUBROUTINE SRgcomb
 !==========================================================================================================================
     
@@ -587,13 +632,6 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
         DO L = 1,NGN
             L1 = Imaingroup(maingrindexofsubgr(L))
             parA(L,J) = ARR(L1,J1)
-            !!IF (isPEGsystem) THEN !special case for CHn <--> H2O interaction parameter in PEG systems only:
-            !!    IF (L1 == 1 .AND. J1 == 7) THEN
-            !!        parA(L,J) = ARR(1,7) !needs to be adjusted to a special group for CHn in PEG
-            !!    ELSE IF (L1 == 7 .AND. J1 == 1) THEN
-            !!        parA(L,J) = ARR(7,1) !needs to be adjusted to a special group for CHn in PEG
-            !!    ENDIF
-            !!ENDIF
             parB(L,J) = BRR(L1,J1)
             parC(L,J) = CRR(L1,J1)
             !Apply check to avoid using SR inteaction parameters that are not assigned correctly or were not estimated yet:
@@ -632,8 +670,8 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
 
     DO I = 1,NK
         DO J = 1,NG
-            RS(I) = RS(I) +SRNY_dimflip(J,I)*R(J)
-            QS(I) = QS(I) +SRNY_dimflip(J,I)*Q(J)
+            RS(I) = RS(I) +SRNY_dimflip(J,I)*R(J) !RS(I) +SRNY(I,J)*R(J)
+            QS(I) = QS(I) +SRNY_dimflip(J,I)*Q(J) !QS(I) +SRNY(I,J)*Q(J)
         ENDDO
         XL(I) = 5.0D0*(RS(I)-QS(I)) -RS(I) +1.0D0  !corresponds to l(i) eq. (3) in UNIFAC Fredenslund et al. (1975) paper
         !...
@@ -688,26 +726,13 @@ DATA ARR / 0.000000D+00, -3.536000D+01, -1.112000D+01, -6.970000D+01,  1.564000D
     !SR_RR(248) = 1.65D0  !3.68  !3.68     !HSO4-
     !SR_RR(249) = 3.34D0  !CH3SO3-  (assigned same value as for SO4--)
     !SR_RR(261) = 3.34D0  !4.7 !4.88     !SO4--
+    SR_RR(244) = 1.77D0 !I- (from calculation using data by Shannon, Acta Cryst. (1976). A32, 751)
 
     !!values calculated after Archard et al. (1994) with hydrated radii from Kiriukhin and Collins (2002) ... see the Excel sheet / AIOMFAC paper (Zuend et al., 2008):
     !SR_QQ(248) = 1.40D0  !3.84  !3.84   !HSO4-
     !SR_QQ(249) = 3.96D0  !CH3SO3-  (assigned same value as for SO4--)
     !SR_QQ(261) = 3.96D0  !4.81 !5.09   !SO4--
-
-    !!debugging check for issue with ion interaction parameters:
-    !DO i = 1,75
-    !    IF (ARR(i,51) /= 0.0D0) THEN
-    !        k = i
-    !        WRITE(*,*) "Problem with interaction param ARR(i,51): i = ",i
-    !        WRITE(*,*) "main group 51 is for all ions and ARR with ions should be zero!"
-    !        READ(*,*) !wait for user interaction
-    !    ELSE IF (ARR(51,i) /= 0.0D0 ) THEN
-    !        k = i
-    !        WRITE(*,*) "Problem with interaction param ARR(51,i): i = ",i
-    !        WRITE(*,*) "main group 51 is for all ions and ARR with ions should be zero!"
-    !        READ(*,*) !wait for user interaction
-    !    ENDIF
-    !ENDDO
+    SR_QQ(244) = 1.47D0 !I- (from calculation using data by Shannon, Acta Cryst. (1976). A32, 751)
 
     !put together BRR and CRR arrays for the (improved) temperature dependent description of UNIFAC:
     BRR = -888888.888D0 !0.0D0  !here just initialization (the actual values will be set during fitting of the model in subroutine SRfitpar.f90 and SRsystem.f90)

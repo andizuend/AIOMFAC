@@ -6,10 +6,12 @@
 !*                                                                                      *
 !*   :: Author & Copyright ::                                                           *
 !*   Andi Zuend,                                                                        *
+!*   IACETH, ETH Zurich, (2004 - 2009)                                                  *
+!*   Div. Chemistry and Chemical Engineering, Caltech, Pasadena, CA, USA (2009 - 2012)  *
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2018 (based on non-module version from 2009)                    *
-!*   -> latest changes: 2018/05/22                                                      *
+!*   -> latest changes: 2018/09/14                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -29,7 +31,7 @@
 !*   -  SUBROUTINE SubgroupNames                                                        *
 !*   -  SUBROUTINE MaingroupNames                                                       *
 !*   -  SUBROUTINE cpsubgrstring                                                        *
-!*   -  SUBROUTINE O2C_H2C_component                                                    *	
+!*   -  SUBROUTINE O2C_H2C_component                                                    *
 !*   -  SUBROUTINE OtoCandHtoCmix                                                       *
 !*                                                                                      *
 !****************************************************************************************
@@ -99,7 +101,7 @@ DATA SMWC /  6.94100D+00,  2.29900D+01,  3.90980D+01,  1.80380D+01,  1.00800D+00
           &  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00 /
   
 !anion no.:       1,             2,            3,            4,            5,            6,            7,            8,            9,           10,  etc. (11, ..., 20 on next row, etc.)
-DATA SMWA /  1.89980D+01,  3.54530D+01,  7.99040D+01,  1.26900D+02,  6.20040D+01,  5.90440D+01,  5.80840D+01,  9.70710D+01,  9.50925D+01,  0.00000D+00, &
+DATA SMWA /  1.89980D+01,  3.54530D+01,  7.99040D+01,  1.26905D+02,  6.20040D+01,  5.90440D+01,  5.80840D+01,  9.70710D+01,  9.50925D+01,  0.00000D+00, &
           &  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
           &  9.60630D+01,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
           &  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00 /
@@ -126,7 +128,7 @@ DATA IonO2Cequiv(223:240) / 18*3.0D0 / !unused (other) cations
 DATA IonO2Cequiv(241) / 3.0D0 / !unused (other) anions
 DATA IonO2Cequiv(242) / 3.4D0 / !3.4D0 !Cl-
 DATA IonO2Cequiv(243) / 3.0D0 / !Br-
-DATA IonO2Cequiv(244) / 3.0D0 / !unused (other) anions
+DATA IonO2Cequiv(244) / 3.0D0 / !I-
 DATA IonO2Cequiv(245) / 2.8D0 / !NO3-
 DATA IonO2Cequiv(246:247) / 2*3.0D0 / !unused (other) anions
 DATA IonO2Cequiv(248) / 3.2D0 / !HSO4-
@@ -321,6 +323,7 @@ DATA IonO2Cequiv(261) / 4.0D0 / !SO4--
     subgrname(241) = "(F-)"      ;  subgrnameTeX(241) = "(F$^-$)"            ;  subgrnameHTML(241) = "(F<sup>-</sup>)"  !this ion is not yet supported for calculations in AIOMFAC
     subgrname(242) = "(Cl-)"     ;  subgrnameTeX(242) = "(Cl$^-$)"           ;  subgrnameHTML(242) = "(Cl<sup>-</sup>)"
     subgrname(243) = "(Br-)"     ;  subgrnameTeX(243) = "(Br$^-$)"           ;  subgrnameHTML(243) = "(Br<sup>-</sup>)"
+    subgrname(244) = "(I-)"      ;  subgrnameTeX(244) = "(I$^-$)"            ;  subgrnameHTML(244) = "(I<sup>-</sup>)"
     subgrname(245) = "(NO3-)"    ;  subgrnameTeX(245) = "(NO$_3$$^-$)"       ;  subgrnameHTML(245) = "(NO<sub>3</sub><sup>-</sup>)"
     subgrname(248) = "(HSO4-)"   ;  subgrnameTeX(248) = "(HSO$_4$$^-$)"      ;  subgrnameHTML(248) = "(HSO<sub>4</sub><sup>-</sup>)"
     subgrname(249) = "(CH3SO3-)" ;  subgrnameTeX(249) = "(CH$_3$SO$_3$$^-$)" ;  subgrnameHTML(249) = "(CH<sub>3</sub>SO<sub>3</sub><sup>-</sup>)"
@@ -442,7 +445,7 @@ DATA IonO2Cequiv(261) / 4.0D0 / !SO4--
 
     SUBROUTINE cpsubgrstring() !compsubgroups, compsubgroupsTeX as output 
 
-    USE ModSystemProp, ONLY : nindcomp, nneutral, nelectrol, ITAB, compsubgroups, compsubgroupsTeX, &
+    USE ModSystemProp, ONLY : nindcomp, nneutral, nelectrol, ITAB_dimflip, compsubgroups, compsubgroupsTeX, &
         & compsubgroupsHTML, ElectComps, ElectNues
 
     IMPLICIT NONE
@@ -466,9 +469,9 @@ DATA IonO2Cequiv(261) / 4.0D0 / !SO4--
         DO k = 1,152 !loop first over standard CHn subgroups and different types of special CHn subgroups for alcohols / polyols
             SELECT CASE(k)
             CASE(1:4,141:152) !CHn subgroups
-                IF (ITAB(i,k) > 0) THEN !subgroup is present
-                    IF (ITAB(i,k) > 1) THEN
-                        WRITE(cn,'(I4)') ITAB(i,k) !string for number of subgroups k
+                IF (ITAB_dimflip(k,i) > 0) THEN !subgroup is present
+                    IF (ITAB_dimflip(k,i) > 1) THEN
+                        WRITE(cn,'(I4)') ITAB_dimflip(k,i) !string for number of subgroups k
                         cn = ADJUSTL(cn) !adjust left and remove leading blanks
                         compsubgroups(i) = TRIM(compsubgroups(i))//TRIM(subgrname(k))//"_"//TRIM(cn) !add subgroup to string
                         compsubgroupsTeX(i) = TRIM(compsubgroupsTeX(i))//TRIM(subgrnameTeX(k))//"$_"//TRIM(cn)//"$"
@@ -486,9 +489,9 @@ DATA IonO2Cequiv(261) / 4.0D0 / !SO4--
         DO k = 5,200 !loop over the rest of implemented subgroups
             SELECT CASE(k)
             CASE(5:140,153:200) !non-CHn subgroups
-                IF (ITAB(i,k) > 0) THEN !subgroup is present
-                    IF (ITAB(i,k) > 1) THEN
-                        WRITE(cn,'(I4)') ITAB(i,k) !string for number of subgroups k
+                IF (ITAB_dimflip(k,i) > 0) THEN !subgroup is present
+                    IF (ITAB_dimflip(k,i) > 1) THEN
+                        WRITE(cn,'(I4)') ITAB_dimflip(k,i) !string for number of subgroups k
                         cn = ADJUSTL(cn) !adjust left and remove leading blanks
                         compsubgroups(i) = TRIM(compsubgroups(i))//TRIM(subgrname(k))//"_"//TRIM(cn) !add subgroup to string
                         compsubgroupsTeX(i) = TRIM(compsubgroupsTeX(i))//TRIM(subgrnameTeX(k))//"$_"//TRIM(cn)//"$"
@@ -557,17 +560,15 @@ DATA IonO2Cequiv(261) / 4.0D0 / !SO4--
     !****************************************************************************************
     PURE SUBROUTINE O2C_H2C_component(ind, compC, compH, compO, O2C, H2C)
 
-    USE ModSystemProp, ONLY : ITAB, SolvSubs, NGN
+    USE ModSystemProp, ONLY : ITAB_dimflip, SolvSubs, NGN
 
     IMPLICIT NONE
-						 															  
-												 
     !..................................
     !interface input:
-    INTEGER(4),INTENT(IN) :: ind  !the component index number in current mixture (e.g. index location of component in ITAB)
+    INTEGER(4),INTENT(IN) :: ind  !the component index number in current mixture (e.g. index location of component in ITAB_dimflip)
     REAL(8),INTENT(OUT) :: compC, compH, compO, O2C, H2C
     !local variables:
-    INTEGER(4) :: isub, k
+    INTEGER(4) :: isub, k, nsub
     !..................................    
     
     !(1) determine number of oxygen, hydrogen and carbon for a given compound
@@ -575,18 +576,15 @@ DATA IonO2Cequiv(261) / 4.0D0 / !SO4--
     compH = 0.0D0
     compC = 0.0D0
     !loop over subgroups to count the O, H, and C atoms:
-																   
     DO k = 1,NGN !loop over organic subgroups (SolvSubs excl. water)
         isub = SolvSubs(k) !subgoup
         IF (isub /= 16) THEN !exclude water (= subgroup 16) from the calculations
-														   
-            IF (ITAB(ind,isub) > 0) THEN !subgroup is present
-															   
-                compO = compO +REAL(ITAB(ind,isub)*subgO(isub), KIND=8)
-                compH = compH +REAL(ITAB(ind,isub)*subgH(isub), KIND=8)
-                compC = compC +REAL(ITAB(ind,isub)*subgC(isub), KIND=8)
+            nsub = ITAB_dimflip(isub,ind)
+            IF (nsub > 0) THEN !subgroup is present
+                compO = compO +REAL(nsub*subgO(isub), KIND=8)
+                compH = compH +REAL(nsub*subgH(isub), KIND=8)
+                compC = compC +REAL(nsub*subgC(isub), KIND=8)
             ENDIF
-				 
         ENDIF
     ENDDO
     

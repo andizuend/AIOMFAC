@@ -6,8 +6,8 @@
 !*                                                                                      *
 !*   :: Author & Copyright ::                                                           *
 !*   Andi Zuend,                                                                        *
-!*   IACETH, ETH Zurich,                                                                *
-!*   Div. Chemistry and Chemical Engineering, Caltech, Pasadena, CA, USA                *
+!*   IACETH, ETH Zurich, (2004 - 2009)                                                  *
+!*   Div. Chemistry and Chemical Engineering, Caltech, Pasadena, CA, USA (2009 - 2012)  *
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2005                                                            *
@@ -30,6 +30,7 @@
 !*   -  SUBROUTINE definemixtures                                                       *
 !*   -  SUBROUTINE defElectrolytes                                                      *
 !*   -  SUBROUTINE SetMolarMass                                                         *
+!*   -  SUBROUTINE syncITAB_dimflip                                                     *
 !*                                                                                      *
 !****************************************************************************************
 SUBMODULE (ModSystemProp) SubModDefSystem
@@ -77,21 +78,17 @@ IMPLICIT NONE
     !........................................................
 
     frominpfile = datafromfile
-    IF (.NOT. datafromfile) THEN 
-        !for AIOMFAC-web, ending up here would be an error...
-    ELSE
-        !(1b) allocate temporary arrays to contain the component information of the system:
-        ninputcomp = ninp
-        ALLOCATE( compID(ninputcomp+2), cpsubg(ninputcomp+2,topsubno), cpname(ninputcomp) ) 
-        compID = 1500 !in this input file case
-        cpsubg = 0
-        cpname = "!?!"
-        !(2b) transfer data from input via interface:
-        DO i = 1,topsubno
-            cpsubg(1:ninputcomp,i) = cpsubginp(1:ninputcomp, i)
-        ENDDO
-        cpname(1:ninputcomp) = cpnameinp(1:ninputcomp)
-    ENDIF
+    !(1b) allocate temporary arrays to contain the component information of the system:
+    ninputcomp = ninp
+    ALLOCATE( compID(ninputcomp+2), cpsubg(ninputcomp+2,topsubno), cpname(ninputcomp) ) 
+    compID = 1500 !in this input file case
+    cpsubg = 0
+    cpname = "!?!"
+    !(2b) transfer data from input via interface:
+    DO i = 1,topsubno
+        cpsubg(1:ninputcomp,i) = cpsubginp(1:ninputcomp, i)
+    ENDDO
+    cpname(1:ninputcomp) = cpnameinp(1:ninputcomp)
     ninput = ninputcomp !save original number of cpsubg-defined input components; i.e. prior to potential automatic changes to ITAB.
 
     !(3) check whether H+, HSO4- and SO4-- are part of the system or could be forming, which may then require an adjustment to cpsubg.
@@ -226,28 +223,29 @@ IMPLICIT NONE
 
     !Interface variables:
     INTEGER(4),INTENT(IN) :: ndi, ninputcomp    
-    INTEGER(4),DIMENSION(:),INTENT(IN) :: compID    !DIMENSION(ninputcomp)
-    INTEGER(4),DIMENSION(:,:),INTENT(IN) :: cpsubg  !DIMENSION(ninputcomp,topsubno) list of component subgroups and corresponding quantity (e.g. from input file or from dataset_components)
+    INTEGER(4),DIMENSION(ninputcomp),INTENT(IN) :: compID           
+    INTEGER(4),DIMENSION(ninputcomp,topsubno),INTENT(IN) :: cpsubg  !list of component subgroups and corresponding quantity (e.g. from input file or from dataset_components)
     !Local variables:
     INTEGER(4) :: i, II, J, JJ, K, Icheck, countall, q, qq, ID
-    INTEGER(4),DIMENSION(200) :: SolvSubs2 !temporary array for solvent subgroups (we allow a maximum of 200)
+    INTEGER(4),DIMENSION(200) :: SolvSubs2                          !temporary array for solvent subgroups (we allow a maximum of 200)
     INTEGER(4),DIMENSION(ninputcomp*2) :: ElectSubs2
     INTEGER(4),DIMENSION(201:topsubno) :: ElectPos
     LOGICAL(4) :: already1, already2
     !--------------------------------------
 
     !initialize arrays and parameters:
-    nd = ndi  !nd = 1 for web-version (single data file / mixture only)
-    solvmixrefnd = .false. !for web-version
+    nd = 1 !for web-version (single data file / mixture only)
+    solvmixrefnd = .false.
     errorflagmix = 0
     IF (ALLOCATED(ITAB)) THEN
-        DEALLOCATE(ITAB, ITABsr, ITABMG, compN, Imaingroup, maingrindexofsubgr)
+        DEALLOCATE(ITAB, ITABsr, ITABMG, ITAB_dimflip, compN, Imaingroup, maingrindexofsubgr)
     ENDIF
-    ALLOCATE( ITAB(ninputcomp,topsubno), compN(ninputcomp) )
+    ALLOCATE( ITAB(ninputcomp, topsubno), ITAB_dimflip(topsubno, ninputcomp), compN(ninputcomp) )
     !assign the different mixture components from interface input data to ITAB:
     DO i = 1,topsubno
         ITAB(:,i) = cpsubg(:,i) !transfer data to module array ITAB
     ENDDO
+    CALL syncITAB_dimflip()
     CompN = compID
 
     !count the number of neutral components, nneutral:
@@ -255,7 +253,7 @@ IMPLICIT NONE
     Icheck = 0
     DO i = 1,ninputcomp
         DO J = 1,200
-            IF (ITAB(i,J) /= 0) THEN
+            IF (ITAB_dimflip(J,i) /= 0) THEN
                 IF (Icheck /= i) THEN
                     nneutral = nneutral+1
                     IF (i > nneutral) THEN
@@ -275,7 +273,7 @@ IMPLICIT NONE
     Icheck = 0
     DO i = nneutral+1,ninputcomp
         DO J = 201,topsubno
-            IF (ITAB(i,J) /= 0) THEN
+            IF (ITAB_dimflip(J,i) /= 0) THEN
                 IF (Icheck /= i) THEN
                     nelectrol = nelectrol+1 !count the same ion only once when existing in different components
                     IF (i-nneutral > nelectrol) THEN
@@ -335,6 +333,12 @@ IMPLICIT NONE
     !check and set switch for presence/absence of water as a component in the system:
     IF (ANY(SolvSubs(1:NGN) == 16)) THEN !water is present
         waterpresent = .true.
+        DO i = 1,ninputcomp
+            IF (ITAB(i,16) == 1) THEN
+                CompN(i) = 401 !use for cases where input files is used to assign components
+                EXIT
+            ENDIF
+        ENDDO
     ELSE
         waterpresent = .false.
     ENDIF
@@ -346,7 +350,7 @@ IMPLICIT NONE
     DO i = nneutral+1,ninputcomp
         DO J = 1,NGS
             K = ElectSubs2(J)
-            IF (ITAB(i,K) > 0 .AND. ElectPos(K) == 0) THEN  !to make sure that every elect. subgroup is only checked once.
+            IF (ITAB_dimflip(K,i) > 0 .AND. ElectPos(K) == 0) THEN  !to make sure that every elect. subgroup is only checked once.
                 ElectPos(K) = q !the position in the later array of ElectSubs, so that the anions and cations in ElectSubs correspond.
                 q = q+1
             ENDIF
@@ -404,7 +408,7 @@ IMPLICIT NONE
                     ENDIF
                 ENDIF
             ENDDO
-        ELSE IF (K <= 261 .AND. K > 240) THEN !K > 240
+        ELSE IF (K <= topsubno .AND. K > 240) THEN !K > 240
             DO qq = 1,NGS
                 IF (.NOT. already2) THEN
                     IF (Ianion(qq) == 0 .OR. Ianion(qq) == K) THEN
@@ -468,7 +472,7 @@ IMPLICIT NONE
         DO J = 1,NGN
             II = SolvSubs(J)
             JJ = NKTAB(II)
-            ITABMG(i,JJ) = ITABMG(i,JJ) + ITAB(i,II)
+            ITABMG(i,JJ) = ITABMG(i,JJ) + ITAB_dimflip(II,i)
             Imaingroup(J) = JJ  !list of main groups (here not yet filtered and sorted)
         ENDDO
         !check input correctness with respect to OH groups and special CHn groups bonded to OH groups:
@@ -531,17 +535,17 @@ IMPLICIT NONE
         !!i = SUM(MAXLOC(ITAB(nneutral+1:nneutral+nelectrol, ID))) +nneutral
         IF (ID > 200 .AND. ID < 240) THEN !cation
             K = K+1
-            ITABsr(K,ID) = 1 !ITAB(i,ID)  !transfer cation info; just set to one ion, actual amount is coming from molality of the ion
+            ITABsr(K,ID) = 1   !transfer cation info; just set to one ion, actual amount is coming from molality of the ion
         ELSE IF (ID > 240) THEN !anion
             JJ = JJ+1
-            ITABsr(JJ,ID) = 1 !ITAB(i,ID)  !transfer anion info; just set to one ion, actual ion amount is coming from molality of the ion
+            ITABsr(JJ,ID) = 1  !transfer anion info; just set to one ion, actual ion amount is coming from molality of the ion
         ENDIF
     ENDDO
     !Transfer of information for neutrals from ITAB to ITABsr:
     DO i = 1,nneutral
         DO J = 1,NGN
             JJ = SolvSubs(J)
-            ITABsr(i,JJ) = ITAB(i,JJ)  !now the whole ITABsr list is up to date.
+            ITABsr(i,JJ) = ITAB_dimflip(JJ,i)  !update ITABsr list.
         ENDDO
     ENDDO
 
@@ -554,6 +558,7 @@ IMPLICIT NONE
     ALLOCATE( OtoCratio(nindcomp), HtoCratio(nindcomp), compname(nindcomp), compnameTeX(nindcomp), ionname(NGS), ionnameTeX(NGS) )
     !set the name strings for the different independent components and the O:C ratio of the neutrals (when set already):
     CALL names_mix(nindcomp, nneutral, CompN, compname, compnameTeX, ionname, ionnameTeX, OtoCratio, HtoCratio) !compname contains the name strings of all independent components of the present mixture nd
+
     CALL cpsubgrstring() !generate for each component a subgroup-string stored in compsubgroups, compsubgroupsTeX, and compsubgroupsHTML
 
     !define the middle range (MR) coefficients of the actual mixture:
@@ -633,11 +638,11 @@ IMPLICIT NONE
             !loop over ElectSubs(K)
             ion = ElectSubs(J)
             IF (KK == 0 .AND. ion > 200 .AND. ion < 240) THEN
-                IF (ITAB(nneutral+i,ion) > 0) THEN
+                IF (ITAB_dimflip(ion,nneutral+i) > 0) THEN
                     KK = ion
                 ENDIF
             ELSE IF (JJ == 0 .AND. ion > 240 .AND. ion <= topsubno) THEN
-                IF (ITAB(nneutral+i,ion) > 0) THEN
+                IF (ITAB_dimflip(ion,nneutral+i) > 0) THEN
                     JJ = ion
                 ENDIF
             ENDIF
@@ -763,6 +768,24 @@ IMPLICIT NONE
     ENDDO
 
     END SUBROUTINE SetMolarMass
+!==========================================================================================================================
+   
+    !************************************************************************
+    !*                                                                      *
+    !*  Synchronize data between ITAB and ITAB_dimflip, which share the     *
+    !*  same data but in flipped storage order (1st vs 2nd dimension).      *
+    !*                                                                      *
+    !************************************************************************
+    MODULE SUBROUTINE syncITAB_dimflip()
+    
+    IMPLICIT NONE
+    INTEGER(4) :: i
+    
+    DO CONCURRENT (i = 1:topsubno)
+        ITAB_dimflip(i,:) = ITAB(:,i)
+    ENDDO
+    
+    END SUBROUTINE syncITAB_dimflip
 !==========================================================================================================================
     
 END SUBMODULE SubModDefSystem

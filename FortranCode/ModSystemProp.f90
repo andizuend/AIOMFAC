@@ -6,8 +6,8 @@
 !*                                                                                      *
 !*   :: Author & Copyright ::                                                           *
 !*   Andi Zuend,                                                                        *
-!*   IACETH, ETH Zurich,                                                                *
-!*   Div. Chemistry and Chemical Engineering, Caltech, Pasadena, CA, USA                *
+!*   IACETH, ETH Zurich, (2004 - 2009)                                                  *
+!*   Div. Chemistry and Chemical Engineering, Caltech, Pasadena, CA, USA (2009 - 2012)  *
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2005                                                            *
@@ -49,17 +49,17 @@ MODULE ModSystemProp
 IMPLICIT NONE
 
 INTEGER(4),PUBLIC,PARAMETER :: Nmaingroups = 75 !total number of SR (UNIFAC) main groups
-INTEGER(4),PUBLIC,PARAMETER :: topsubno = 261 !index no. of the last subgroup considered (top boundary of ITAB subgroups)
+INTEGER(4),PUBLIC,PARAMETER :: topsubno = 261   !index no. of the last subgroup considered (top boundary of ITAB subgroups)
 !--
 INTEGER(4),PUBLIC :: nd, NGS, NGN, NGI, NG, NKNpNGS, nindcomp, nneutral, nelectrol, ninput, errorflagmix, errorflagcalc
-INTEGER(4),PUBLIC :: Nanion, Ncation  !Nanion = number of anions, Ncation = number of cations
+INTEGER(4),PUBLIC :: Nanion, Ncation     !Nanion = number of anions, Ncation = number of cations
 INTEGER(4),PUBLIC :: idH, idHSO4, idSO4  !the index locations of these ions in the cation and anion arrays (e.g., in SMC, and SMA); idH = CatNr(205), idHSO4 = AnNr(248), idSO4 = AnNr(261)
 INTEGER(4),DIMENSION(:),ALLOCATABLE,PUBLIC :: CompN
 INTEGER(4),DIMENSION(:,:),ALLOCATABLE,PUBLIC :: ElectComps, ElectNues
 INTEGER(4),DIMENSION(:),ALLOCATABLE,PUBLIC :: Ication, Ianion, ElectSubs, SolvSubs, AllSubs
 INTEGER(4),DIMENSION(:),ALLOCATABLE,PUBLIC :: Imaingroup, maingrindexofsubgr
 INTEGER(4),DIMENSION(201:topsubno),PUBLIC :: CatNr, AnNr  !CatNr, AnNr: saves present mixture index entry of a certain ion related to Ication or Ianion list (whether it is cation 1, 2, 3,...).
-INTEGER(4),DIMENSION(:,:),ALLOCATABLE,PUBLIC :: ITAB, ITABsr, ITABMG
+INTEGER(4),DIMENSION(:,:),ALLOCATABLE,PUBLIC :: ITAB, ITABsr, ITABMG, ITAB_dimflip
 !--
 REAL(8),PARAMETER,PUBLIC :: Rgas = 8.3144598D0 !the universal gas constant in J/(K*mol); 8.314 4598  according to NIST (2015)
 REAL(8),DIMENSION(:),ALLOCATABLE,PUBLIC :: cationZ, anionZ !cationZ and anionZ are the integer charges of the cations and anions in current mixture ion order (as in Ication, Ianion);
@@ -90,8 +90,8 @@ INTERFACE
     !--
     MODULE SUBROUTINE definemixtures(ndi, ninputcomp, compID, cpsubg)
         INTEGER(4),INTENT(IN) :: ndi, ninputcomp
-        INTEGER(4),DIMENSION(:),INTENT(IN) :: compID
-        INTEGER(4),DIMENSION(:,:),INTENT(IN) :: cpsubg
+        INTEGER(4),DIMENSION(ninputcomp),INTENT(IN) :: compID
+        INTEGER(4),DIMENSION(ninputcomp,topsubno),INTENT(IN) :: cpsubg 
     END SUBROUTINE definemixtures
     !--
     MODULE SUBROUTINE defElectrolytes(nneutral, NGS, nelectrol)
@@ -102,15 +102,18 @@ INTERFACE
     PURE MODULE SUBROUTINE SetMolarMass(MolarM)
         REAL(8),DIMENSION(:),INTENT(OUT) :: MolarM
     END SUBROUTINE SetMolarMass
+    !--
+    MODULE SUBROUTINE syncITAB_dimflip()
+    END SUBROUTINE syncITAB_dimflip
 END INTERFACE
 !....................................................................................
 
 !$OMP THREADPRIVATE(nd, nindcomp, nelectrol, nneutral, ninput, NGS, NGN, NGI, NG, NKNpNGS, Nanion,  &
     !$OMP & Ncation, Mmass, idH, idHSO4, idSO4, CompN, Ication, Ianion, ElectSubs, SolvSubs, AllSubs, &
-    !$OMP & Imaingroup, CatNr, AnNr, ITAB, ITABsr, ITABMG, OtoCratio, HtoCratio, cpname, compname, compnameTeX, &
-    !$OMP & compsubgroups, compsubgroupsTeX, compsubgroupsHTML, ionname, ionnameTeX, solvmixrefnd, frominpfile, &
-    !$OMP & bisulfsyst, waterpresent, calcviscosity, elpresent, isPEGsystem, maingrindexofsubgr, ElectComps,  &
-    !$OMP & ElectNues, ElectVolatile, IAPcoeffs, KVLE_298K, K_el, SubGroupMW, ElectO2Cequiv, cationZ, anionZ, &
-    !$OMP & errorflagmix, errorflagcalc, nuestoich)
+    !$OMP & Imaingroup, CatNr, AnNr, ITAB, ITAB_dimflip, ITABsr, ITABMG, OtoCratio, HtoCratio, cpname, compname,  &
+    !$OMP & compnameTeX, compsubgroups, compsubgroupsTeX, compsubgroupsHTML, ionname, ionnameTeX, solvmixrefnd,  &
+    !$OMP & frominpfile, bisulfsyst, waterpresent, calcviscosity, elpresent, isPEGsystem, maingrindexofsubgr,   &
+    !$OMP & ElectComps, ElectNues, ElectVolatile, IAPcoeffs, KVLE_298K, K_el, SubGroupMW, ElectO2Cequiv, cationZ,  &
+    !$OMP & anionZ, errorflagmix, errorflagcalc, nuestoich)
 
 END MODULE ModSystemProp

@@ -124,18 +124,21 @@ DATA  cTABna(1:75,21) /  1.130960D-01,  2.717248D-01,  6.332340D-02, -7.777778D+
         & nd, nelectrol, NGI, NGN, nneutral, solvmixrefnd, SolvSubs, SubGroupMW, errorflagcalc
     USE ModAIOMFACvar, ONLY : DebyeHrefresh, galrln, gamrln, gclrln, gcmrln, gnlrln, gnmrln, &
         & Ionicstrength, meanSolventMW, SumIonMolalities, SMA, SMC, solvmixcorrMRa, solvmixcorrMRc, &
-        & T_K, Tmolal, TmolalSolvmix, wtf, XN
+        & T_K, Tmolal, TmolalSolvmix, XN
 
     IMPLICIT NONE
     !Local Variables
-    INTEGER(4) :: I, II, J, K, nq
-    REAL(8) :: A, b, bb, SI, SI2, Z, Test11, Test12, summolarsaltmix, TermI, Sumkion1,  &
-    & sumca1, sumq1, sumkion2, sumbsca, sumcnca, sumcsca, sumqc1, SumRc, sumxg, densmix, & 
-    & dielmix, SumQa2, lrw1, twoZ, ZSI, avgmaingrMW, Mavg
+    INTEGER(4) :: I, II, J, K
+    REAL(8) :: A, b, bb, SI, SI2, Z, Test11, Test12, TermI, Sumkion1,  &
+    & sumca1, sumq1, sumkion2, sumbsca, sumcnca, sumcsca, sumqc1, SumRc, sumxg, SumQa2, & 
+    & lrw1, twoZ, ZSI, avgmaingrMW, Mavg
     REAL(8),PARAMETER :: dtiny = EPSILON(1.0D0)
     REAL(8),PARAMETER :: Mwater = 0.01801528D0 !the molar mass of water [kg/mol]
     REAL(8),PARAMETER :: cDens = 997.0D0 !density of water (kg/m^3) at 298.15 K
+    REAL(8),PARAMETER :: densmix = cDens  !here by design the density of reference solvent water at 298.15 K is used
+    REAL(8),PARAMETER :: sqrtDensmix = SQRT(densmix)
     REAL(8),PARAMETER :: cDiel = 78.54D0 !static dielectric const. (= relative static permittivity) of water at 298.15 K
+    REAL(8),PARAMETER :: dielmix = cDiel
     REAL(8),DIMENSION(NGI) :: SumABca, SumBcx, SumBax, SumCBca, ZA, ZA2, ZC2, smcsma, oexp1, oexp2
     REAL(8),DIMENSION(NGN) :: subgroupxsf, mgroupxsf, mgroupMK, SumBM, gkmrln
     REAL(8),DIMENSION(NGI,NGI) :: BSca, CSca, Bca, Cnca
@@ -174,12 +177,12 @@ DATA  cTABna(1:75,21) /  1.130960D-01,  2.717248D-01,  6.332340D-02, -7.777778D+
 
     !Calculation of the density of the salt free mixture
     !**--++1 water LR 
-    densmix = cDens !SUM(compVF(1:nneutral)*cDens(1:nneutral))
-    !Calculation of the dielectric constant of the salt free mixture:
-    dielmix = cDiel != SUM(compVF(1:nneutral)*cDiel(1:nneutral))
+    !densmix = cDens !SUM(compVF(1:nneutral)*cDens(1:nneutral))
+    !!Calculation of the dielectric constant of the salt free mixture:
+    !dielmix = cDiel != SUM(compVF(1:nneutral)*cDiel(1:nneutral))
     IF (DebyeHrefresh) THEN !only calculate the first time and when T_K changes significantly
-        A_DebyeHw = 1.327757D5*SQRT(densmix)/((dielmix*T_K)**1.5D0)
-        B_DebyeHw = 6.359696D0*SQRT(densmix)/((dielmix*T_K)**0.5D0)
+        A_DebyeHw = 1.327757D5*sqrtDensmix/((dielmix*T_K)**1.5D0)
+        B_DebyeHw = 6.359696D0*sqrtDensmix/((dielmix*T_K)**0.5D0)
     ENDIF
     A = A_DebyeHw
     b = B_DebyeHw
@@ -194,7 +197,7 @@ DATA  cTABna(1:75,21) /  1.130960D-01,  2.717248D-01,  6.332340D-02, -7.777778D+
     !Calculation of Z (number of charges per kg solvent):
     Z = SUM( SMA(1:NGI)*ZA(1:NGI) + SMC(1:NGI)*cationZ(1:NGI) )
     !for debugging tests:
-    Test11 = SUM(SMA(1:NGI)*ZA(1:NGI)) !Test of the electrical charge neutrality condition in the solution
+    Test11 = SUM(SMA(1:NGI)*ZA(1:NGI)) !Test of the electrical charge neutrality condition in the solution:  !test test
     Test12 = SUM(SMC(1:NGI)*cationZ(1:NGI))
     Test11 = Test11-Test12
     IF (SI < 1.0D6 .AND. ABS(Test11) > 1.0D-9) THEN  !test
@@ -224,16 +227,16 @@ DATA  cTABna(1:75,21) /  1.130960D-01,  2.717248D-01,  6.332340D-02, -7.777778D+
         SumABca = 0.0D0
         !Calculation of Bca, Cnca, Bkionc and Bkiona:
         lrw1 = -0.5D0/SI2
-        DO CONCURRENT (J = 1:NGI)
+        DO CONCURRENT (J = 1:NGI) !DO J = 1,NGI
             oexp1(1:NGI) = omega(1:NGI,J)*SI2 
             WHERE (oexp1(1:NGI) > 300.0D0) !prevent floating point underflow as the second term becomes practically zero:
-                Bca(1:NGI,J) = bac(1:NGI,J) 
+                Bca(1:NGI,J) = bac(1:NGI,J) !+cac(1:NGI,J)*EXP(-300.0D0)
             ELSEWHERE
                 Bca(1:NGI,J) = bac(1:NGI,J) +cac(1:NGI,J)*EXP(-oexp1(1:NGI))
             ENDWHERE
             oexp2(1:NGI) = omega2(1:NGI,J)*SI2
             WHERE (oexp2(1:NGI) > 300.0D0) !prevent floating point underflow as the second term becomes practically zero:
-                Cnca(1:NGI,J) = cnac1(1:NGI,J)
+                Cnca(1:NGI,J) = cnac1(1:NGI,J) !+cnac2(1:NGI,J)*EXP(-300.0D0)
             ELSEWHERE
                 Cnca(1:NGI,J) = cnac1(1:NGI,J) +cnac2(1:NGI,J)*EXP(-oexp2(1:NGI))
             ENDWHERE
@@ -242,7 +245,7 @@ DATA  cTABna(1:75,21) /  1.130960D-01,  2.717248D-01,  6.332340D-02, -7.777778D+
             CSca(1:NGI,J) = lrw1*omega2(1:NGI,J)*(Cnca(1:NGI,J)-cnac1(1:NGI,J))
         ENDDO
 
-        DO CONCURRENT (J = 1:NGI) 
+        DO CONCURRENT (J = 1:NGI) !DO J = 1,NGI
             IF (SI2 > 250.0D0) THEN !prevent floating point underflow as the second term becomes practically zero:
                 Bkionc(1:NGN,J) = bnc(1:NGN,J)
                 Bkiona(1:NGN,J) = bna(1:NGN,J)
@@ -259,7 +262,7 @@ DATA  cTABna(1:75,21) /  1.130960D-01,  2.717248D-01,  6.332340D-02, -7.777778D+
         avgmaingrMW = SUM(mgroupMK*mgroupxsf) !this is the mean main group molar mass -- and not the mean solvent molar mass!
 
         !Calculation of the midrange part for the neutrals:
-        DO CONCURRENT (I = 1:NGN)
+        DO CONCURRENT (I = 1:NGN) !DO I = 1,NGN
             SumBm(I) = SUM(Bkiona(I,1:NGI)*SMA(1:NGI) +Bkionc(I,1:NGI)*SMC(1:NGI))
         ENDDO
         Sumkion1 = 0.0D0
@@ -316,8 +319,8 @@ DATA  cTABna(1:75,21) /  1.130960D-01,  2.717248D-01,  6.332340D-02, -7.777778D+
         !Calculation of the middle-range contribution part for the cations and anions: @@##
         SumBcx = 0.0D0
         SumBax = 0.0D0
-        DO CONCURRENT (I = 1:NGI)
-            SumBCx(I) = SUM(Bkionc(1:NGN,I)*mgroupxsf(1:NGN))
+        DO CONCURRENT (I = 1:NGI) !DO I = 1,NGI
+            SumBCx(I) = SUM(Bkionc(1:NGN,I)*mgroupxsf(1:NGN)) 
             SumBax(I) = SUM(Bkiona(1:NGN,I)*mgroupxsf(1:NGN)) 
         ENDDO
         SumBsCA = 0.0D0
@@ -414,7 +417,7 @@ DATA  cTABna(1:75,21) /  1.130960D-01,  2.717248D-01,  6.332340D-02, -7.777778D+
     !****************************************************************************************
     SUBROUTINE MRinteractcoeff()
    
-    !Module variables:
+    !Public variables:  
     USE ModSystemProp, ONLY : NGN, NGI, NG, Ication, Ianion, Imaingroup, Ncation, isPEGsystem, &
         & CatNr, AnNr, errorflagmix, frominpfile 
     
@@ -591,7 +594,7 @@ DATA  cTABna(1:75,21) /  1.130960D-01,  2.717248D-01,  6.332340D-02, -7.777778D+
 
     END SUBROUTINE MRinteractcoeff
 !==========================================================================================================================
- 
+    
     
     !****************************************************************************************
     !*   :: Purpose ::                                                                      *
@@ -665,7 +668,7 @@ DATA  cTABna(1:75,21) /  1.130960D-01,  2.717248D-01,  6.332340D-02, -7.777778D+
     cn2TABAC(1,21) = -0.263257805913055D0 
     omega2TAB(1,21) = 1.31696686093901D0
     TABhighestwtf(1,21) = 0.25D0
-    TABKsp(1,21) = 3.25D0 ![molal basis] molal ion activity product at the solubility limit @ 298.15 K 
+    TABKsp(1,21) = 3.25D0 ![molal basis] molal ion activity product at the solubility limit @ 298.15 K  
     
     !Li+ <--> HSO4-  using an analogy approach with the (HSO4- <--> H+) parameters
     bTABAC(1,8) = 2.15532299D-02  
@@ -675,7 +678,7 @@ DATA  cTABna(1:75,21) /  1.130960D-01,  2.717248D-01,  6.332340D-02, -7.777778D+
     cn2TABAC(1,8) = 7.03842440D-02
     omega2TAB(1,8) = 7.14194282D-01      
     TABhighestwtf(1,8) = 0.82D0
-    TABKsp(1,8) = 1.0D28 ![molal basis]    here just set to indicate suppressed solid formation [not true value]  
+    TABKsp(1,8) = 1.0D28 ![molal basis]    here just set to indicate suppressed solid formation [not true value] 
 
     !Na+ <-> Cl-          4P JUN 2007         
     bTABAC(2,2) = 5.374079546760321D-002 

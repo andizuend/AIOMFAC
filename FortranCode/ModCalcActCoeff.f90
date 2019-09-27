@@ -32,7 +32,7 @@
 !*                 CONTAINS:  -  SUBROUTINE DiffKsulfuricDissoc                         *
 !*                            -  FUNCTION   fHSO4dissoc                                 *
 !*   -  SUBROUTINE DeltaActivities                                                      *
-!*   -  SUBROUTINE partialdactcoeff 			 
+!*   -  SUBROUTINE partialdactcoeff                                                     *
 !*                                                                                      *
 !****************************************************************************************
 MODULE ModCalcActCoeff
@@ -82,7 +82,7 @@ IMPLICIT NONE
     REAL(8),PARAMETER :: lnhuge = 0.49D0*LOG(HUGE(1.0D0))
     !........................................................................................................
 
-    wtf = WTFin  !input concentration is in mass fractions; other concentration scales are derived from this.
+    wtf = WTFin  !input concentration is in mass fractions; other concentration scales are derived (when needed) from this.
     T_K = TKelvin
     !initialize the variables/arrays:
     errorflagcalc = 0
@@ -117,13 +117,13 @@ IMPLICIT NONE
     actcoeff_a = 0.0D0
     actcoeff_ion = 0.0D0 !to save activity coefficients of ions at their ID number
     molality_ion = 0.0D0
-    
+
     !ln of the activity coefficient for the neutrals:
     DO CONCURRENT (I = 1:nneutral) !DO I = 1,nneutral
         IF (wtf(I) > dtiny) THEN
             lnactcoeff_n(I) = gnmrln(I) +gnsrln(I) +gnlrln(I)
             IF (lnactcoeff_n(I) < -340.0D0 .OR. lnactcoeff_n(I) > 340.0D0) THEN 
-                trunc = DINT(lnactcoeff_n(I)) !get the truncated real value of lnactcoeff_n(I)
+                trunc = AINT(lnactcoeff_n(I)) !get the truncated real value of lnactcoeff_n(I)
                 IF (lnactcoeff_n(I) < -340.0D0) THEN
                     actcoeff_n(I) = EXP(-340.0D0 + 3.0D0*(lnactcoeff_n(I) - trunc))    
                 ELSE
@@ -143,7 +143,7 @@ IMPLICIT NONE
                 lnactcoeff_c(I) = lnactcoeff_c(I) +solvmixcorrMRc(I) +Tmolal -TmolalSolvmix    
             ENDIF
             IF (lnactcoeff_c(I) < -340.0D0 .OR. lnactcoeff_c(I) > 340.0D0) THEN 
-                trunc = DINT(lnactcoeff_c(I)) !get the truncated real value of lnactcoeff_c(I)
+                trunc = AINT(lnactcoeff_c(I)) !get the truncated real value of lnactcoeff_c(I)
                 IF (lnactcoeff_c(I) < -340.0D0) THEN
                     actcoeff_c(I) = EXP(-340.0D0 + 3.0D0*(lnactcoeff_c(I) -trunc))    
                 ELSE
@@ -167,7 +167,7 @@ IMPLICIT NONE
                 lnactcoeff_a(I) = lnactcoeff_a(I) +solvmixcorrMRa(I)+ Tmolal -TmolalSolvmix 
             ENDIF
             IF (lnactcoeff_a(I) < -340.0D0 .OR. lnactcoeff_a(I) > 340.0D0) THEN 
-                trunc = DINT(lnactcoeff_a(I)) !get the truncated real value of lnactcoeff_a(I)
+                trunc = AINT(lnactcoeff_a(I)) !get the truncated real value of lnactcoeff_a(I)
                 IF (lnactcoeff_a(I) < -340.0D0) THEN
                     actcoeff_a(I) = EXP(-340.0D0 + 3.0D0*(lnactcoeff_a(I) -trunc))  
                 ELSE
@@ -185,6 +185,19 @@ IMPLICIT NONE
 
     Xwdissoc = x(1)
     activity(1:nneutral) = actcoeff_n(1:nneutral)*x(1:nneutral)
+
+    !!!notify exception in case of floating point overflow problems and return:
+    !!IF (floatingproblem) THEN
+    !!    errorflagcalc = 6
+    !!    activity(1:nindcomp) = -9999.9D0
+    !!    actcoeff_n(1:nneutral) = -9999.9D0
+    !!    actcoeff_c(1:nelectrol) = -9999.9D0
+    !!    actcoeff_a(1:nelectrol) = -9999.9D0
+    !!    meanmolalactcoeff(1:nelectrol) = -9999.9D0
+    !!    ionactivityprod(1:nelectrol) = -9999.9D0
+    !!    lnmeanmactcoeff = -9999.9D0
+    !!    RETURN
+    !!ENDIF
 
     !loop over all identified electrolyte components and calculate the corresponding mean molal activity coefficient and molal ion activity product:
     ii = 0
@@ -208,7 +221,7 @@ IMPLICIT NONE
                     IF (ma1 < lnhuge) THEN !no floating point overflow problem expected
                         meanmolalactcoeff(ii) = EXP(ma1) !the mean molal activity coefficient of the ions of "electrolyte unit" ii
                     ELSE !numerical issue, so output a large number (smaller than overflow risk)
-                        trunc = DINT(ma1)
+                        trunc = AINT(ma1)
                         meanmolalactcoeff(ii) = EXP(lnhuge + 3.0D0*(ma1 - trunc))
                         errorflagcalc = 7
                     ENDIF
@@ -221,12 +234,12 @@ IMPLICIT NONE
                     IF (t1 < lnhuge) THEN !no floating point overflow problem expected
                         ionactivityprod(ii) = EXP(t1) !the mean molal activity coefficient of the ions of "electrolyte unit" ii
                     ELSE !numerical issue, so output a large number (smaller than overflow risk)
-                        trunc = DINT(t1)
+                        trunc = AINT(t1)
                         ionactivityprod(ii) = EXP(lnhuge + 3.0D0*(t1 - trunc))
                         errorflagcalc = 7
                     ENDIF
                 ELSE !underflow risk
-                    trunc = DINT(t1)
+                    trunc = AINT(t1)
                     ionactivityprod(ii) = EXP(lntiny + 3.0D0*(t1 - trunc)) !i.e. tiny number, almost zero
                     errorflagcalc = 7
                 ENDIF
@@ -298,7 +311,7 @@ IMPLICIT NONE
     X(NKNpNcat+1:NKNpNcat+Nanion) = SMA(1:Nanion)/summolal     !Mole fractios of the anions
 
     !check whether temperature-dependent parameters need to be updated in SR and LR parts:
-    IF (ABS(T_K - lastTK) > 1.0D-2) THEN !detected a change in temperature => PsiT and other coeff. need to be updated
+    IF (ABS(T_K - lastTK) > 1.0D-2) THEN !detected a change in temperature --> PsiT and other coeff. need to be updated
         refreshgref = .true.
         DebyeHrefresh = .true.
         lastTK = T_K
@@ -519,7 +532,7 @@ IMPLICIT NONE
     
         !****************************************************************************************
         !*   :: Purpose ::                                                                      *
-        !*   Subroutine to calculate the difference between the literature value (lnKHSO4atT)   *
+        !*   Subroutine to calculate the difference between the reference value (lnKHSO4atT)    *
         !*   and the estimated value of the dissociation constant of HSO4- <-> H+ + SO4--.      *
         !*                                                                                      *
         !*   :: Author & Copyright ::                                                           *
@@ -611,9 +624,8 @@ IMPLICIT NONE
         ELSE
             lngammaSulf = 0.0D0
         ENDIF
-        !estimate the right molalities of SO4--, HSO4- and H+ to get agreement with
-        !the literature value of the dissociation constant.
-
+        !estimate the molalities of SO4--, HSO4- and H+ to get agreement 
+        !with the reference value of the dissociation constant.
         lngKbisulf = lngammaH +lngammaSulf -lngammaHydSulf
 
         !comparison, logarithmic "rel." deviation:
@@ -637,7 +649,7 @@ IMPLICIT NONE
 
         END SUBROUTINE DiffKsulfuricDissoc 
         !--------------------------------------------------------------------------------------------------
-
+    
         FUNCTION fHSO4dissoc(mHSO4in) !internal wrapper function for the computation of Diffk as a function of mHSO4 input.
     
         IMPLICIT NONE
@@ -666,10 +678,10 @@ IMPLICIT NONE
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2010                                                            *
-    !*   -> latest changes: 2018/05/31                                                      *
+    !*   -> latest changes: 2019/09/24                                                      *
     !*                                                                                      *
     !**************************************************************************************** 
-    SUBROUTINE DeltaActivities(xin, TKelvin, dact, dactcoeff)
+    SUBROUTINE DeltaActivities(xin, TKelvin, onlyDeltaVisc, dact, dactcoeff)
 
     USE ModSystemProp, ONLY : nindcomp
     USE ModAIOMFACvar, ONLY : deltaetamix
@@ -678,16 +690,17 @@ IMPLICIT NONE
 
     !interface variables:
     REAL(8),DIMENSION(nindcomp),INTENT(IN) :: xin
-    REAL(8),DIMENSION(nindcomp),INTENT(OUT) :: dact, dactcoeff
     REAL(8),INTENT(IN) :: TKelvin
+    LOGICAL(4),INTENT(IN) :: onlyDeltaVisc !default = .false.; this is set true when only the first component is varied; use only for delta(etamix) calculation.
+    REAL(8),DIMENSION(nindcomp),INTENT(OUT) :: dact, dactcoeff
     !local variables:
     INTEGER(4) :: ni, j
     LOGICAL(4) :: xinputtype
     REAL(8),DIMENSION(nindcomp) :: xinit
-    REAL(8),DIMENSION(nindcomp,nindcomp) :: partdact, partdactcoeff
+    REAL(8),DIMENSION(:,:),ALLOCATABLE :: partdact, partdactcoeff
     REAL(8) :: Dtiny, dn, partdact_ji, partdactcoeff_ji
     PARAMETER (Dtiny = 1.79D1*EPSILON(1.0D0))
-    PARAMETER (dn = 1.0D-9) ![mol] a small, but not too small molar (change) for the numerical differentiation
+    PARAMETER (dn = 0.1D0*SQRT(EPSILON(1.0D0))) ![mol] a small, but not too small molar (change) for the numerical differentiation
     PARAMETER (xinputtype = .true.) !mole fraction input concentration
     !...........................................................
     !parameters:
@@ -695,24 +708,40 @@ IMPLICIT NONE
 
     !calculate the finite differences (numerical "partial derivatives") of the component ni's activity at composition xinit while holding the moles of the other componentes fixed.
     !compositions for the forward / backward differences at the given point xinit (component nnvar is the one to be enhanced/diminished):
-    DO ni = 1,nindcomp  !loop
-        !calling the subroutine calculating the partial derivative of the activity and act. coeff. of component j with respect to moles of component ni:
-        DO j = 1,nindcomp
-            CALL partialdactcoeff(xinit, TKelvin, j, ni, partdact_ji, partdactcoeff_ji)
-            partdact(j,ni) = partdact_ji
-            partdactcoeff(j,ni) = partdactcoeff_ji
-        ENDDO
-    ENDDO !ni
+    IF (onlyDeltaVisc) THEN !e.g. for web-model version, only perform calculation with variation in component 1 (often water) and effect on component 1 only for deltaetamix etc (much faster).
+        ALLOCATE( partdact(1,1), partdactcoeff(1,1) )
+        partdact = 0.0D0
+        partdactcoeff = 0.0D0
+        CALL partialdactcoeff(xinit, TKelvin, 1, 1, partdact_ji, partdactcoeff_ji)
+        partdact(1,1) = partdact_ji
+        partdactcoeff(1,1) = partdactcoeff_ji    
+    ELSE
+        ALLOCATE( partdact(nindcomp,nindcomp), partdactcoeff(nindcomp,nindcomp) )
+        partdact = 0.0D0
+        partdactcoeff = 0.0D0
+        DO ni = 1,nindcomp  !loop
+            !calling the subroutine calculating the partial derivative of the activity and act. coeff. of component j with respect to moles of component ni:
+            DO j = 1,nindcomp
+                CALL partialdactcoeff(xinit, TKelvin, j, ni, partdact_ji, partdactcoeff_ji)
+                partdact(j,ni) = partdact_ji
+                partdactcoeff(j,ni) = partdactcoeff_ji
+            ENDDO
+        ENDDO !ni
+    ENDIF
     !---
     !calculate the total derivative for each component from the absolute values of the partial derivatives:
-    dact(1:nindcomp) = 0.0D0
-    dactcoeff(1:nindcomp) = 0.0D0
-    DO ni = 1,nindcomp
-        dact(ni) = SUM(ABS(partdact(ni,1:nindcomp))) !we skip here the *dn (which would allow calculating the total differential, as it leads to small numbers and sensitivity will be normalized later anyways)
-        dactcoeff(ni) = SUM(ABS(partdactcoeff(ni,1:nindcomp)))
-    ENDDO
+    dact = 0.0D0
+    dactcoeff = 0.0D0
+    IF (.NOT. onlyDeltaVisc) THEN
+        DO ni = 1,nindcomp
+            dact(ni) = SUM(ABS(partdact(ni,1:nindcomp))) !we skip here the *dn (which would allow calculating the total differential, as it leads to small numbers and sensitivity will be normalized later anyways)
+            dactcoeff(ni) = SUM(ABS(partdactcoeff(ni,1:nindcomp)))
+        ENDDO
+    ENDIF
     !for viscosity sensitivity estimate as a function of a change in mole fraction of component 1 (water):
     deltaetamix = ABS(deltaetamix)
+    
+    DEALLOCATE(partdact, partdactcoeff)
 
     END SUBROUTINE DeltaActivities
     !==========================================================================================================================
@@ -730,7 +759,7 @@ IMPLICIT NONE
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2010                                                            *
-    !*   -> latest changes: 2018/05/31                                                      *
+    !*   -> latest changes: 2019/09/24                                                      *
     !*                                                                                      *
     !****************************************************************************************
     SUBROUTINE partialdactcoeff(xin, TKelvin, j, i, partdact_ji, partdactcoeff_ji)
@@ -751,106 +780,99 @@ IMPLICIT NONE
     REAL(8),DIMENSION(nindcomp) :: xinit, xplus, wtf
     REAL(8) :: ntplus, Dtiny, dn, actplus, actinit, actcoeffplus, actcoeffinit, etamixplus, etamixinit
     PARAMETER (Dtiny = 1.11D0*EPSILON(1.0D0))
-    PARAMETER (dn = 1.0D-9) ![mol] a small molar (change) for the numerical differentiation
+    PARAMETER (dn = 0.1D0*SQRT(EPSILON(1.0D0))) ![mol] a small molar (change) for the numerical differentiation
     PARAMETER (xinputtype = .true.) !mole fraction input concentration
     !...........................................................
     !parameters:
     xinit = xin !xinit is locally stored and unaffected by changes when reentrant code will be called that might feed back on xin!
     
     !calculate the finite differences (numerical "partial derivatives") of component j's activity and activity coeff. with respect to component i,
-    !at composition xinit, while holding the moles of the other componentes fixed.
+    !at composition xinit, while holding the moles of the other components fixed.
     !compositions for the forward / backward differences at the given point xinit (component i is the one to be enhanced/diminished):
-    IF (j <= nindcomp .AND. i <= nindcomp) THEN !the nindcomp comparisons are necessary for the cases where HSO4- dissociation can change the nindcomp during calc.
-        ntplus = 1.0D0+dn !as the molar sum of all components can be set arbitrarily to 1.0
-        !calculate the mole fractions at the slightly changed compositions:
-        xplus(1:i-1) = xinit(1:i-1)/ntplus
-        xplus(i) = (xinit(i)+dn)/ntplus
-        xplus(i+1:nindcomp) = xinit(i+1:nindcomp)/ntplus
-        !..
-        !Call AIOMFAC_calc to calculate the activity at composition xplus:
-        CALL MoleFrac2MassFrac(xplus, Mmass, wtf) 
-        CALL AIOMFAC_calc(wtf, TKelvin)
-        actplus = activity(j)
-        IF (j <= nneutral) THEN !neutral component
-            actcoeffplus = actcoeff_n(j)
-        ELSE !electrolyte component
-            actcoeffplus = meanmolalactcoeff(j-nneutral)
-        ENDIF
-        IF (j == 1 .AND. i == 1) THEN !save the etamix value for the sensitivity of viscosity
-            etamixplus = etamix
-        ENDIF
-        !..
-        !calculate the activity & activity coeff. at the initial composition xinit:
-        CALL MoleFrac2MassFrac(xinit, Mmass, wtf) 
-        CALL AIOMFAC_calc(wtf, TKelvin)
-        actinit = activity(j)
-        IF (j <= nneutral) THEN
-            actcoeffinit = actcoeff_n(j)
-        ELSE
-            actcoeffinit = meanmolalactcoeff(j-nneutral)
-        ENDIF
-        IF (j == 1 .AND. i == 1) THEN !save the etamix value for the sensitivity of viscosity
-            etamixinit = etamix
-        ENDIF
-        !..
-        !calculate the numerical forward differences with respect to activity at point xinit 
-        !(partial derivative of component j with resp. to a small molar change, dn, in component i)
-        IF (actplus > 0.0D0 .AND. actinit > 0.0D0) THEN
-            IF (ABS(actplus-actinit) < 1.0D-292) THEN !floating underflow risk
-                IF (actplus-actinit < 0.0D0) THEN !"negative zero"
-                    partdact_ji = -1.0D-292 !almost zero
-                ELSE !"positive zero"
-                    partdact_ji = 1.0D-292 !almost zero
-                ENDIF
-            ELSE !no underflow
-                IF (actplus -actinit > 1.0D292) THEN !floating overflow risk
-                    partdact_ji = 1.0D292+(LOG(actplus)-LOG(actinit)) !set to huge positive number to allow following computations but prevent overflow
-                ELSE IF (actplus -actinit < -1.0D292) THEN !floating overflow risk
-                    partdact_ji = -1.0D292-(LOG(actplus)-LOG(actinit)) !set to huge negative number to allow following computations but prevent overflow
-                ELSE
-                    partdact_ji = (actplus -actinit)/dn !the numerical derivatives with respect to component i (while all other component's moles are kept const.) 
-                ENDIF
-            ENDIF
-            IF (ABS(actcoeffplus -actcoeffinit) < 1.0D-292) THEN !floating underflow risk
-                IF (actcoeffplus -actcoeffinit < 0.0D0) THEN !"negative zero"
-                    partdactcoeff_ji = -1.0D-292 !almost zero
-                ELSE !"positive zero"
-                    partdactcoeff_ji = 1.0D-292 !almost zero
-                ENDIF
-            ELSE !ok, no underflow
-                IF (actcoeffplus -actcoeffinit > 1.0D292) THEN !floating overflow risk
-                    partdactcoeff_ji = 1.0D292+(LOG(actcoeffplus)-LOG(actcoeffinit)) !set to huge positive number to allow following computations but prevent overflow
-                ELSE IF (actcoeffplus -actcoeffinit < -1.0D292) THEN !floating overflow risk
-                    partdactcoeff_ji = -1.0D292-(LOG(actcoeffplus)-LOG(actcoeffinit)) !set to huge negative number to allow following computations but prevent overflow
-                ELSE
-                    partdactcoeff_ji = (actcoeffplus -actcoeffinit)/dn
-                ENDIF
-            ENDIF
-        ELSE IF (xinit(j) > Dtiny .AND. (actplus < Dtiny .OR. actinit < Dtiny)) THEN !there is some amount of a component in the mixture, but the model activity coefficient is too large (thus, very steep derivative)
-            partdact_ji = 1.11111111D5 !a specific value indicating a floating point overflow in AIOMFAC_calc, while not suppressing the feedback of such a value.
-            partdactcoeff_ji = 1.11111111D5
-            errorflagcalc = 2
-        ELSE !exceptions where problem occurred
-            partdact_ji = 0.0D0
-            partdactcoeff_ji = 0.0D0
-            errorflagcalc = 3
-        ENDIF
-        !**--
-        IF (j == 1 .AND. i == 1) THEN
-            !partial forward difference for mixture viscosity:
-            IF (etamixinit > 0.0D0) THEN
-                deltaetamix = (LOG(etamixplus) -LOG(etamixinit))/dn !the numerical derivatives with respect to component i (while all other component's moles are kept const.)
-            ELSE
-                deltaetamix = 0.0D0
-            ENDIF
-        ENDIF
-        !**--
+    ntplus = 1.0D0+dn !as the molar sum of all components can be set arbitrarily to 1.0
+    !calculate the mole fractions at the slightly changed compositions:
+    xplus(1:i-1) = xinit(1:i-1)/ntplus
+    xplus(i) = (xinit(i)+dn)/ntplus
+    xplus(i+1:nindcomp) = xinit(i+1:nindcomp)/ntplus
+    !..
+    !Call AIOMFAC_calc to calculate the activity at composition xplus:
+    CALL MoleFrac2MassFrac(xplus, Mmass, wtf) 
+    CALL AIOMFAC_calc(wtf, TKelvin)
+    actplus = activity(j)
+    IF (j <= nneutral) THEN !neutral component
+        actcoeffplus = actcoeff_n(j)
+    ELSE !electrolyte component
+        actcoeffplus = meanmolalactcoeff(j-nneutral)
+    ENDIF
+    IF (j == 1 .AND. i == 1) THEN !save the etamix value for the sensitivity of viscosity
+        etamixplus = etamix
+    ENDIF
+    !..
+    !calculate the activity & activity coeff. at the initial composition xinit:
+    CALL MoleFrac2MassFrac(xinit, Mmass, wtf) 
+    CALL AIOMFAC_calc(wtf, TKelvin)
+    actinit = activity(j)
+    IF (j <= nneutral) THEN
+        actcoeffinit = actcoeff_n(j)
     ELSE
+        actcoeffinit = meanmolalactcoeff(j-nneutral)
+    ENDIF
+    IF (j == 1 .AND. i == 1) THEN !save the etamix value for the sensitivity of viscosity
+        etamixinit = etamix
+    ENDIF
+    !..
+    !calculate the numerical forward differences with respect to activity at point xinit 
+    !(partial derivative of component j with resp. to a small molar change, dn, in component i)
+    IF (actplus > 0.0D0 .AND. actinit > 0.0D0) THEN
+        IF (ABS(actplus-actinit) < 1.0D-292) THEN !floating underflow risk
+            IF (actplus-actinit < 0.0D0) THEN !"negative zero"
+                partdact_ji = -1.0D-292 !almost zero
+            ELSE !"positive zero"
+                partdact_ji = 1.0D-292 !almost zero
+            ENDIF
+        ELSE !no underflow
+            IF (actplus -actinit > 1.0D292) THEN !floating overflow risk
+                partdact_ji = 1.0D292+(LOG(actplus)-LOG(actinit)) !set to huge positive number to allow following computations but prevent overflow
+            ELSE IF (actplus -actinit < -1.0D292) THEN !floating overflow risk
+                partdact_ji = -1.0D292-(LOG(actplus)-LOG(actinit)) !set to huge negative number to allow following computations but prevent overflow
+            ELSE
+                partdact_ji = (actplus -actinit)/dn !the numerical derivatives with respect to component i (while all other component's moles are kept const.) 
+            ENDIF
+        ENDIF
+        IF (ABS(actcoeffplus -actcoeffinit) < 1.0D-292) THEN !floating underflow risk
+            IF (actcoeffplus -actcoeffinit < 0.0D0) THEN !"negative zero"
+                partdactcoeff_ji = -1.0D-292 !almost zero
+            ELSE !"positive zero"
+                partdactcoeff_ji = 1.0D-292 !almost zero
+            ENDIF
+        ELSE !ok, no underflow
+            IF (actcoeffplus -actcoeffinit > 1.0D292) THEN !floating overflow risk
+                partdactcoeff_ji = 1.0D292+(LOG(actcoeffplus)-LOG(actcoeffinit)) !set to huge positive number to allow following computations but prevent overflow
+            ELSE IF (actcoeffplus -actcoeffinit < -1.0D292) THEN !floating overflow risk
+                partdactcoeff_ji = -1.0D292-(LOG(actcoeffplus)-LOG(actcoeffinit)) !set to huge negative number to allow following computations but prevent overflow
+            ELSE
+                partdactcoeff_ji = (actcoeffplus -actcoeffinit)/dn
+            ENDIF
+        ENDIF
+    ELSE IF (xinit(j) > Dtiny .AND. (actplus < Dtiny .OR. actinit < Dtiny)) THEN !there is some amount of a component in the mixture, but the model activity coefficient is too large (thus, very steep derivative)
+        partdact_ji = 1.11111111D5 !a specific value indicating a floating point overflow in AIOMFAC_calc, while not suppressing the feedback of such a value.
+        partdactcoeff_ji = 1.11111111D5
+        errorflagcalc = 2
+    ELSE !exceptions where problem occurred
         partdact_ji = 0.0D0
         partdactcoeff_ji = 0.0D0
-        errorflagcalc = 4
+        errorflagcalc = 3
     ENDIF
-
+    !**--
+    IF (j == 1 .AND. i == 1) THEN
+        !partial forward difference for mixture viscosity:
+        IF (etamixinit > 0.0D0) THEN
+            deltaetamix = (LOG(etamixplus) -LOG(etamixinit))/dn !the numerical derivatives with respect to component i (while all other component's moles are kept const.)
+        ELSE
+            deltaetamix = 0.0D0
+        ENDIF
+    ENDIF
+    !**--
     END SUBROUTINE partialdactcoeff
     !==========================================================================================================================
     

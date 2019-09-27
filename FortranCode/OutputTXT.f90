@@ -8,7 +8,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
 !*                                                                                      *
 !*   -> created:        2011                                                            *
-!*   -> latest changes: 2018/08/10                                                      *
+!*   -> latest changes: 2019/09/24                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -23,7 +23,7 @@
 !*   program. If not, see <http://www.gnu.org/licenses/>.                               *
 !*                                                                                      *
 !****************************************************************************************
-SUBROUTINE OutputTXT(fname, VersionNo, cpnameinp, nspecmax, npoints, watercompno, T_K, px, out_data, out_viscdata)
+SUBROUTINE OutputTXT(fname, VersionNo, nspecmax, npoints, watercompno, cpnameinp, T_K, px, out_data, out_viscdata)
 
 !module variables:
 USE ModSystemProp, ONLY : compname, compsubgroups, compsubgroupsTeX, NGS, NKNpNGS, ninput, nneutral
@@ -33,8 +33,8 @@ IMPLICIT NONE
 !interface variables:
 CHARACTER(LEN=*),INTENT(IN) :: fname 
 CHARACTER(LEN=*),INTENT(IN) :: VersionNo
-CHARACTER(LEN=*),DIMENSION(nspecmax),INTENT(IN) :: cpnameinp   !list of assigned component names (from input file)
 INTEGER(4),INTENT(IN) ::  nspecmax, npoints, watercompno
+CHARACTER(LEN=200),DIMENSION(nspecmax),INTENT(IN) :: cpnameinp   !list of assigned component names (from input file)
 REAL(8),DIMENSION(npoints),INTENT(IN) :: T_K
 INTEGER(4),DIMENSION(nspecmax),INTENT(INOUT) :: px
 REAL(8),DIMENSION(7,npoints,NKNpNGS),INTENT(IN) :: out_data
@@ -43,14 +43,21 @@ REAL(8),DIMENSION(3,npoints),INTENT(IN) :: out_viscdata
 !local variables:
 CHARACTER(LEN=:),ALLOCATABLE :: cn
 CHARACTER(LEN=5) :: tlen
-CHARACTER(LEN=50) :: subntxt
-CHARACTER(LEN=150) :: cnformat, horizline, tablehead, tformat, txtn
+CHARACTER(LEN=50) :: subntxt, Iformat
+CHARACTER(LEN=150) :: cnformat, horizline, tformat, txtn, tablehead
 CHARACTER(LEN=3000) :: txtsubs, mixturestring
-INTEGER(4) ::  i, k, pointi, qty, unitx
+INTEGER(4) ::  i, k, kms, pointi, qty, unitx
 REAL(8) :: RH
 !...................................................................................
 
+k = MAX(2, CEILING(LOG10(REAL(nspecmax))) )  
+WRITE(tlen,'(I0)') k
+Iformat = "I"//TRIM(tlen)//"."//TRIM(tlen)  !variable integer specifier
+cnformat = "("//Iformat//")"                !constructed format specifier
+ALLOCATE(CHARACTER(LEN=k) :: cn)
+
 !create a character string of the mixture as a series of its components:
+kms = LEN(mixturestring)
 mixturestring = TRIM(cpnameinp(1)) !first component
 !loop over all further components / species:
 DO i = 2,nspecmax
@@ -64,7 +71,15 @@ DO i = 2,nspecmax
             txtn = "unknown_sub"
         ENDIF
     ENDIF
-    mixturestring = TRIM(mixturestring)//' + '//TRIM(ADJUSTL(txtn))
+    k = LEN_TRIM(mixturestring) +LEN_TRIM(' + '//TRIM(txtn) )
+    IF (k < kms - 50) THEN
+        mixturestring = TRIM(mixturestring)//' + '//TRIM(ADJUSTL(txtn))
+    ELSE
+        qty = nspecmax -i
+        WRITE(subntxt,'(I0)') qty
+        mixturestring = TRIM(mixturestring)//' + '//TRIM(subntxt)//' additional components ...'
+        EXIT
+    ENDIF
 ENDDO
 mixturestring = ADJUSTL(mixturestring)
 
@@ -78,9 +93,10 @@ mixturestring = "'"//TRIM(mixturestring)//"'"
 WRITE(tlen,'(I5.5)') LEN_TRIM(mixturestring)
 tformat = '(A15, A'//tlen//')'  !dynamic format specifier
 WRITE(unitx, tformat) "Mixture name:  ", ADJUSTL(mixturestring)
-WRITE(unitx,'(A40, I2.2)') "Number of independent input components: ", ninput
-WRITE(unitx,'(A40, I2.2)') "Number of different neutral components: ", nneutral
-WRITE(unitx,'(A40, I2.2)') "Number of different inorganic ions    : ", NGS
+tformat = '(A40,' //TRIM(Iformat)//')'
+WRITE(unitx, tformat) "Number of independent input components: ", ninput
+WRITE(unitx, tformat) "Number of different neutral components: ", nneutral
+WRITE(unitx, tformat) "Number of different inorganic ions    : ", NGS
 WRITE(unitx,*) ""
 WRITE(unitx,'(A78)') "The AIOMFAC output is tabulated for each component/species individually below."
 WRITE(unitx,*) ""
@@ -133,11 +149,6 @@ DO pointi = 1,npoints  !loop over composition points
 ENDDO !pointi
 WRITE(unitx,'(A107)') ADJUSTL(horizline)
 WRITE(unitx,*) ""
-!--
-k = MAX(2, CEILING(LOG10(REAL(nspecmax))) )  
-WRITE(tlen,'(I0)') k
-cnformat = "(I"//TRIM(tlen)//"."//TRIM(tlen)//")" !variable format specifier
-ALLOCATE(CHARACTER(LEN=k) :: cn)
 
 !write individual data tables for each component / ionic species:
 DO i = 1,nspecmax
@@ -145,7 +156,8 @@ DO i = 1,nspecmax
     WRITE(unitx,*) ""
     !distinguish between neutral components and ionic species:
     IF (INT(out_data(6,px(i),i)) == 0) THEN !neutral component
-        WRITE(unitx,'(A24,I2.2)') "Mixture's component # : ", i
+        tformat = '(A24,'//TRIM(Iformat)//')'
+        WRITE(unitx,tformat) "Mixture's component # : ", i
         txtn = "'"//TRIM(ADJUSTL(compname(i)))//"'"
         WRITE(tlen,'(I5.5)') LEN_TRIM(txtn)
         tformat = '(A24, A'//tlen//')'
@@ -161,10 +173,13 @@ DO i = 1,nspecmax
         !write table column headers:
         WRITE(unitx,'(A107)') ADJUSTL(horizline)
         tablehead = "no.   T_[K]     RH_[%]   w("//cn//")          x_i("//cn//")        m_i("//cn//")        a_coeff_x("//cn//")   a_x("//cn//")        flag "
-        WRITE(unitx,'(2X, A105)') ADJUSTL(tablehead)
+        WRITE(tlen,'(I5.5)') MAX(105, LEN_TRIM(tablehead))
+        tformat = '(2X, A'//tlen//')'
+        WRITE(unitx, tformat) ADJUSTL(tablehead)
         !--
     ELSE IF (INT(out_data(6,px(i),i)) < 240) THEN !cation
-        WRITE(unitx,'(A24,I2.2)') "Mixture's species, #  : ", i
+        tformat = '(A24,'//TRIM(Iformat)//')'
+        WRITE(unitx,tformat) "Mixture's species, #  : ", i
         subntxt = TRIM(ADJUSTL(subgrname(INT(out_data(6,px(i),i)))))
         qty = LEN_TRIM(subntxt)
         txtn = ADJUSTL(subntxt(2:qty-1)) !to print the ion name without the enclosing parathesis ()
@@ -184,10 +199,13 @@ DO i = 1,nspecmax
         !write table column headers:
         WRITE(unitx, '(A107)') ADJUSTL(horizline)
         tablehead = "no.   T_[K]     RH_[%]   w("//cn//")          x_i("//cn//")        m_i("//cn//")        a_coeff_m("//cn//")   a_m("//cn//")        flag "
-        WRITE(unitx, '(2X,A105)') ADJUSTL(tablehead)
+        WRITE(tlen,'(I5.5)') MAX(105, LEN_TRIM(tablehead))
+        tformat = '(2X, A'//tlen//')'
+        WRITE(unitx, tformat) ADJUSTL(tablehead)
         !--
     ELSE IF (INT(out_data(6,px(i),i)) > 240) THEN !anion
-        WRITE(unitx,'(A24,I2.2)') "Mixture's species, #  : ", i
+        tformat = '(A24,'//TRIM(Iformat)//')'
+        WRITE(unitx,tformat) "Mixture's species, #  : ", i
         subntxt = TRIM( ADJUSTL( subgrname(INT(out_data(6,px(i),i))) ) )
         qty = LEN_TRIM(subntxt)
         txtn = ADJUSTL(subntxt(2:qty-1))
@@ -207,7 +225,9 @@ DO i = 1,nspecmax
         !write table column headers:
         WRITE(unitx,'(A107)') ADJUSTL(horizline)
         tablehead = "no.   T_[K]     RH_[%]   w("//cn//")          x_i("//cn//")        m_i("//cn//")        a_coeff_m("//cn//")   a_m("//cn//")        flag "
-        WRITE(unitx,'(2X,A105)') ADJUSTL(tablehead)
+        WRITE(tlen,'(I5.5)') MAX(105, LEN_TRIM(tablehead))
+        tformat = '(2X, A'//tlen//')'
+        WRITE(unitx, tformat) ADJUSTL(tablehead)
         !--
     ELSE
         !error

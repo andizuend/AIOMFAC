@@ -12,7 +12,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2011                                                            *
-!*   -> latest changes: 2019/01/23                                                      *
+!*   -> latest changes: 2019/09/24                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -39,7 +39,7 @@ IMPLICIT NONE
 !interface variables: 
 REAL(8),DIMENSION(nindcomp),INTENT(IN) :: inputconc      !inputconc = the concentration of a given input point (e.g., at an experimental data point)
 REAL(8),DIMENSION(6,NKNpNGS),INTENT(OUT) :: outputvars   !2-D output array with computed compositions and activities for each species; structure is:  | mass-frac., mole-frac., molality, act.coeff., activity, ion-indicator | species-no |
-REAL(8),DIMENSION(2),INTENT(OUT) :: outputviscvars !output array for viscosity related values: | viscosity | model sensitivity |
+REAL(8),DIMENSION(2),INTENT(OUT) :: outputviscvars       !output array for viscosity related values: | viscosity | model sensitivity |
 REAL(8),INTENT(IN) :: TKelvin                            !the input temperature [K]
 LOGICAL(4),INTENT(IN) :: xinputtype
 INTEGER(4),INTENT(OUT) :: nspecies, errorflag, warningflag
@@ -49,8 +49,9 @@ CHARACTER(LEN=*),DIMENSION(NKNpNGS),INTENT(OUT) :: outnames
 CHARACTER(LEN=2) :: cn  !this assumes a maximum two-digit component number in the system (max. 99); to be adjusted otherwise.
 CHARACTER(LEN=3) :: cino
 INTEGER(4) :: i, ion_no, ion_indic, nc, NKSinput, NKSinputp1
+LOGICAL(4) :: onlyDeltaVisc
 REAL(8),PARAMETER :: DEPS = 1.1D1*(EPSILON(DEPS))
-REAL(8) :: wtf_cp, xi_cp, mi_cp, actcoeff_cp, a_cp, sum_ms, sum_miMi, xtolviscosity !, sum_mions
+REAL(8) :: wtf_cp, xi_cp, mi_cp, actcoeff_cp, a_cp, sum_ms, sum_miMi, xtolviscosity, w1perturb
 REAL(8),DIMENSION(nelectrol) :: mixingratio, wtfdry
 REAL(8),DIMENSION(nindcomp) :: xinp, dact, dactcoeff, wfrac
 !------------------------------------------------------------------------------------------- 
@@ -105,16 +106,19 @@ IF (errorflag /= 0) THEN
 ENDIF
 !.....
 CALL MassFrac2MoleFracMolality(wtf, XrespSalt, mrespSalt)
-CALL AIOMFAC_calc(wtf, TKelvin) !calculate at given mass fraction and temperature
 
 IF (calcviscosity) THEN
+    onlyDeltaVisc = .true.
     xinp(1:nindcomp) = XrespSalt(1:nindcomp)
-    CALL DeltaActivities(xinp, TKelvin, dact, dactcoeff)
+    CALL DeltaActivities(xinp, TKelvin, onlyDeltaVisc, dact, dactcoeff) !will als call AIOMFAC_calc and compute activity coeff.
+    w1perturb = 0.02D0
     wfrac = wtf
-    wfrac(1) = wfrac(1) + 0.02D0
-    wfrac = wfrac/(1.0D0 + 0.02D0)
+    wfrac(1) = wfrac(1) + w1perturb
+    wfrac = wfrac/(1.0D0 + w1perturb)
     CALL MassFrac2MoleFracMolality(wfrac, XrespSalt, mrespSalt)
     xtolviscosity = XrespSalt(1) - xinp(1)
+ELSE
+    CALL AIOMFAC_calc(wtf, TKelvin) !calculate at given mass fraction and temperatur
 ENDIF
 !.....
 

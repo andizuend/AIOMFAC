@@ -23,7 +23,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
 !*                                                                                      *
 !*   -> created:        2011  (this file)                                               *
-!*   -> latest changes: 2019/08/21                                                      *
+!*   -> latest changes: 2019/09/24                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -42,7 +42,6 @@
 PROGRAM Main_IO_driver
 
 !module variables:
-!USE IFPORT  !for directory creation
 USE ModSystemProp, ONLY : errorflagmix, nindcomp, NKNpNGS, SetSystem, topsubno, waterpresent
 USE ModSubgroupProp, ONLY : SubgroupAtoms, SubgroupNames
 USE ModMRpart, ONLY : MRdata
@@ -50,8 +49,8 @@ USE ModSRunifac, ONLY : SRdata
 
 IMPLICIT NONE
 !set preliminary input-related parameters:
-INTEGER(4),PARAMETER :: maxpoints = 1000  !limit maximum number of composition points for web-version
-INTEGER(4),PARAMETER :: ninpmax = 51      !set the maximum number of mixture components allowed (preliminary parameter)
+INTEGER(4),PARAMETER :: maxpoints = 1001     !limit maximum number of composition points for web-version
+INTEGER(4),PARAMETER :: ninpmax = 51 !5E+04  !set the maximum number of mixture components allowed (preliminary parameter)
 !local variables:
 CHARACTER(LEN=4) :: VersionNo
 CHARACTER(LEN=20) :: dummy
@@ -94,7 +93,7 @@ END INTERFACE
 !
 !==== INITIALIZATION section =======================================================
 !
-VersionNo = "2.30"  !AIOMFAC-web version number (change here if minor or major changes require a version number change)
+VersionNo = "2.31"  !AIOMFAC-web version number (change here if minor or major changes require a version number change)
 verbose = .true.    !if true, some debugging information will be printed to the unit "unito" (errorlog file)
 nspecmax = 0
 errorind = 0        !0 means no error found
@@ -105,7 +104,7 @@ warningind = 0      !0 means no warnings found
 !read command line for text-file name (which contains the input parameters to run the AIOMFAC progam):
 CALL GET_COMMAND_ARGUMENT(1, txtfilein)
 !---
-!txtfilein = './Inputfiles/input_1354.txt' !just use this for debugging with a specific input file, otherwise comment out
+!txtfilein = './Inputfiles/input_0008.txt' !just use this for debugging with a specific input file, otherwise comment out
 !---
 filepath = ADJUSTL(TRIM(txtfilein))
 WRITE(*,*) ""
@@ -211,13 +210,13 @@ IF (filevalid) THEN
         WRITE(unito,'(A80)') "................................................................................"
         !create an output ASCII text file with an overall mixture header and individual tables for all components / species (in case of ions)
         fname = TRIM(filepathout)//TRIM(filename)
-        CALL OutputTXT(fname, VersionNo, cpnameinp(1:nspecmax), nspecmax, npoints, watercompno, T_K(1:npoints), px(1:nspecmax), out_data, out_viscdata)
+        CALL OutputTXT(fname, VersionNo,  nspecmax, npoints, watercompno, cpnameinp(1:nspecmax),T_K(1:npoints), px(1:nspecmax), out_data, out_viscdata)
         !--
         !>> write output HTML-file
         i = LEN_TRIM(filename)
         filename = filename(1:i-3)//"html"
         fname = TRIM(filepathout)//TRIM(filename)
-        CALL OutputHTML(fname, VersionNo, cpnameinp(1:nspecmax), nspecmax, npoints, watercompno, T_K(1:npoints), px(1:nspecmax), out_data, out_viscdata)
+        CALL OutputHTML(fname, VersionNo, nspecmax, npoints, watercompno, cpnameinp(1:nspecmax), T_K(1:npoints), px(1:nspecmax), out_data, out_viscdata)
         !
         !==== TERMINATION section ==========================================================
         !

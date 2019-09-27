@@ -113,11 +113,16 @@ fname = TRIM(filepath)//TRIM(filename)
 INQUIRE(FILE = fname, EXIST = fileexists, SIZE = inpfilesize) !inpfilesize is the file size in [bytes]
 !Delete very large files that can only mean uploaded spam content and not actual input:
 IF (fileexists) THEN
-    IF (FLOAT(inpfilesize) > 50*(ninpmax +ninpmax*maxpoints) ) THEN !cannot be a valid input file
+    IF (FLOAT(inpfilesize) > 50*(ninpmax +ninpmax*maxpoints) ) THEN !likely not a valid input file
         fname = TRIM(filepath)//TRIM(filename)
-        OPEN (NEWUNIT = unitx, FILE = fname, STATUS='OLD')
-        CLOSE(unitx, STATUS='DELETE')  !close and delete the file
-        fileexists = .false.
+        OPEN (NEWUNIT = unitx, FILE = fname, IOSTAT=istat, ACTION='READ', STATUS='OLD')
+        READ(unitx,*) dummy, dummy, dummy, txtcheck
+        CLOSE(unitx)
+        IF (.NOT. (txtcheck(1:11) == "AIOMFAC-web")) THEN !invalid file (likely spam)
+            OPEN (NEWUNIT = unitx, FILE = fname, STATUS='OLD')
+            CLOSE(unitx, STATUS='DELETE')  !close and delete the file
+            fileexists = .false.
+        ENDIF
     ENDIF
 ENDIF
 

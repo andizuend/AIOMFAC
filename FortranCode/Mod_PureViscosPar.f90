@@ -21,8 +21,8 @@ MODULE Mod_PureViscosPar
 IMPLICIT NONE
 !..................................
 !public parameter arrays:
-REAL(8),DIMENSION(1500,2),PUBLIC :: CorrelTrange !structure: (lower T limit, upper T limit) in [K]
-!..................................
+REAL(8),DIMENSION(1500,2),PUBLIC :: CorrelTrange    !structure: (lower T limit, upper T limit) in [K]
+
 !================================================================================================================================= 
     CONTAINS
 !================================================================================================================================= 
@@ -122,10 +122,9 @@ REAL(8),DIMENSION(1500,2),PUBLIC :: CorrelTrange !structure: (lower T limit, upp
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2012/09/07                                                      *
-    !*   -> latest changes: 2019/03/16                                                      *
+    !*   -> latest changes: 2019/09/24                                                      *
     !*                                                                                      *
     !****************************************************************************************
-
     SUBROUTINE PureCompViscosity(ind, TempK, eta, iflag, Tglass, fragility)
     
     USE ModSystemProp, ONLY : CompN, ITAB
@@ -155,7 +154,7 @@ REAL(8),DIMENSION(1500,2),PUBLIC :: CorrelTrange !structure: (lower T limit, upp
     
     SELECT CASE(cpn)
     CASE(401) !water
-        equationNo = 1
+        equationNo = 12
         a = 225.66D0  
         b = 1.3788D-4
         c = -1.6433D0
@@ -163,8 +162,8 @@ REAL(8),DIMENSION(1500,2),PUBLIC :: CorrelTrange !structure: (lower T limit, upp
         e = 0.0D0
         CorrelTrange(cpn,1) = 230.0D0
         CorrelTrange(cpn,2) = 495.0D0
-    CASE DEFAULT !for system input of organics from file
-        equationNo = 2
+    CASE(1500, 9999) !for system input of organics from file
+        equationNo = 10
         a = -999.0D0
         b = -999.0D0
         c = -999.0D0
@@ -173,19 +172,24 @@ REAL(8),DIMENSION(1500,2),PUBLIC :: CorrelTrange !structure: (lower T limit, upp
         CorrelTrange(cpn,1) = 1.0D0
         CorrelTrange(cpn,2) = 1000.0D0
     END SELECT
-
+    
     !compare requested temperature with temperature range of parameterization:
     IF (TempK >= CorrelTrange(cpn,1) .AND. TempK <= CorrelTrange(cpn,2)) THEN !valid
         iflag = 0 !0 means no errors
         ! decide apppropriate value in Tg range
-        CALL DeRieux_Tno_Est(ind, a, Tg)
-        Tglass = Tg
-        CALL VogelTemp(Tglass, TempK, fragility, Tvog)
+        IF (ind > 0) THEN
+            CALL DeRieux_Tno_Est(ind, a, Tg)
+            Tglass = Tg
+            CALL VogelTemp(Tglass, TempK, fragility, Tvog)
+        ELSE IF (ind == -1) THEN !use water properties for ions
+            Tg = 225.66D0
+            Tglass = Tg
+        ENDIF
         !compute eta with given equation for the component
         SELECT CASE(equationNo)
-        CASE(1)
+        CASE(12)
             eta = b*((TempK/a) - 1)**c
-        CASE(2) !Vogel-Fulcher-Tammann (VFT) using DeRieux et al. (2018) constants and DeRieux Tg
+        CASE(10) !Vogel-Fulcher-Tammann (VFT) using DeRieux et al. (2018) constants and DeRieux Tg
             eta = 10.0D0**(-5.0D0 + 0.434D0*(fragility*Tvog/(TempK - Tvog))) !DeRieux et al. 2018, eqn (6)
         END SELECT
         iflag = 0 !0 means no errors
@@ -195,5 +199,5 @@ REAL(8),DIMENSION(1500,2),PUBLIC :: CorrelTrange !structure: (lower T limit, upp
 
     END SUBROUTINE PureCompViscosity
     !=================================================================================================================================
-
+    
 END MODULE Mod_PureViscosPar
