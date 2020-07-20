@@ -11,7 +11,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2018 (based on non-module version from 2009)                    *
-!*   -> latest changes: 2018/09/14                                                      *
+!*   -> latest changes: 2020/07/18                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -45,7 +45,6 @@ IMPLICIT NONE
 INTEGER(4),DIMENSION(261),PUBLIC :: NKTAB   !lists AIOMFAC subgroup affiliations with main groups
 INTEGER(4),DIMENSION(201:261),PUBLIC :: Ioncharge  !the (positive or negative) integer-valued relative el. charge of the ions.
 INTEGER(4),DIMENSION(200),PUBLIC :: subgC, subgH, subgO, subgN, subgS !the C, H, O, etc. atoms in organic subgroups
-REAL(8),DIMENSION(201:261),PUBLIC :: IonO2Cequiv
 REAL(8),DIMENSION(200),PUBLIC :: GroupMW    !list of subgroup molar masses [g/mol]
 REAL(8),DIMENSION(40),PUBLIC :: SMWA, SMWC  !lists of anion and cation molar masses [g/mol]
 CHARACTER(LEN=100),DIMENSION(261),PUBLIC :: subgrname, subgrnameTeX, subgrnameHTML
@@ -112,31 +111,6 @@ DATA Ioncharge(221:240) / 20*2 /     !double-charge cations
 DATA Ioncharge(241:260) / 20*-1 /    !single-charge anion
 DATA Ioncharge(261:261) / -2 /       !double-charge anion   
 
-!Assign an O:C-equivalent value to each ion (which is used to compute mean electrolyte O:C equivalent values).
-!These values are used to generate initial guesses in PhaseSeparation.
-!- cations
-DATA IonO2Cequiv(201) / 3.6D0 / !Li+
-DATA IonO2Cequiv(202) / 4.0D0 / !Na+
-DATA IonO2Cequiv(203) / 3.0D0 / !K+
-DATA IonO2Cequiv(204) / 3.0D0 / !NH4+
-DATA IonO2Cequiv(205) / 2.8D0 / !H+
-DATA IonO2Cequiv(206:220) / 15*3.0D0 / !unused (other) cations
-DATA IonO2Cequiv(221) / 4.0D0 / !Ca++
-DATA IonO2Cequiv(223) / 4.0D0 / !Mg+
-DATA IonO2Cequiv(223:240) / 18*3.0D0 / !unused (other) cations
-!- anions  
-DATA IonO2Cequiv(241) / 3.0D0 / !unused (other) anions
-DATA IonO2Cequiv(242) / 3.4D0 / !3.4D0 !Cl-
-DATA IonO2Cequiv(243) / 3.0D0 / !Br-
-DATA IonO2Cequiv(244) / 3.0D0 / !I-
-DATA IonO2Cequiv(245) / 2.8D0 / !NO3-
-DATA IonO2Cequiv(246:247) / 2*3.0D0 / !unused (other) anions
-DATA IonO2Cequiv(248) / 3.2D0 / !HSO4-
-DATA IonO2Cequiv(249) / 3.2D0 / !CH3SO3-
-DATA IonO2Cequiv(250:260) / 11*3.0D0 / !unused (other) anions
-DATA IonO2Cequiv(261) / 4.0D0 / !SO4--
-
-
 !================================================================================================================================= 
     CONTAINS
 !================================================================================================================================= 
@@ -189,10 +163,22 @@ DATA IonO2Cequiv(261) / 4.0D0 / !SO4--
     subgC(24) = 1; subgH(24) = 3; subgO(24) = 1;  !subgrname(24) = "(CH3O)"            
     subgC(25) = 1; subgH(25) = 2; subgO(25) = 1;  !subgrname(25) = "(CH2O)"            
     subgC(26) = 1; subgH(26) = 1; subgO(26) = 1;  !subgrname(26) = "(CHO[ether])"      
-    subgC(27) = 1; subgH(27) = 2; subgO(27) = 1;  !subgrname(27) = "(THF[CH2O])"
-    subgC(137) = 1; subgH(137) = 1; subgO(137) = 2;  !subgrname(137) ="(COOH)"            
+    subgC(27) = 1; subgH(27) = 2; subgO(27) = 1;  !subgrname(27) = "(THF[CH2O])"  
+    subgC(28) = 1; subgH(28) = 5; subgO(28) = 0; subgN(28) = 1; !(CH3NH2)
+    subgC(29) = 1; subgH(29) = 4; subgO(29) = 0; subgN(29) = 1; !(CH2NH2)  
+    subgC(30) = 1; subgH(30) = 3; subgO(30) = 0; subgN(30) = 1; !(CHNH2)
+    subgC(31) = 1; subgH(31) = 4; subgO(31) = 0; subgN(31) = 1; !(CH3NH)
+    subgC(32) = 1; subgH(32) = 3; subgO(32) = 0; subgN(32) = 1; !(CH2NH)  
+    subgC(33) = 1; subgH(33) = 2; subgO(33) = 0; subgN(33) = 1; !(CHNH)         
     subgC(42) = 1; subgH(42) = 1; subgO(42) = 2;  !subgrname(42) ="(COOH)"             
-    subgC(43) = 1; subgH(43) = 2; subgO(43) = 2;  !subgrname(43) = "(HCOOH)"           
+    subgC(43) = 1; subgH(43) = 2; subgO(43) = 2;  !subgrname(43) = "(HCOOH)" 
+    subgC(137) = 1; subgH(137) = 1; subgO(137) = 2;  !subgrname(137) ="(COOH)"
+    
+    subgC(54) = 1; subgH(54) = 3; subgO(54) = 2; subgN(54) = 1; !(CH3NO2) nitro
+    subgC(55) = 1; subgH(55) = 2; subgO(55) = 2; subgN(55) = 1; !(CH2NO2) nitro
+    subgC(56) = 1; subgH(56) = 1; subgO(56) = 2; subgN(56) = 1; !(CHNO2) nitro
+    subgC(57) = 1; subgH(57) = 0; subgO(57) = 2; subgN(57) = 1; !(ACNO2) aromatic nitro
+    
     subgC(141) = 1; subgH(141) = 3;  !subgrname(141) ="(CH3[alc])"        
     subgC(142) = 1; subgH(142) = 2;  !subgrname(142) ="(CH2[alc])"        
     subgC(143) = 1; subgH(143) = 1;  !subgrname(143) ="(CH[alc])"         
@@ -224,7 +210,8 @@ DATA IonO2Cequiv(261) / 4.0D0 / !SO4--
     subgC(170) = 2; subgH(170) = 1; subgO(170) = 2;  !subgrname(170) ="(CHOOC[perox])"    
     subgC(171) = 2; subgH(171) = 0; subgO(171) = 2;  !subgrname(171) ="(COOC[perox])"     
     subgC(172) = 1; subgH(172) = 0; subgO(172) = 5; subgN(172) = 1;  !subgrname(172) ="(C(=O)OONO2[perox])"
-
+    subgC(173) = 1; subgH(173) = 0; subgO(173) = 2; !CO2 (carbon dioxide)
+    
     END SUBROUTINE SubgroupAtoms
     !================================================================================================================================= 
     
@@ -275,9 +262,20 @@ DATA IonO2Cequiv(261) / 4.0D0 / !SO4--
     subgrname(25) = "(CH2O)"            ;  subgrnameTeX(25) = "(CH$_2$O)"                ;  subgrnameHTML(25) = "(CH<sub>2</sub>O)"
     subgrname(26) = "(CHO[ether])"      ;  subgrnameTeX(26) = "(CHO[ether])"             ;  subgrnameHTML(26) = "(CHO[ether])"
     subgrname(27) = "(THF[CH2O])"       ;  subgrnameTeX(27) = "(THF[CH$_2$O])"           ;  subgrnameHTML(27) = "(THF[CH<sub>2</sub>O])" !Tetrahydrofuran group (and molecule)
-    subgrname(137) = "(COOH)"           ;  subgrnameTeX(137) = "(COOH)"                  ;  subgrnameHTML(137) = "(COOH)"
+    subgrname(28) = "(CH3NH2)"          ;  subgrnameTeX(28) = "(CH$_3$NH$_2$)"           ;  subgrnameHTML(28) = "(CH<sub>3</sub>NH<sub>2</sub>)"
+    subgrname(29) = "(CH2NH2)"          ;  subgrnameTeX(29) = "(CH$_2$NH$_2$)"           ;  subgrnameHTML(29) = "(CH<sub>2</sub>NH<sub>2</sub>)"
+    subgrname(30) = "(CHNH2)"           ;  subgrnameTeX(30) = "(CHNH$_2$)"               ;  subgrnameHTML(30) = "(CHNH<sub>2</sub>)"
+    subgrname(31) = "(CH3NH)"           ;  subgrnameTeX(31) = "(CH$_3$NH)"               ;  subgrnameHTML(31) = "(CH<sub>3</sub>NH)"
+    subgrname(32) = "(CH2NH)"           ;  subgrnameTeX(32) = "(CH$_2$NH)"               ;  subgrnameHTML(32) = "(CH<sub>2</sub>NH)"
+    subgrname(33) = "(CHNH)"            ;  subgrnameTeX(33) = "(CHNH)"                   ;  subgrnameHTML(33) = "(CHNH)"
     subgrname(42) = "(COOH)"            ;  subgrnameTeX(42) = "(COOH)"                   ;  subgrnameHTML(42) = "(COOH)"
     subgrname(43) = "(HCOOH)"           ;  subgrnameTeX(43) = "(HCOOH)"                  ;  subgrnameHTML(43) = "(HCOOH)"
+    subgrname(137) = "(COOH)"           ;  subgrnameTeX(137) = "(COOH)"                  ;  subgrnameHTML(137) = "(COOH)"
+    subgrname(54) = "(CH3NO2)"          ;  subgrnameTeX(54) = "(CH$_3$NO$_2$)"          ;  subgrnameHTML(54) = "(CH<sub>3</sub>NO<sub>2</sub>)"
+    subgrname(55) = "(CH2NO2)"          ;  subgrnameTeX(55) = "(CH$_2$NO$_2$)"          ;  subgrnameHTML(55) = "(CH<sub>2</sub>NO<sub>2</sub>)"
+    subgrname(56) = "(CHNO2)"           ;  subgrnameTeX(56) = "(CHNO$_2$)"              ;  subgrnameHTML(56) = "(CHNO<sub>2</sub>)"
+    subgrname(57) = "(ACNO2)"           ;  subgrnameTeX(57) = "(ACNO$_2$)"              ;  subgrnameHTML(57) = "(ACNO<sub>2</sub>)"
+    
     subgrname(141) ="(CH3[alc])"        ;  subgrnameTeX(141) ="(CH$_3$$^{[alc]}$)"       ;  subgrnameHTML(141) ="(CH<sub>3</sub><sup>[alc]</sup>)"
     subgrname(142) ="(CH2[alc])"        ;  subgrnameTeX(142) ="(CH$_2$$^{[alc]}$)"       ;  subgrnameHTML(142) ="(CH<sub>2</sub><sup>[alc]</sup>)"
     subgrname(143) ="(CH[alc])"         ;  subgrnameTeX(143) ="(CH$^{[alc]}$)"           ;  subgrnameHTML(143) ="(CH<sup>[alc]</sup>)"
@@ -309,8 +307,8 @@ DATA IonO2Cequiv(261) / 4.0D0 / !SO4--
     subgrname(169) ="(CHOOCH[perox])"   ;  subgrnameTeX(169) ="(CHOOCH[perox])"          ;  subgrnameHTML(169) ="(CHOOCH[perox])"
     subgrname(170) ="(CHOOC[perox])"    ;  subgrnameTeX(170) ="(CHOOC[perox])"           ;  subgrnameHTML(170) ="(CHOOC[perox])"
     subgrname(171) ="(COOC[perox])"     ;  subgrnameTeX(171) ="(COOC[perox])"            ;  subgrnameHTML(171) ="(COOC[perox])"
-    subgrname(172) ="(C(=O)OONO2[perox])";  subgrnameTeX(172) ="(C(=O)OONO$_2$[perox])"  ;  subgrnameHTML(172) ="(C(=O)OONO<sub>2</sub>[perox])"
-    
+    subgrname(172) ="(C(=O)OONO2[perox])"; subgrnameTeX(172) ="(C(=O)OONO$_2$[perox])"   ;  subgrnameHTML(172) ="(C(=O)OONO<sub>2</sub>[perox])"
+    subgrname(173) ="(CO2)"             ;  subgrnameTeX(173) ="(CO$_2$)"                 ;  subgrnameHTML(173) ="(CO<sub>2</sub>)"
 
     !list of subgroup names of inorganic ions:
     subgrname(201) = "(Li+)"     ;  subgrnameTeX(201) = "(Li$^+$)"           ;  subgrnameHTML(201) = "(Li<sup>+</sup>)"
@@ -361,8 +359,8 @@ DATA IonO2Cequiv(261) / 4.0D0 / !SO4--
     maingrname(11) = "(CCOO)"
     maingrname(12) = "(HCOO[formate])"
     maingrname(13) = "(CHnO[ether])"
-    maingrname(14) = "(CNH2)"
-    maingrname(15) = "(CNH)"
+    maingrname(14) = "(CHnNH2)"
+    maingrname(15) = "(CHnNH)"
     maingrname(16) = "((C)3N)"
     maingrname(17) = "(ACNH2)"
     maingrname(18) = "(PYRIDINE)"
@@ -531,7 +529,7 @@ DATA IonO2Cequiv(261) / 4.0D0 / !SO4--
             !add cation:
             cn = ADJUSTL(cn) !adjust left and remove leading blanks
             compsubgroups(i) = TRIM(compsubgroups(i))//TRIM(subgrname(j))//"_"//TRIM(cn) !add subgroup to string
-            compsubgroupsTeX(i) = TRIM(compsubgroupsTeX(i))//TRIM(subgrnameTeX(j))//"$_"//TRIM(cn)//"$" !add subgroup to string
+            compsubgroupsTeX(i) = TRIM(compsubgroupsTeX(i))//TRIM(subgrnameTeX(j))//"$_"//TRIM(cn)//"$"
             compsubgroupsHTML(i) = TRIM(compsubgroupsHTML(i))//TRIM(subgrnameHTML(j))//"<sub>"//TRIM(cn)//"</sub>"
         ELSE
             compsubgroups(i) = TRIM(compsubgroups(i))//TRIM(subgrname(j))
@@ -576,11 +574,11 @@ DATA IonO2Cequiv(261) / 4.0D0 / !SO4--
     compH = 0.0D0
     compC = 0.0D0
     !loop over subgroups to count the O, H, and C atoms:
-    DO k = 1,NGN !loop over organic subgroups (SolvSubs excl. water)
-        isub = SolvSubs(k) !subgoup
-        IF (isub /= 16) THEN !exclude water (= subgroup 16) from the calculations
+    DO k = 1,NGN            !loop over organic subgroups (SolvSubs excl. water)
+        isub = SolvSubs(k)  !subgoup
+        IF (isub /= 16 .AND. isub /= 173) THEN  !exclude water (= subgroup 16) from the calculations; also exclude CO2(aq) (subgroup 173);
             nsub = ITAB_dimflip(isub,ind)
-            IF (nsub > 0) THEN !subgroup is present
+            IF (nsub > 0) THEN  !subgroup is present
                 compO = compO +REAL(nsub*subgO(isub), KIND=8)
                 compH = compH +REAL(nsub*subgH(isub), KIND=8)
                 compC = compC +REAL(nsub*subgC(isub), KIND=8)

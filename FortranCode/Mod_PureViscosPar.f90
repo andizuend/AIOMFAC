@@ -162,7 +162,7 @@ REAL(8),DIMENSION(1500,2),PUBLIC :: CorrelTrange    !structure: (lower T limit, 
         e = 0.0D0
         CorrelTrange(cpn,1) = 230.0D0
         CorrelTrange(cpn,2) = 495.0D0
-    CASE(1500, 9999) !for system input of organics from file
+    CASE DEFAULT !(1500, 9999) !for system input of any organics from file
         equationNo = 10
         a = -999.0D0
         b = -999.0D0

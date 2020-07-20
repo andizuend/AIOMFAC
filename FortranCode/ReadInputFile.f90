@@ -8,7 +8,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
 !*                                                                                      *
 !*   -> created:        2011                                                            *
-!*   -> latest changes: 2019/07/29                                                      *
+!*   -> latest changes: 2019/10/17                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -23,15 +23,16 @@
 !*   program. If not, see <http://www.gnu.org/licenses/>.                               *
 !*                                                                                      *
 !****************************************************************************************
-SUBROUTINE ReadInputFile(filepath, filename, filepathout, ninpmax, maxpoints, unito, verbose, ncp, npoints, &
+SUBROUTINE ReadInputFile(filepath, folderpathout, filename, ninpmax, maxpoints, unito, verbose, ncp, npoints, &
     & warningind, errorind, filevalid, cpnameinp, cpsubg, T_K, composition, xinputtype)
 
 USE ModSystemProp, ONLY : topsubno
 
 IMPLICIT NONE
 
-!interface:
-CHARACTER(LEN=3000),INTENT(INOUT) :: filepath, filename, filepathout
+!interface variables:
+CHARACTER(LEN=3000),INTENT(INOUT) :: filepath, folderpathout
+CHARACTER(LEN=200),INTENT(INOUT) :: filename
 INTEGER(4),INTENT(IN) :: ninpmax, maxpoints
 INTEGER(4),INTENT(INOUT) :: unito
 LOGICAL(4),INTENT(IN) :: verbose
@@ -48,7 +49,7 @@ LOGICAL(4),INTENT(OUT) :: xinputtype
 CHARACTER(LEN=:),ALLOCATABLE :: cn   !this assumes a maximum four-digit component number in the system (max. 9999); to be adjusted otherwise.
 CHARACTER(LEN=4) :: dashes, equalsigns, pluses
 CHARACTER(LEN=20) :: dummy, cnformat
-CHARACTER(LEN=50) :: txtcheck, inpfolder
+CHARACTER(LEN=50) :: txtcheck, inpfolder, outpfolder
 CHARACTER(LEN=3000) :: errlogfile, fname
 CHARACTER(LEN=20),DIMENSION(ninpmax) :: txtarray
 INTEGER(4) :: cpno, i, inpfilesize, istat, k, kinpf, qty, subg, unitx
@@ -80,41 +81,53 @@ IF (k < 1) THEN !no file was provided
     STOP
 ENDIF
 
-inpfolder = "Inputfiles" !"Inputfiles" in AIOMFAC-web
-kinpf = LEN_TRIM(inpfolder)
-i = INDEX(filepath, TRIM(inpfolder)//"/input")
-IF (i > 0 .AND. i < k) THEN !found a direcory path in UNIX file path style
-    filename = filepath(i+kinpf+1:k)
-    filepath = filepath(1:i+kinpf)
+i = INDEX(filepath, "/input_", BACK = .true.)  !find index position of input file, assuming that all input files start with "input_"
+IF (i < k .AND. i > 0) THEN !found a direcory path in UNIX file path style
+    filename = TRIM(filepath(i+1:k))
+    filepath = TRIM(filepath(1:k))
+    kinpf = INDEX(filepath(1:i-1), "/", BACK = .true.)  !find folder length of folder containing the input file
 ELSE
-    i = INDEX(filepath, TRIM(inpfolder)//"\input")
+    kinpf = 0
+    i = INDEX(filepath, "\input_", BACK = .true.) 
     IF (i > 0 .AND. i < k) THEN !found a direcory path in WINDOWS file path style
-        filename = filepath(i+kinpf+1:k)
-        filepath = filepath(1:i+kinpf)
-    ELSE
-        filename = filepath(i+kinpf+1:k)
-        filepath = ""
+        filename = TRIM(filepath(i+1:k))
+        filepath = TRIM(filepath(1:k))
+        kinpf = INDEX(filepath(1:i-1), "\", BACK = .true.)  !find folder length of folder containing the input file
     ENDIF
 ENDIF
-!-----
-!check / create for associated output directory "Outputfiles":
-i = LEN_TRIM(filepath)
-filepathout = TRIM(filepath(1:i-(kinpf+1)))//"Outputfiles/"
+IF (kinpf > i-1) THEN
+    kinpf = 0
+ENDIF
+inpfolder = TRIM(filepath(kinpf+1:i-1))
+kinpf = LEN_TRIM(inpfolder)
+
+!check / create for associated output directory:
+outpfolder = "Outputfiles/"  !initialize
+istat = INDEX(inpfolder, "inp")
+IF (istat > 0 .AND. istat < kinpf) THEN
+    outpfolder = "outp"//TRIM(inpfolder(4:))//"/"  
+ELSE
+    istat = INDEX(inpfolder, "Inp")
+    IF (istat > 0) THEN
+        outpfolder = "Outp"//TRIM(inpfolder(4:))//"/"   
+    ENDIF
+ENDIF
+folderpathout = TRIM(filepath(1:i-(kinpf+1)))//TRIM(outpfolder)
 
 !use the name of the input file to create a corresponding output file name:
 i = INDEX(filename, ".txt") !returns starting position of string input within string filename
 !create an error-logfile associated with the input file name:
 errlogfile = "Errorlog_"//filename(i-4:)
-fname = TRIM(filepathout)//TRIM(errlogfile)
+fname = TRIM(folderpathout)//TRIM(errlogfile)
 OPEN (NEWUNIT = unito, FILE = fname, STATUS ='UNKNOWN') !unito is the error / logfile unit
 !-----
 !check if file exists and read its content if true:
-fname = TRIM(filepath)//TRIM(filename)
+fname = TRIM(filepath)
 INQUIRE(FILE = fname, EXIST = fileexists, SIZE = inpfilesize) !inpfilesize is the file size in [bytes]
 !Delete very large files that can only mean uploaded spam content and not actual input:
 IF (fileexists) THEN
     IF (FLOAT(inpfilesize) > 50*(ninpmax +ninpmax*maxpoints) ) THEN !likely not a valid input file
-        fname = TRIM(filepath)//TRIM(filename)
+        fname = TRIM(filepath)
         OPEN (NEWUNIT = unitx, FILE = fname, IOSTAT=istat, ACTION='READ', STATUS='OLD')
         READ(unitx,*) dummy, dummy, dummy, txtcheck
         CLOSE(unitx)
@@ -132,7 +145,7 @@ IF (fileexists) THEN
         WRITE(unito,*) ""
         WRITE(unito,*) "MESSAGE from AIOMFAC: input file exists."
     ENDIF
-    fname = TRIM(filepath)//TRIM(filename)
+    fname = TRIM(filepath)
     OPEN (NEWUNIT = unitx, FILE = fname, IOSTAT=istat, ACTION='READ', STATUS='OLD')
     IF (istat /= 0) THEN ! an error occurred
         WRITE(unito,*) ""

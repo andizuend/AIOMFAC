@@ -121,7 +121,7 @@ DATA  cTABna(1:75,21) /  1.130960D-01,  2.717248D-01,  6.332340D-02, -7.777778D+
     SUBROUTINE LR_MR_activity()
 
     USE ModSystemProp, ONLY : anionZ, cationZ, Imaingroup, ITAB, ITABMG, maingrindexofsubgr, Mmass, &
-        & nd, nelectrol, NGI, NGN, nneutral, solvmixrefnd, SolvSubs, SubGroupMW, errorflagcalc
+        & nelectrol, NGI, NGN, nneutral, solvmixrefnd, SolvSubs, SubGroupMW, errorflagcalc
     USE ModAIOMFACvar, ONLY : DebyeHrefresh, galrln, gamrln, gclrln, gcmrln, gnlrln, gnmrln, &
         & Ionicstrength, meanSolventMW, SumIonMolalities, SMA, SMC, solvmixcorrMRa, solvmixcorrMRc, &
         & T_K, Tmolal, TmolalSolvmix, XN
@@ -146,7 +146,7 @@ DATA  cTABna(1:75,21) /  1.130960D-01,  2.717248D-01,  6.332340D-02, -7.777778D+
     !....................................................................
 
     !Calculation of the salt-free mole fractions of the neutral subgroups (combined contributions from different molecules if the same subgroup is present):
-    DO CONCURRENT (I = 1:NGN) !DO I = 1,NGN
+    DO I = 1,NGN
         II = SolvSubs(I)
         subgroupxsf(I) = SUM(ITAB(1:nneutral,II)*XN(1:nneutral))
     ENDDO
@@ -227,7 +227,7 @@ DATA  cTABna(1:75,21) /  1.130960D-01,  2.717248D-01,  6.332340D-02, -7.777778D+
         SumABca = 0.0D0
         !Calculation of Bca, Cnca, Bkionc and Bkiona:
         lrw1 = -0.5D0/SI2
-        DO CONCURRENT (J = 1:NGI) !DO J = 1,NGI
+        DO J = 1,NGI
             oexp1(1:NGI) = omega(1:NGI,J)*SI2 
             WHERE (oexp1(1:NGI) > 300.0D0) !prevent floating point underflow as the second term becomes practically zero:
                 Bca(1:NGI,J) = bac(1:NGI,J) !+cac(1:NGI,J)*EXP(-300.0D0)
@@ -245,7 +245,7 @@ DATA  cTABna(1:75,21) /  1.130960D-01,  2.717248D-01,  6.332340D-02, -7.777778D+
             CSca(1:NGI,J) = lrw1*omega2(1:NGI,J)*(Cnca(1:NGI,J)-cnac1(1:NGI,J))
         ENDDO
 
-        DO CONCURRENT (J = 1:NGI) !DO J = 1,NGI
+        DO J = 1,NGI
             IF (SI2 > 250.0D0) THEN !prevent floating point underflow as the second term becomes practically zero:
                 Bkionc(1:NGN,J) = bnc(1:NGN,J)
                 Bkiona(1:NGN,J) = bna(1:NGN,J)
@@ -262,7 +262,7 @@ DATA  cTABna(1:75,21) /  1.130960D-01,  2.717248D-01,  6.332340D-02, -7.777778D+
         avgmaingrMW = SUM(mgroupMK*mgroupxsf) !this is the mean main group molar mass -- and not the mean solvent molar mass!
 
         !Calculation of the midrange part for the neutrals:
-        DO CONCURRENT (I = 1:NGN) !DO I = 1,NGN
+        DO I = 1,NGN
             SumBm(I) = SUM(Bkiona(I,1:NGI)*SMA(1:NGI) +Bkionc(I,1:NGI)*SMC(1:NGI))
         ENDDO
         Sumkion1 = 0.0D0
@@ -319,7 +319,7 @@ DATA  cTABna(1:75,21) /  1.130960D-01,  2.717248D-01,  6.332340D-02, -7.777778D+
         !Calculation of the middle-range contribution part for the cations and anions: @@##
         SumBcx = 0.0D0
         SumBax = 0.0D0
-        DO CONCURRENT (I = 1:NGI) !DO I = 1,NGI
+        DO I = 1,NGI
             SumBCx(I) = SUM(Bkionc(1:NGN,I)*mgroupxsf(1:NGN)) 
             SumBax(I) = SUM(Bkiona(1:NGN,I)*mgroupxsf(1:NGN)) 
         ENDDO
@@ -688,7 +688,7 @@ DATA  cTABna(1:75,21) /  1.130960D-01,  2.717248D-01,  6.332340D-02, -7.777778D+
     omega2TAB(2,2) = 0.562981194934520D0       
     TABhighestwtf(2,2) = 0.44D0
     TABKsp(2,2) = 37.83D0 ![molal basis] molal ion activity product at the solubility limit @ 298 K
-      	
+
     !Na+ <-> Br-          4P JUN 2007        
     bTABAC(2,3) = 0.180807320471190D0
     cTABAC(2,3) = 0.273143813534931D0   
@@ -924,7 +924,7 @@ DATA  cTABna(1:75,21) /  1.130960D-01,  2.717248D-01,  6.332340D-02, -7.777778D+
     cn1TABAC(23,2) = 0.0D0
     cn2TABAC(23,2) = 7.865437200679259D-002    
     omega2TAB(23,2) = 0.397920452995359D0
-    TABhighestwtf(23,2) = 0.32D0	!MgCl2
+    TABhighestwtf(23,2) = 0.32D0    !MgCl2
     TABKsp(23,2) = 1.8986D4  !hydrate-Ksp [molal basis] for saturated solution with respect to MgCl2 . 6H2O (hydrate); solubility value from Rard: 5.8101 mol MgCl2/kg water
 
     ! Mg++ <-> Br-        4P JUL 2010
@@ -933,7 +933,7 @@ DATA  cTABna(1:75,21) /  1.130960D-01,  2.717248D-01,  6.332340D-02, -7.777778D+
     cn1TABAC(23,3) = 0.0D0
     cn2TABAC(23,3) = 6.162636D-002    
     omega2TAB(23,3) = 0.299475D0
-    TABhighestwtf(23,3) = 0.48D0	!MgBr2
+    TABhighestwtf(23,3) = 0.48D0    !MgBr2
     TABKsp(23,3) = 999999.0D0 ![molal basis] , here just set to indicate suppressed solid formation, [not true value]!     
 
     ! Mg++ <-> NO3-      4P JUN 2007

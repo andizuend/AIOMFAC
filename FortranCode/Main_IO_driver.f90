@@ -23,7 +23,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
 !*                                                                                      *
 !*   -> created:        2011  (this file)                                               *
-!*   -> latest changes: 2019/09/24                                                      *
+!*   -> latest changes: 2020/07/18                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -49,13 +49,14 @@ USE ModSRunifac, ONLY : SRdata
 
 IMPLICIT NONE
 !set preliminary input-related parameters:
-INTEGER(4),PARAMETER :: maxpoints = 1001     !limit maximum number of composition points for web-version
-INTEGER(4),PARAMETER :: ninpmax = 51 !5E+04  !set the maximum number of mixture components allowed (preliminary parameter)
+INTEGER(4),PARAMETER :: maxpoints = 101     !limit maximum number of composition points for web-version
+INTEGER(4),PARAMETER :: ninpmax = 51        !set the maximum number of mixture components allowed (preliminary parameter)
 !local variables:
 CHARACTER(LEN=4) :: VersionNo
 CHARACTER(LEN=20) :: dummy
 CHARACTER(LEN=150) :: tformat
-CHARACTER(LEN=3000) :: filename, filepath, filepathout, fname, txtfilein  
+CHARACTER(LEN=200) :: filename
+CHARACTER(LEN=3000) :: filepath, folderpathout, fname, txtfilein  
 CHARACTER(LEN=200),DIMENSION(:),ALLOCATABLE :: cpnameinp   !list of assigned component names (from input file)
 CHARACTER(LEN=200),DIMENSION(:),ALLOCATABLE :: outnames
 INTEGER(4) :: allocstat, errorflagcalc, errorind, i, nc, ncp, npoints, nspecies, nspecmax, pointi, &
@@ -71,10 +72,11 @@ LOGICAL(4) :: filevalid, verbose, xinputtype
 !--
 !explicit interfaces:
 INTERFACE
-    SUBROUTINE ReadInputFile(filepath, filename, filepathout, ninpmax, maxpoints, unito, verbose, ncp, npoints, &
+    SUBROUTINE ReadInputFile(filepath, folderpathout, filename, ninpmax, maxpoints, unito, verbose, ncp, npoints, &
         & warningind, errorind, filevalid, cpnameinp, cpsubg, T_K, composition, xinputtype)
         USE ModSystemProp, ONLY : topsubno
-        CHARACTER(LEN=3000),INTENT(INOUT) :: filepath, filename, filepathout
+        CHARACTER(LEN=3000),INTENT(INOUT) :: filepath, folderpathout
+        CHARACTER(LEN=200),INTENT(INOUT) :: filename
         INTEGER(4),INTENT(IN) :: ninpmax, maxpoints
         INTEGER(4),INTENT(INOUT) :: unito
         LOGICAL(4),INTENT(IN) :: verbose
@@ -93,7 +95,7 @@ END INTERFACE
 !
 !==== INITIALIZATION section =======================================================
 !
-VersionNo = "2.31"  !AIOMFAC-web version number (change here if minor or major changes require a version number change)
+VersionNo = "2.32"  !AIOMFAC-web version number (change here if minor or major changes require a version number change)
 verbose = .true.    !if true, some debugging information will be printed to the unit "unito" (errorlog file)
 nspecmax = 0
 errorind = 0        !0 means no error found
@@ -103,16 +105,16 @@ warningind = 0      !0 means no warnings found
 !
 !read command line for text-file name (which contains the input parameters to run the AIOMFAC progam):
 CALL GET_COMMAND_ARGUMENT(1, txtfilein)
-!---
-!txtfilein = './Inputfiles/input_0008.txt' !just use this for debugging with a specific input file, otherwise comment out
-!---
+IF (LEN_TRIM(txtfilein) < 4) THEN   !no command line argument; use specific input file for tests;
+    txtfilein = './Inputfiles/input_0011.txt' !just use this for debugging with a specific input file, otherwise comment out
+ENDIF
 filepath = ADJUSTL(TRIM(txtfilein))
 WRITE(*,*) ""
-WRITE(*,*) "MESSAGE from AIOMFAC-web: program started, command line argument 1 = ", filepath
+WRITE(*,*) "MESSAGE from AIOMFAC-web: program started, command line argument 1 = ", TRIM(filepath)
 WRITE(*,*) ""
 ALLOCATE(cpsubg(ninpmax,topsubno), cpnameinp(ninpmax), composition(maxpoints,ninpmax), T_K(maxpoints), STAT=allocstat)
 !--
-CALL ReadInputFile(filepath, filename, filepathout, ninpmax, maxpoints, unito, verbose, ncp, npoints, &
+CALL ReadInputFile(filepath, folderpathout, filename, ninpmax, maxpoints, unito, verbose, ncp, npoints, &
     & warningind, errorind, filevalid, cpnameinp, cpsubg, T_K, composition, xinputtype)
 !--
 IF (filevalid) THEN
@@ -145,13 +147,13 @@ IF (filevalid) THEN
     ENDDO
     DEALLOCATE(cpsubg, composition, STAT=allocstat)
     
-    IF (errorflagmix /= 0) THEN !a mixture-related error occured:
+    IF (errorflagmix /= 0) THEN     !a mixture-related error occured:
         CALL RepErrorWarning(unito, errorflagmix, warningflag, errorflagcalc, i, errorind, warningind)
     ENDIF
 
-    IF (errorind == 0) THEN !perform AIOMFAC calculations; else jump to termination section
+    IF (errorind == 0) THEN         !perform AIOMFAC calculations; else jump to termination section
         !--
-        ALLOCATE(inputconc(nindcomp), outputvars(6,NKNpNGS), outputviscvars(nindcomp), outnames(NKNpNGS), out_data(7,npoints,NKNpNGS), out_viscdata(3,npoints), STAT=allocstat)
+        ALLOCATE(inputconc(nindcomp), outputvars(6,NKNpNGS), outputviscvars(2), outnames(NKNpNGS), out_data(7,npoints,NKNpNGS), out_viscdata(3,npoints), STAT=allocstat)
         inputconc = 0.0D0
         out_data = 0.0D0
         out_viscdata = 0.0D0
@@ -163,7 +165,7 @@ IF (filevalid) THEN
         ENDIF
         px = 0
         !set AIOMFAC input and call the main AIOMFAC subroutines for all composition points:
-        DO pointi = 1,npoints !loop over points, changing composition / temperature
+        DO pointi = 1,npoints   !loop over points, changing composition / temperature
             inputconc(1:ncp) = compos2(pointi,1:ncp)
             TKelvin = T_K(pointi)
             !--
@@ -174,14 +176,14 @@ IF (filevalid) THEN
                 CALL RepErrorWarning(unito, errorflagmix, warningflag, errorflagcalc, pointi, errorind, warningind)
                 !$OMP END CRITICAL errwriting
             ENDIF
-            nspecmax = MAX(nspecmax, nspecies) !figure out the maximum number of different species in mixture (accounting for the 
-                                               !possibility of HSO4- dissoc. and different species at different data points due to zero mole fractions).
-            DO nc = 1,nspecmax !loop over species (ions dissociated and treated as individual species):
-                out_data(1:6,pointi,nc) = outputvars(1:6,nc) !out_data general structure: | data columns 1:7 | data point | component no.|
+            nspecmax = MAX(nspecmax, nspecies)  !figure out the maximum number of different species in mixture (accounting for the 
+                                                !possibility of HSO4- dissoc. and different species at different data points due to zero mole fractions).
+            DO nc = 1,nspecmax  !loop over species (ions dissociated and treated as individual species):
+                out_data(1:6,pointi,nc) = outputvars(1:6,nc)        !out_data general structure: | data columns 1:7 | data point | component no.|
                 out_data(7,pointi,nc) = REAL(errorflagcalc, KIND=8)
                 out_viscdata(3,pointi) = REAL(errorflagcalc, KIND=8)
-                IF (errorflagcalc == 0 .AND. warningflag > 0) THEN !do not overwrite an errorflag if present!
-                    IF (warningflag == 16) THEN !a warning that only affects viscosity calc.
+                IF (errorflagcalc == 0 .AND. warningflag > 0) THEN  !do not overwrite an errorflag if present!
+                    IF (warningflag == 16) THEN                     !a warning that only affects viscosity calc.
                         out_viscdata(3,pointi) = REAL(warningflag, KIND=8)
                     ELSE
                         out_data(7,pointi,nc) = REAL(warningflag, KIND=8)
@@ -189,33 +191,33 @@ IF (filevalid) THEN
                     ENDIF
                 ENDIF
                 IF (px(nc) == 0 .AND. out_data(6,pointi,nc) >= 0.0D0) THEN
-                    px(nc) = pointi !use a point for which this component's abundance is given, i.e. mole fraction(nc) > 0.0!
+                    px(nc) = pointi     !use a point for which this component's abundance is given, i.e. mole fraction(nc) > 0.0!
                 ENDIF
             ENDDO !nc
-            out_viscdata(1:2,pointi) = outputviscvars(1:2) !out_viscdata general structure: | data columns 1:2 | data point |
+            out_viscdata(1:2,pointi) = outputviscvars(1:2)  !out_viscdata general structure: | data columns 1:2 | data point |
         ENDDO !pointi
+        
         !
         !==== OUTPUT data-to-file section ==================================================
         !
         !use the name of the input file to create a corresponding output file name from a string like "inputfile_0004.txt"
         i = INDEX(filename, ".txt")
-        !replace "input" by "output":
         filename = "AIOMFAC_output_"//filename(i-4:)
         !-- for debugging
-        WRITE(unito,'(A80)') "................................................................................"
-        WRITE(unito,'(A60)') "MESSAGE from AIOMFAC: computations successfully performed."
-        WRITE(dummy,'(I0)') LEN_TRIM(filepathout)
-        tformat = '(A13, A24, A18, A'//TRIM(dummy)//')'  !dynamic format specifier
-        WRITE(unito, tformat) "Output file, ", TRIM(filename), " created at path: ", TRIM(filepathout)
-        WRITE(unito,'(A80)') "................................................................................"
+        WRITE(unito,'(A)') "................................................................................"
+        WRITE(unito,'(A)') "MESSAGE from AIOMFAC: computations successfully performed."
+        WRITE(dummy,'(I0)') LEN_TRIM(folderpathout)
+        tformat = '(A, A, A, A'//TRIM(dummy)//')'  !dynamic format specifier
+        WRITE(unito, '(4(A))') "Output file, ", TRIM(filename), " created at path: ", TRIM(folderpathout)
+        WRITE(unito,'(A)') "................................................................................"
         !create an output ASCII text file with an overall mixture header and individual tables for all components / species (in case of ions)
-        fname = TRIM(filepathout)//TRIM(filename)
+        fname = TRIM(folderpathout)//TRIM(filename)
         CALL OutputTXT(fname, VersionNo,  nspecmax, npoints, watercompno, cpnameinp(1:nspecmax),T_K(1:npoints), px(1:nspecmax), out_data, out_viscdata)
         !--
         !>> write output HTML-file
         i = LEN_TRIM(filename)
         filename = filename(1:i-3)//"html"
-        fname = TRIM(filepathout)//TRIM(filename)
+        fname = TRIM(folderpathout)//TRIM(filename)
         CALL OutputHTML(fname, VersionNo, nspecmax, npoints, watercompno, cpnameinp(1:nspecmax), T_K(1:npoints), px(1:nspecmax), out_data, out_viscdata)
         !
         !==== TERMINATION section ==========================================================
@@ -228,18 +230,18 @@ IF (filevalid) THEN
 ENDIF !file valid
 
 WRITE(unito,*) "+-+-+-+-+"
-WRITE(unito,*) "Final warning indicator (an entry '00' means no warnings found):"
+WRITE(unito,'(A)') "Final warning indicator (an entry '00' means no warnings found):"
 WRITE(unito,'(I2.2)') warningind
 WRITE(unito,*) "+-+-+-+-+"
 WRITE(unito,*) ""
 WRITE(unito,*) "########"
-WRITE(unito,*) "Final error indicator (an entry '00' means no errors found):"
+WRITE(unito,'(A)') "Final error indicator (an entry '00' means no errors found):"
 WRITE(unito,'(I2.2)') errorind
 WRITE(unito,*) "########"
-CLOSE(unito) !close the error log-file
+CLOSE(unito)    !close the error log-file
 
 WRITE(*,*) ""
-WRITE(*,*) "MESSAGE from AIOMFAC: End of program; final error indicator: ", errorind
+WRITE(*,'(A)') "MESSAGE from AIOMFAC: End of program; final error indicator: ", errorind
 WRITE(*,*) ""
 !READ(*,*)  !Pause; just for debugging and testing.
 !

@@ -63,7 +63,7 @@ INTEGER(4),DIMENSION(:,:),ALLOCATABLE,PUBLIC :: ITAB, ITABsr, ITABMG, ITAB_dimfl
 !--
 REAL(8),PARAMETER,PUBLIC :: Rgas = 8.3144598D0 !the universal gas constant in J/(K*mol); 8.314 4598  according to NIST (2015)
 REAL(8),DIMENSION(:),ALLOCATABLE,PUBLIC :: cationZ, anionZ !cationZ and anionZ are the integer charges of the cations and anions in current mixture ion order (as in Ication, Ianion);
-REAL(8),DIMENSION(:),ALLOCATABLE,PUBLIC :: OtoCratio, HtoCratio, ElectO2Cequiv 
+REAL(8),DIMENSION(:),ALLOCATABLE,PUBLIC :: OtoCratio, HtoCratio 
 REAL(8),DIMENSION(201:240, 241:topsubno, 1:3),PUBLIC :: IAPcoeffs
 REAL(8),DIMENSION(201:240, 241:topsubno),PUBLIC :: KVLE_298K
 REAL(8),DIMENSION(:),ALLOCATABLE :: K_el, nuestoich, SubGroupMW
@@ -113,7 +113,7 @@ END INTERFACE
     !$OMP & Imaingroup, CatNr, AnNr, ITAB, ITAB_dimflip, ITABsr, ITABMG, OtoCratio, HtoCratio, cpname, compname,  &
     !$OMP & compnameTeX, compsubgroups, compsubgroupsTeX, compsubgroupsHTML, ionname, ionnameTeX, solvmixrefnd,  &
     !$OMP & frominpfile, bisulfsyst, waterpresent, calcviscosity, elpresent, isPEGsystem, maingrindexofsubgr,   &
-    !$OMP & ElectComps, ElectNues, ElectVolatile, IAPcoeffs, KVLE_298K, K_el, SubGroupMW, ElectO2Cequiv, cationZ,  &
+    !$OMP & ElectComps, ElectNues, ElectVolatile, IAPcoeffs, KVLE_298K, K_el, SubGroupMW, cationZ,  &
     !$OMP & anionZ, errorflagmix, errorflagcalc, nuestoich)
 
 END MODULE ModSystemProp

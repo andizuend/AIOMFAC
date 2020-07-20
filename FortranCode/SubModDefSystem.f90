@@ -592,12 +592,12 @@ IMPLICIT NONE
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2014/07/21                                                      *
-    !*   -> latest changes: 2018/05/24                                                      *
+    !*   -> latest changes: 2020/07/18                                                      *
     !*                                                                                      *
     !**************************************************************************************** 
     MODULE SUBROUTINE defElectrolytes(nneutral, NGS, nelectrol)
 
-    USE ModSubgroupProp, ONLY : Ioncharge, IonO2Cequiv
+    USE ModSubgroupProp, ONLY : Ioncharge
 
     IMPLICIT NONE
     !Interface variables:
@@ -614,9 +614,9 @@ IMPLICIT NONE
     !cation-anion combinations (e.g. for gas-particle partitioning of different electrolytes):
     iel = Ncation*Nanion !maximum number of possible electrolyte components just formed by one cation and anion each.
     IF (ALLOCATED(ElectComps)) THEN
-        DEALLOCATE( ElectComps, ElectNues, ElectVolatile, ElectO2Cequiv, K_el )
+        DEALLOCATE( ElectComps, ElectNues, ElectVolatile, K_el )
     ENDIF
-    ALLOCATE( ElectComps(iel,2), ElectNues(iel,2), ElectVolatile(iel), ElectO2Cequiv(iel), K_el(nnp1:nneutral+iel) )
+    ALLOCATE( ElectComps(iel,2), ElectNues(iel,2), ElectVolatile(iel), K_el(nnp1:nneutral+iel) )
     IF (ALLOCATED(nuestoich)) DEALLOCATE(nuestoich)
     ALLOCATE( nuestoich(nneutral+iel) )
 
@@ -624,7 +624,6 @@ IMPLICIT NONE
     ElectComps = 0
     ElectNues = 0
     ElectVolatile = .false.
-    ElectO2Cequiv = 0.0D0
     K_el = 0.0D0
     nuestoich = 1.0D0
 
@@ -663,19 +662,16 @@ IMPLICIT NONE
         IF (zc == za) THEN !1:1 electrolyte (both the same charge of +-1 or +-2)
             ElectNues(iel,1) = 1
             ElectNues(iel,2) = 1
-            ElectO2Cequiv(iel) = (IonO2Cequiv(KK)*IonO2Cequiv(JJ))**0.5D0
             nuestoich(nneutral+iel) = 2.0D0
         ELSE
             SELECT CASE(zc)
             CASE(1) !2:1 electrolyte
                 ElectNues(iel,1) = 2
                 ElectNues(iel,2) = 1 !anion charge: -2
-                ElectO2Cequiv(iel) = (IonO2Cequiv(KK)**2 *IonO2Cequiv(JJ))**onethird
                 nuestoich(nneutral+iel) = 3.0D0
             CASE(2) !1:2 electrolyte
                 ElectNues(iel,1) = 1 !cation charge: +2
                 ElectNues(iel,2) = 2
-                ElectO2Cequiv(iel) = (IonO2Cequiv(KK)*IonO2Cequiv(JJ)**2)**onethird
                 nuestoich(nneutral+iel) = 3.0D0
             END SELECT
         ENDIF
@@ -707,19 +703,16 @@ IMPLICIT NONE
                 IF (zc == za) THEN !1:1 electrolyte (both the same charge of +-1 or +-2)
                     ElectNues(i,1) = 1
                     ElectNues(i,2) = 1
-                    ElectO2Cequiv(i) = (IonO2Cequiv(KK)*IonO2Cequiv(JJ))**0.5D0
                     nuestoich(nneutral+i) = 2.0D0
                 ELSE
                     SELECT CASE(zc)
                     CASE(1) !2:1 electrolyte
                         ElectNues(i,1) = 2
                         ElectNues(i,2) = 1 !anion charge: -2
-                        ElectO2Cequiv(i) = (IonO2Cequiv(KK)**2 *IonO2Cequiv(JJ))**onethird
                         nuestoich(nneutral+i) = 3.0D0
                     CASE(2) !1:2 electrolyte
                         ElectNues(i,1) = 1 !cation charge: +2
                         ElectNues(i,2) = 2
-                        ElectO2Cequiv(i) = (IonO2Cequiv(KK)*IonO2Cequiv(JJ)**2)**onethird
                         nuestoich(nneutral+i) = 3.0D0
                     END SELECT
                 ENDIF
@@ -781,7 +774,7 @@ IMPLICIT NONE
     IMPLICIT NONE
     INTEGER(4) :: i
     
-    DO CONCURRENT (i = 1:topsubno)
+    DO i = 1,topsubno
         ITAB_dimflip(i,:) = ITAB(:,i)
     ENDDO
     

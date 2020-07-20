@@ -34,6 +34,7 @@ USE ModAIOMFACvar
 USE ModCompScaleConversion
 USE ModCalcActCoeff, ONLY : AIOMFAC_calc, DeltaActivities
 USE ModSubgroupProp, ONLY : SMWA, SMWC
+USE, INTRINSIC :: IEEE_ARITHMETIC
 
 IMPLICIT NONE
 !interface variables: 
@@ -46,7 +47,7 @@ INTEGER(4),INTENT(OUT) :: nspecies, errorflag, warningflag
 CHARACTER(LEN=*),DIMENSION(NKNpNGS),INTENT(OUT) :: outnames
 !--
 !local variables:
-CHARACTER(LEN=2) :: cn  !this assumes a maximum two-digit component number in the system (max. 99); to be adjusted otherwise.
+CHARACTER(LEN=3) :: cn  !this assumes a maximum three-digit component number in the system (max. 999); to be adjusted otherwise.
 CHARACTER(LEN=3) :: cino
 INTEGER(4) :: i, ion_no, ion_indic, nc, NKSinput, NKSinputp1
 LOGICAL(4) :: onlyDeltaVisc
@@ -56,12 +57,12 @@ REAL(8),DIMENSION(nelectrol) :: mixingratio, wtfdry
 REAL(8),DIMENSION(nindcomp) :: xinp, dact, dactcoeff, wfrac
 !------------------------------------------------------------------------------------------- 
 
-!check for debugging:
-IF (ANY(ISNAN(inputconc(1:nindcomp)))) THEN
-    WRITE(*,*) "inputconc is NaN: ", inputconc(1:nindcomp)
-    WRITE(*,*) ""
-    RETURN
-ENDIF
+!!check for debugging:
+!IF (ANY(IEEE_IS_NAN(inputconc(1:nindcomp)))) THEN
+!    WRITE(*,*) "inputconc is NaN: ", inputconc(1:nindcomp)
+!    WRITE(*,*) ""
+!    RETURN
+!ENDIF
       
 ! Set initial values of some array variables:
 errorflag = 0  
@@ -93,7 +94,7 @@ ELSE
     IF (nindcomp > 0 .AND. ANY(wtf(1:nindcomp) < -DEPS)) THEN
         errorflag = 4
     ENDIF
-    IF (ANY(ISNaN(wtf(1:nindcomp)))) THEN
+    IF (ANY(IEEE_IS_NAN(wtf(1:nindcomp)))) THEN
         errorflag = 5
     ENDIF
 ENDIF
@@ -110,7 +111,7 @@ CALL MassFrac2MoleFracMolality(wtf, XrespSalt, mrespSalt)
 IF (calcviscosity) THEN
     onlyDeltaVisc = .true.
     xinp(1:nindcomp) = XrespSalt(1:nindcomp)
-    CALL DeltaActivities(xinp, TKelvin, onlyDeltaVisc, dact, dactcoeff) !will als call AIOMFAC_calc and compute activity coeff.
+    CALL DeltaActivities(xinp, TKelvin, onlyDeltaVisc, dact, dactcoeff)     !will als call AIOMFAC_calc and compute activity coeff.
     w1perturb = 0.02D0
     wfrac = wtf
     wfrac(1) = wfrac(1) + w1perturb
@@ -118,7 +119,7 @@ IF (calcviscosity) THEN
     CALL MassFrac2MoleFracMolality(wfrac, XrespSalt, mrespSalt)
     xtolviscosity = XrespSalt(1) - xinp(1)
 ELSE
-    CALL AIOMFAC_calc(wtf, TKelvin) !calculate at given mass fraction and temperatur
+    CALL AIOMFAC_calc(wtf, TKelvin)     !calculate at given mass fraction and temperature
 ENDIF
 !.....
 
@@ -134,12 +135,12 @@ DO i = 1,NGI !calculate sum of ion molalities, mi, times ion molar mass, Mi; [kg
     ENDIF
 ENDDO
 DO nc = 1,nspecies !loop over components
-    IF (nc <= nneutral) THEN !distinguish between neutral components and inorg. ions
-        WRITE(cn,'(I2.2)') nc
-        outnames(nc) = "comp_no_"//cn
+    IF (nc <= nneutral) THEN    !distinguish between neutral components and inorg. ions
+        WRITE(cn,'(I0.2)') nc
+        outnames(nc) = "comp_no_"//TRIM(cn)
         wtf_cp = wtf(nc)
         xi_cp = X(nc)
-        mi_cp = mrespSalt(nc) !molality in solvent mixture [mol/(kg solvent mix)]      
+        mi_cp = mrespSalt(nc)   !molality in solvent mixture [mol/(kg solvent mix)]      
         actcoeff_cp = actcoeff_n(nc)
         IF (wtf(nc) > 0.0D0) THEN
             actcoeff_cp = actcoeff_n(nc) 
@@ -149,13 +150,13 @@ DO nc = 1,nspecies !loop over components
         a_cp = activity(nc)
         ion_indic = 0
     ELSE
-        ion_no = ElectSubs(nc-nneutral) !the current ion subgroup number to identify the ion as output component nc
+        ion_no = ElectSubs(nc-nneutral)     !the current ion subgroup number to identify the ion as output component nc
         WRITE(cino,'(I3.3)') ion_no
         outnames(nc) = "ion_no_"//cino
         ion_indic = ion_no
         !detect whether it is a cation or an anion:
-        IF (ion_no > 239) THEN !anion
-            i = AnNr(ion_no) !the number i anion (storage location in sma(i) etc.)
+        IF (ion_no > 239) THEN  !anion
+            i = AnNr(ion_no)    !the number i anion (storage location in sma(i) etc.)
             xi_cp = sma(i)/(sum_ms + SumIonMolalities)
             mi_cp = sma(i)
             wtf_cp = sma(i)*SMWA(Ianion(i)-240)*1.0D-3/(1.0D0+sum_miMi)
@@ -165,9 +166,9 @@ DO nc = 1,nspecies !loop over components
                 actcoeff_cp = 0.0D0
             ENDIF
             IF (actcoeff_a(i) >= 0.0D0) THEN
-               a_cp = actcoeff_a(i)*sma(i) !molal activity
+               a_cp = actcoeff_a(i)*sma(i)  !molal activity
             ELSE
-               a_cp = -9999.999999D0 !indicate a numerical problem
+               a_cp = -9999.999999D0        !indicate a numerical problem
                errorflag = 7 
             ENDIF
         ELSE !cation
@@ -181,9 +182,9 @@ DO nc = 1,nspecies !loop over components
                 actcoeff_cp = 0.0D0
             ENDIF
             IF (actcoeff_c(i) >= 0.0D0) THEN
-               a_cp = actcoeff_c(i)*smc(i) !molal activity
+               a_cp = actcoeff_c(i)*smc(i)  !molal activity
             ELSE
-               a_cp = -9999.999999D0 !indicate a numerical problem 
+               a_cp = -9999.999999D0        !indicate a numerical problem 
                errorflag = 7
             ENDIF
         ENDIF 
@@ -199,7 +200,8 @@ ENDDO
 ! viscosity output
 IF (calcviscosity) THEN
     outputviscvars(1) = LOG10(etamix)
-    outputviscvars(2) = xtolviscosity*deltaetamix*0.4342944819D0  !the factor 0.4342944.. for conversion from deltaetamix which is an ln() value to log_10().
+    outputviscvars(2) = xtolviscosity*deltaetamix*0.4342944819D0  !the factor 0.4342944.. for conversion from deltaetamix which is an ln() value to log_10(). 
+                                                                  !This is the log10-scale +/- error value to be added to the log10 viscosity value.
 ELSE
     outputviscvars(1) = -999.999D0  !negative/unphysical values to signal "property not calculated"
     outputviscvars(2) = -999.999D0

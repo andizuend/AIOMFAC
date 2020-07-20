@@ -28,7 +28,6 @@
 !*   -  SUBROUTINE MassFrac2IonMolalities                                               *
 !*   -  SUBROUTINE MoleFrac2MassFrac                                                    *
 !*   -  SUBROUTINE Inputconc_to_wtf                                                     *
-!*   -  SUBROUTINE SpecialInputConcConversion                                           *
 !*   -  SUBROUTINE MassFrac2MoleFracMolality                                            *
 !*   -  SUBROUTINE zSolution2SpeciesMolality                                            *
 !*                                                                                      *
@@ -171,24 +170,15 @@ PUBLIC
     INTEGER(4), DIMENSION(1) :: minlocwtf, maxlocwtf
     REAL(8),PARAMETER :: lowval = 1.0D2*EPSILON(1.0D0)
     REAL(8),DIMENSION(nindcomp) :: x 
-    LOGICAL(4) :: defaultcase
     !...................................
     wtf = 0.0D0
-    defaultcase = .true.
-    !===
-    !consider special cases that need a scaling of input amounts (e.g. to distribute among multiple salts or PEG-oligomer components);
-    !this is not needed for general customized input (e.g. remove for AIOMFAC-web version)
-    CALL SpecialInputConcConversion(inputconc, mixingratio, wtfdry, xinput, wtf, defaultcase)
-    !===
-    IF (defaultcase) THEN  !(defaultcase should be set .true. if SpecialInputConcConversion is not used)
-        IF (xinput) THEN
-            x(2:nindcomp) = inputconc(2:nindcomp)  !mole fraction (with respect to salts not dissociated into ions) of other components including salts!
-            x(1) = 1.0D0-SUM(x(2:nindcomp)) !for component water usually
-            CALL MoleFrac2MassFrac(x, Mmass, wtf)
-        ELSE
-            wtf(2:nindcomp) = inputconc(2:nindcomp)
-            wtf(1) = 1.0D0-SUM(wtf(2:nindcomp))
-        ENDIF
+    IF (xinput) THEN
+        x(2:nindcomp) = inputconc(2:nindcomp)  !mole fraction (with respect to salts not dissociated into ions) of other components including salts!
+        x(1) = 1.0D0-SUM(x(2:nindcomp)) !for component water usually
+        CALL MoleFrac2MassFrac(x, Mmass, wtf)
+    ELSE
+        wtf(2:nindcomp) = inputconc(2:nindcomp)
+        wtf(1) = 1.0D0-SUM(wtf(2:nindcomp))
     ENDIF
                     
     !check and correct mixture composition if necessary (avoiding floating point exceptions):
@@ -214,181 +204,6 @@ PUBLIC
 
     END SUBROUTINE Inputconc_to_wtf
 !================================================================================================================================= 
-    
-    
-    !****************************************************************************************
-    !*   :: Purpose ::                                                                      *
-    !*   Subroutine to set molar mixing ratios and dry mass fractions of certain salt or    * 
-    !*   PEG mixtures. This is used for model fits to experimental data and for             *
-    !*   model output calculation of a list of special mixture systems.                     *
-    !*                                                                                      *
-    !*   :: Author & Copyright ::                                                           *
-    !*   Andi Zuend,                                                                        *
-    !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
-    !*                                                                                      *
-    !*   -> created:        2005                                                            *
-    !*   -> latest changes: 2018/05/28                                                      *
-    !*                                                                                      *
-    !****************************************************************************************   
-    PURE SUBROUTINE SpecialInputConcConversion(inputconc, mixingratio, wtfdry, xinput, wtf, defaultcase)
-    
-    IMPLICIT NONE
-    !interface:
-    REAL(8),DIMENSION(nindcomp),INTENT(IN) :: inputconc   !inputconc = the concentration of a given input point (e.g., at an experimental data point)
-    REAL(8),DIMENSION(nelectrol),INTENT(IN) :: mixingratio, wtfdry
-    LOGICAL(4),INTENT(IN) :: xinput
-    REAL(8),DIMENSION(nindcomp),INTENT(INOUT) :: wtf
-    LOGICAL(4),INTENT(OUT) :: defaultcase
-    !local:
-    REAL(8) :: totalweight, SUMSalts
-    REAL(8),DIMENSION(nindcomp) :: x 
-    !..........................................
-
-    defaultcase = .false. !initialize
-
-    !weightfractions of the read in data:
-    IF (.NOT. xinput) THEN !data is read in in mass fraction scale
-        SELECT CASE(nd)
-        CASE(26)
-            wtf(2) = inputconc(2) !inputconc(2)
-            wtf(1) = inputconc(3) !inputconc(3)
-            wtf(3) = 0.0D0
-        CASE(111)
-            wtf(2) = inputconc(2) !inputconc(2)
-            wtf(3) = inputconc(3) !inputconc(3)
-            wtf(4) = inputconc(4) !inputconc(4) !second salt
-            wtf(1) = 1.0D0-SUM(inputconc(2:4))  !water wtf
-        CASE(117,122,123,134:135,199) !saltmixes
-            wtf(nneutral+1:nindcomp) = inputconc(2)*wtfdry(1:nelectrol)
-            wtf(1) = 1.0D0-inputconc(2)
-        CASE(38,133,139:145,180:181,191,200:202) !saltmixes
-            SUMSalts = SUM(Mmass(nneutral+1:nindcomp)*mixingratio(1:nelectrol))
-            wtf(nneutral+1:nindcomp) = inputconc(2)*Mmass(nneutral+1:nindcomp)*mixingratio(1:nelectrol)/SUMSalts
-            wtf(1) = 1.0D0-inputconc(2)
-        CASE(203:204) !PEG-400 weight ratios for a 1:2 molar mixing ratio:
-            wtf(2) = inputconc(2)*0.30885D0 !PEG-400-n7
-            wtf(3) = inputconc(2)*0.69115D0 !PEG-400-n8
-            wtf(1) = 1.0D0-inputconc(2) !water wtf
-        CASE(205:209,219:221) !PEG-400 weight ratios for a 1:2 molar mixing ratio:
-            wtf(2) = inputconc(2)*0.30885D0 !PEG-400-n7
-            wtf(3) = inputconc(2)*0.69115D0 !PEG-400-n8
-            wtf(4) = inputconc(3)
-            wtf(1) = 1.0D0-inputconc(2)-inputconc(3) !water wtf
-        !CASE(210,217,218) !PEG-1000 weight ratios for a 0.708913:0.291087 molar mixing ratio:
-        !    wtf(2) = inputconc(2)*0.69982246682D0 !PEG-1000-n21
-        !    wtf(3) = inputconc(2)*0.30017753058D0 !PEG-1000-n22
-        !    wtf(4) = inputconc(3)
-        !    wtf(1) = 1.0D0-inputconc(2)-inputconc(3) !water wtf
-        CASE(211) !PEG-1000 weight ratios for a 0.708913:0.291087 molar mixing ratio:
-            wtf(2) = inputconc(2)*0.69982246682D0 !PEG-1000-n21
-            wtf(3) = inputconc(2)*0.30017753058D0 !PEG-1000-n22
-            wtf(1) = 1.0D0-inputconc(2) !water wtf
-        CASE(212) !PEG-600 weight ratios for a 0.708913:0.291087 molar mixing ratio:
-            wtf(2) = inputconc(2)*0.7767D0 !PEG-1000-n12
-            wtf(3) = inputconc(2)*0.2233D0 !PEG-1000-n13
-            wtf(1) = 1.0D0-inputconc(2) !water wtf
-        CASE(213) !PEG-1450 weight ratios for a 0.708913:0.291087 molar mixing ratio:
-            wtf(2) = inputconc(2)*0.48630405D0 !PEG-1000-n31
-            wtf(3) = inputconc(2)*0.51369595D0 !PEG-1000-n32
-            wtf(1) = 1.0D0-inputconc(2) !water wtf
-        !CASE(214) !PEG-1540 weight ratios for a 0.45089529:0.54910471 molar mixing ratio:
-        !    wtf(2) = inputconc(2)*0.44381284D0 !PEG-1540-n33
-        !    wtf(3) = inputconc(2)*0.55618716D0 !PEG-1540-n34
-        !    wtf(4) = inputconc(3)
-        !    wtf(1) = 1.0D0-inputconc(2)-inputconc(3) !water wtf
-        CASE(1157) !PEG-200 as a mix of two PEG chain length; mass fractions are: 0.843854566*(PEG-200-n3) + 0.156145434*(PEG-200-n4)
-            wtf(2) = inputconc(2)*0.843854566D0 !PEG-200-n3
-            wtf(3) = inputconc(2)*0.156145434D0 !PEG-200-n4
-            wtf(1) = 1.0D0-inputconc(2) !water wtf
-        CASE DEFAULT
-            defaultcase = .true.
-        END SELECT
-    ELSE !data is read in in mole fractions x => conversion to wtf is necessary:
-        SELECT CASE(nd)
-        CASE(38,133,139:145,180:181,191,200:202) !saltmixes
-            x(nneutral+1:nindcomp) = inputconc(2)*mixingratio(1:nelectrol)
-            x(1) = 1.0D0-SUM(x(nneutral+1:nindcomp))
-            totalweight = SUM(Mmass(1:nneutral)*x(1:nneutral))
-            totalweight = totalweight+SUM(Mmass(nneutral+1:nindcomp)*x(nneutral+1:nindcomp))
-            wtf(nneutral+1:nindcomp) = x(nneutral+1:nindcomp)*Mmass(nneutral+1:nindcomp)/totalweight
-            wtf(1) = 1.0D0-SUM(wtf(2:nindcomp))
-        CASE(196:198)
-            x(1) = 1.0D0-inputconc(2)-inputconc(3)
-            x(nneutral+1:nindcomp) = inputconc(2)*mixingratio(1:nelectrol)/SUM(mixingratio(1:nelectrol))
-            totalweight = SUM(Mmass(1:nneutral)*x(1:nneutral))
-            totalweight = totalweight+SUM(Mmass(nneutral+1:nindcomp)*x(nneutral+1:nindcomp))
-            wtf(1:nneutral) = x(1:nneutral)*Mmass(1:nneutral)/totalweight
-            wtf(nneutral+1:nindcomp) = x(nneutral+1:nindcomp)*Mmass(nneutral+1:nindcomp)/totalweight
-        CASE(203:204) !PEG-400 molar ratios
-            x(1) = 1.0D0-inputconc(2)
-            x(2) = inputconc(2)*(1.0D0/3.0D0) !PEG-400 n = 7
-            x(3) = inputconc(2)*(2.0D0/3.0D0) !PEG-400 n = 8
-            totalweight = SUM(Mmass(1:nneutral)*x(1:nneutral))
-            wtf(1:nneutral) = x(1:nneutral)*Mmass(1:nneutral)/totalweight
-        CASE(205:209,219:221) !PEG-400 molar ratios
-            x(1) = 1.0D0-inputconc(2)-inputconc(3)
-            x(2) = inputconc(2)*(1.0D0/3.0D0) !PEG-400 n = 7
-            x(3) = inputconc(2)*(2.0D0/3.0D0) !PEG-400 n = 8
-            x(4) = inputconc(3) !AS
-            totalweight = SUM(Mmass(1:nneutral)*x(1:nneutral))
-            totalweight = totalweight+SUM(Mmass(nneutral+1:nindcomp)*x(nneutral+1:nindcomp))
-            wtf(1:nneutral) = x(1:nneutral)*Mmass(1:nneutral)/totalweight
-            wtf(nneutral+1:nindcomp) = x(nneutral+1:nindcomp)*Mmass(nneutral+1:nindcomp)/totalweight
-        !CASE(210,217,218) !PEG-1000 molar ratios
-        !    x(1) = 1.0D0-inputconc(2)-inputconc(3)
-        !    x(2) = inputconc(2)*0.708913D0 !PEG-1000 n = 21
-        !    x(3) = inputconc(2)*0.291087D0 !PEG-1000 n = 22
-        !    x(4) = inputconc(3) !AS
-        !    totalweight = SUM(Mmass(1:nneutral)*x(1:nneutral))
-        !    totalweight = totalweight+SUMMmass(nneutral+1:nindcomp)*x(nneutral+1:nindcomp))
-        !    wtf(1:nneutral) = x(1:nneutral)*Mmass(1:nneutral)/totalweight
-        !    wtf(nneutral+1:nindcomp) = x(nneutral+1:nindcomp)*Mmass(nneutral+1:nindcomp)/totalweight
-        CASE(211) !PEG-1000  0.708913:0.291087 molar mixing ratio:
-            x(1) = 1.0D0-inputconc(2)-inputconc(3)
-            x(2) = inputconc(2)*0.708913D0
-            x(3) = inputconc(2)*0.291087D0
-            totalweight = SUM(Mmass(1:nneutral)*x(1:nneutral))
-            wtf(1:nneutral) = x(1:nneutral)*Mmass(1:nneutral)/totalweight
-        CASE(212) !PEG-600 as a mixture of 0.788926 PEG-600-n12 and 0.211074 PEG-600-n13
-            x(1) = 1.0D0-inputconc(2)-inputconc(3)
-            x(2) = inputconc(2)*0.788926D0
-            x(3) = inputconc(2)*0.211074D0
-            totalweight = SUM(Mmass(1:nneutral)*x(1:nneutral))
-            wtf(1:nneutral) = x(1:nneutral)*Mmass(1:nneutral)/totalweight
-        CASE(213) !PEG-1450 (PEG-1450 as a mixture of 0.493898 PEG-1450-n31 and 0.506102 PEG-1450-n32)
-            x(1) = 1.0D0-inputconc(2)-inputconc(3)
-            x(2) = inputconc(2)*0.493898D0
-            x(3) = inputconc(2)*0.506102D0
-            totalweight = SUM(Mmass(1:nneutral)*x(1:nneutral))
-            wtf(1:nneutral) = x(1:nneutral)*Mmass(1:nneutral)/totalweight
-        !CASE(214) !PEG-1540 molar ratios
-        !    x(1) = 1.0D0-inputconc(2)-inputconc(3)
-        !    x(2) = inputconc(2)*0.45089529 !PEG-1540 n = 33
-        !    x(3) = inputconc(2)*0.54910471 !PEG-1540 n = 34
-        !    x(4) = inputconc(3) !AS
-        !    totalweight = SUM(Mmass(1:nneutral)*x(1:nneutral))
-        !    totalweight = totalweight+SUM(Mmass(nneutral+1:nindcomp)*x(nneutral+1:nindcomp))
-        !    wtf(1:nneutral) = x(1:nneutral)*Mmass(1:nneutral)/totalweight
-        !    wtf(nneutral+1:nindcomp) = x(nneutral+1:nindcomp)*Mmass(nneutral+1:nindcomp)/totalweight
-        CASE(510)  !ternary neutral mixture (no salts)
-            x(2:nindcomp) = inputconc(2:nindcomp)  !mole fraction (with respect to salts not dissociated into ions) of other components including salts!
-            x(1) = 1.0D0-SUM(x(2:nindcomp)) !for component water usually
-            totalweight = SUM(Mmass(1:nneutral)*x(1:nneutral))
-            wtf(2:nneutral) = x(2:nneutral)*Mmass(2:nneutral)/totalweight
-            wtf(1) = 1.0D0-SUM(wtf(2:nindcomp))
-        CASE(1157) !PEG-200; mole fractions of PEG-200-n3 and PEG-200-n4 to yield 200 g/mol:  0.8689391*(PEG-200-n3) + 0.1310609*(PEG-200-n4);
-            x(1) = 1.0D0-inputconc(2)
-            x(2) = inputconc(2)*0.8689391D0 !PEG-200 n = 3
-            x(3) = inputconc(2)*0.1310609D0 !PEG-200 n = 4
-            totalweight = SUM(Mmass(1:nneutral)*x(1:nneutral))
-            wtf(1:nneutral) = x(1:nneutral)*Mmass(1:nneutral)/totalweight
-        CASE DEFAULT
-            defaultcase = .true.
-        END SELECT
-    ENDIF
-
-    END SUBROUTINE SpecialInputConcConversion
-!=================================================================================================================================
     
     
     !********************************************************************************

@@ -119,7 +119,7 @@ IMPLICIT NONE
     molality_ion = 0.0D0
 
     !ln of the activity coefficient for the neutrals:
-    DO CONCURRENT (I = 1:nneutral) !DO I = 1,nneutral
+    DO I = 1,nneutral
         IF (wtf(I) > dtiny) THEN
             lnactcoeff_n(I) = gnmrln(I) +gnsrln(I) +gnlrln(I)
             IF (lnactcoeff_n(I) < -340.0D0 .OR. lnactcoeff_n(I) > 340.0D0) THEN 
@@ -136,7 +136,7 @@ IMPLICIT NONE
     ENDDO
 
     !ln of the activity coefficient for the cations:
-    DO CONCURRENT (I = 1:Ncation) !DO I = 1,Ncation
+    DO I = 1,Ncation
         IF (SMC(I) > dtiny) THEN
             lnactcoeff_c(I) = gcmrln(I) +gcsrln(I) +gclrln(I) -Tmolal  !this term converts to the molality scale (basis/scale conversion)
             IF (solvmixrefnd) THEN !correction terms for MR and SR part, because reference solution is the solvent mixture
@@ -160,7 +160,7 @@ IMPLICIT NONE
     ENDDO
 
     !ln of the activity coefficient for the anions:
-    DO CONCURRENT (I = 1:Nanion) !DO I = 1,Nanion 
+    DO I = 1,Nanion 
         IF (SMA(I) > dtiny) THEN
             lnactcoeff_a(I) = gamrln(I) +gasrln(I) +galrln(I) -Tmolal    !this term converts to the molality scale (basis/scale conversion)
             IF (solvmixrefnd) THEN  !correction terms for MR and SR because reference solution is the solvent mixture
@@ -204,7 +204,7 @@ IMPLICIT NONE
     ionactivityprod = 0.0D0
     meanmolalactcoeff = 1.0D0
     lnmeanmactcoeff = 0.0D0
-    DO CONCURRENT (ii = 1:nelectrol)  !DO  ii = 1,nelectrol
+    DO  ii = 1,nelectrol
         ic = ElectComps(ii,1)  !get cation identifier 
         ia = ElectComps(ii,2)  !get anion identifier
         i = CatNr(ic)          !array index number of cation ic in, e.g., SMC array
@@ -738,7 +738,7 @@ IMPLICIT NONE
             dactcoeff(ni) = SUM(ABS(partdactcoeff(ni,1:nindcomp)))
         ENDDO
     ENDIF
-    !for viscosity sensitivity estimate as a function of a change in mole fraction of component 1 (water):
+    !for log viscosity sensitivity estimate as a function of a change in mole fraction of component 1 (water):
     deltaetamix = ABS(deltaetamix)
     
     DEALLOCATE(partdact, partdactcoeff)
@@ -867,7 +867,7 @@ IMPLICIT NONE
     IF (j == 1 .AND. i == 1) THEN
         !partial forward difference for mixture viscosity:
         IF (etamixinit > 0.0D0) THEN
-            deltaetamix = (LOG(etamixplus) -LOG(etamixinit))/dn !the numerical derivatives with respect to component i (while all other component's moles are kept const.)
+            deltaetamix = ((etamixplus -etamixinit)/dn)/etamixinit  != (LOG(etamixplus) -LOG(etamixinit))/dn;  relative partial differential error with respect to component i (while all other component's moles are kept const.)
         ELSE
             deltaetamix = 0.0D0
         ENDIF
