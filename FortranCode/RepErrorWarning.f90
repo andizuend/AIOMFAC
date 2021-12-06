@@ -8,7 +8,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
 !*                                                                                      *
 !*   -> created:        2011                                                            *
-!*   -> latest changes: 2018/08/08                                                      *
+!*   -> latest changes: 2021-12-06                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -208,6 +208,18 @@ ELSE
             WRITE(unito,*) "Make sure that selected integer amounts of cation and  "
             WRITE(unito,*) "anion 'subgroups' fulfill the charge balance (in the   "
             WRITE(unito,*) "inorganic component definition of the input file).     "
+            WRITE(unito,*) "Composition point no.: ", pointi
+            WRITE(unito,*) "======================================================="
+            WRITE(unito,*) ""
+        CASE(17)
+            WRITE(unito,*) ""
+            WRITE(unito,*) "======================================================="
+            WRITE(unito,'(A)') "AIOMFAC ERROR 17: Issue with ion dissociation &
+                            &equilibria calculations."
+            WRITE(unito,'(A)') "The numerical solution of electrolyte/ion dissociation &
+                            &equilibria was not accomplished to the desired tolerance &
+                            &level. Model output for this point is unreliable and likely &
+                            &incorrect."
             WRITE(unito,*) "Composition point no.: ", pointi
             WRITE(unito,*) "======================================================="
             WRITE(unito,*) ""
