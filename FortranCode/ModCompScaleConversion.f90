@@ -9,7 +9,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2004 (non-module versions)                                      *
-!*   -> latest changes: 2018/05/28                                                      *
+!*   -> latest changes: 2021-10-01                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -26,7 +26,10 @@
 !*   :: List of subroutines and functions contained in this module:                     *
 !*   --------------------------------------------------------------                     *
 !*   -  SUBROUTINE MassFrac2IonMolalities                                               *
+!*   -  SUBROUTINE MassFrac2SolvMolalities                                              *
 !*   -  SUBROUTINE MoleFrac2MassFrac                                                    *
+!*   -  SUBROUTINE Moles2solvmass                                                       *
+!*   -  SUBROUTINE Molality2SolvMoleFrac                                                *
 !*   -  SUBROUTINE Inputconc_to_wtf                                                     *
 !*   -  SUBROUTINE MassFrac2MoleFracMolality                                            *
 !*   -  SUBROUTINE zSolution2SpeciesMolality                                            *
@@ -35,14 +38,15 @@
 MODULE ModCompScaleConversion
 
 !Public Variables:
-USE ModSystemProp, ONLY : AnNr, CatNr, ElectComps, ElectNues, Mmass, Ncation, nd, nelectrol, NGI, nindcomp, NKNpNGS, nneutral
+USE ModSystemProp, ONLY : AnNr, CatNr, ElectComps, ElectNues, Mmass, Ncation, nd, nelectrol, &
+    & NGI, nindcomp, NKNpNGS, nneutral
 
 IMPLICIT NONE
 PUBLIC
 
-!================================================================================================================================= 
+!========================================================================================================== 
     CONTAINS
-!================================================================================================================================= 
+!========================================================================================================== 
     
     
     !****************************************************************************************
@@ -57,7 +61,7 @@ PUBLIC
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2004                                                            *
-    !*   -> latest changes: 2018/05/27                                                      *
+    !*   -> latest changes: 2018-05-27                                                      *
     !*                                                                                      *
     !**************************************************************************************** 
     PURE SUBROUTINE MassFrac2IonMolalities(wtf, SMC, SMA)
@@ -90,11 +94,41 @@ PUBLIC
     ENDDO !K
 
     END SUBROUTINE MassFrac2IonMolalities
-!================================================================================================================================= 
+!========================================================================================================== 
     
     
     !****************************************************************************************
     !*   :: Purpose ::                                                                      *
+    !*   Subroutine to calculate the molalities of the neutral (solvent) species from a     *
+    !*   given input (phase) composition in mass fractions (wtf) of all components.         *
+    !*                                                                                      *
+    !*   :: Author & Copyright ::                                                           *
+    !*   Hang Yin and Andi Zuend,                                                           *
+    !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
+    !*                                                                                      *
+    !*   -> created:        2020                                                            *
+    !*   -> latest changes: 2021/10/01                                                      *
+    !*                                                                                      *
+    !**************************************************************************************** 
+    PURE SUBROUTINE MassFrac2SolvMolalities(wtf, mNeutral)
+
+    IMPLICIT NONE
+    !interface variables:
+    REAL(8),DIMENSION(nindcomp),INTENT(IN) :: wtf        !mass fractions of all components
+    REAL(8),DIMENSION(nneutral),INTENT(OUT) :: mNeutral  !neutral component molalities
+    !local Variables
+    REAL(8) :: sumWN
+    !..........................................
+    
+    sumWN = SUM(wtf(1:nneutral))
+    mNeutral = wtf(1:nneutral)/( sumWN*Mmass(1:nneutral) )
+
+    END SUBROUTINE MassFrac2SolvMolalities
+!==========================================================================================================
+    
+    
+    !****************************************************************************************
+    !*   :: Purpose ::                                                                      *																							 
     !*   Subroutines to convert from mole fractions (xin) to mass fractions (wout) for      *
     !*   given input components and their molar masses. The applied procedure is designed   *
     !*   to avoid tiny rounding issues by identifying the most abundant component for       *
@@ -106,7 +140,7 @@ PUBLIC
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2012                                                            *
-    !*   -> latest changes: 2018/06/11                                                      *
+    !*   -> latest changes: 2019/10/29                                                      *
     !*                                                                                      *
     !**************************************************************************************** 
     PURE SUBROUTINE MoleFrac2MassFrac(xin, Mmass, wout) 
@@ -125,23 +159,87 @@ PUBLIC
     nc = SIZE(xin)
     nmaxindex = MAXLOC(xin, DIM=1)
     totmass = SUM(xin*Mmass)
-    IF (nmaxindex > 1) THEN
-        wout(1:nmaxindex-1) = xin(1:nmaxindex-1)*Mmass(1:nmaxindex-1)/totmass
-        sum1 = SUM(wout(1:nmaxindex-1))
-    ELSE
-        sum1 = 0.0D0
-    ENDIF
-    IF (nmaxindex < nc) THEN
-        wout(nmaxindex+1:) = xin(nmaxindex+1:)*Mmass(nmaxindex+1:)/totmass
-        sum2 = SUM(wout(nmaxindex+1:))
-    ELSE
+    IF (totmass > 0.0D0) THEN
+        IF (nmaxindex > 1) THEN
+            wout(1:nmaxindex-1) = xin(1:nmaxindex-1)*Mmass(1:nmaxindex-1)/totmass
+            sum1 = SUM(wout(1:nmaxindex-1))
+        ELSE
+            sum1 = 0.0D0
+        ENDIF
+        IF (nmaxindex < nc) THEN
+            wout(nmaxindex+1:) = xin(nmaxindex+1:)*Mmass(nmaxindex+1:)/totmass
+            sum2 = SUM(wout(nmaxindex+1:))
+        ELSE
+            sum2 = 0.0D0
+        ENDIF
+    ELSE !zero total mass; assign artificial mass fraction distribution
+        wout = 1.0D0/REAL(nc, KIND=8)
+        sum1 = SUM(wout(1:nc-1))
         sum2 = 0.0D0
     ENDIF
     !set the mass fraction value of the most abundant component, which is least sensitive to a tiny rounding error:
     wout(nmaxindex) = MAX(1.0D0-sum1-sum2, 0.0D0) !MAX() to ensure that wout is never a negative value.
 
     END SUBROUTINE MoleFrac2MassFrac
-!================================================================================================================================= 
+!==========================================================================================================
+    
+    
+    !****************************************************************************************
+    !*   :: Purpose ::                                                                      *
+    !*   Utility subroutines to update solvent mass.                                        *
+    !*                                                                                      *
+    !*   :: Author & Copyright ::                                                           *
+    !*   Hang Yin and Andi Zuend,                                                           *
+    !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
+    !*                                                                                      *
+    !*   -> created:        2020                                                            *
+    !*   -> latest changes: 2020/06/06                                                      *
+    !*                                                                                      *
+    !**************************************************************************************** 
+    PURE SUBROUTINE Moles2solvmass(moleNeutral, solvmass)
+
+    IMPLICIT NONE
+    !interface variables:
+    REAL(8),DIMENSION(nneutral),INTENT(IN) :: moleNeutral
+    REAL(8),INTENT(OUT) :: solvmass
+    !...................................................
+    
+    solvmass = SUM(moleNeutral(1:nneutral)*Mmass(1:nneutral))
+
+    END SUBROUTINE Moles2solvmass
+!==========================================================================================================
+    
+    
+    !****************************************************************************************
+    !*   :: Purpose ::                                                                      *
+    !*   Subroutine to calculate the mole fractions of the neutral species from a given     *
+    !*   input (phase) composition in molality of all components.                           *
+    !*                                                                                      *
+    !*   :: Author & Copyright ::                                                           *
+    !*   Hang Yin and Andi Zuend,                                                           *
+    !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
+    !*                                                                                      *
+    !*   -> created:        2020                                                            *
+    !*   -> latest changes: 2020/06/06                                                      *
+    !*                                                                                      *
+    !**************************************************************************************** 
+    PURE SUBROUTINE Molality2SolvMoleFrac(SMA, SMC, mNeutral, xout)
+
+    IMPLICIT NONE
+    !interface variables:
+    REAL(8),DIMENSION(:),INTENT(IN) :: mNeutral         !neutral molalities
+    REAL(8),DIMENSION(:),INTENT(IN) :: SMA, SMC         !ion molalities
+    REAL(8),DIMENSION(nneutral),INTENT(OUT) :: xout     !neutral mole fractions (on the basis of dissociated electrolytes) 
+    !Local Variables and Parameters:
+    REAL(8) :: SumIonMolalities, summolal
+    !.........................................
+    
+    SumIonMolalities = SUM(SMA(1:NGI)) +SUM(SMC(1:NGI))
+    summolal = SUM(mNeutral) +SumIonMolalities          !sum of all molalities
+    xout = mNeutral/summolal                            !mole fraction of the neutral components 
+                                                        !(on the basis of partially/fully dissociated electrolytes)    
+    END SUBROUTINE Molality2SolvMoleFrac
+!========================================================================================================== 
     
 
     !****************************************************************************************
@@ -162,36 +260,42 @@ PUBLIC
 
     IMPLICIT NONE
     !interface variables:
-    REAL(8),DIMENSION(nindcomp),INTENT(IN) :: inputconc   !the concentration of a given input point (e.g., at an experimental data point)
+    REAL(8),DIMENSION(nindcomp),INTENT(IN) :: inputconc             !the concentration of a given input point (e.g., at an experimental data point)
     REAL(8),DIMENSION(nelectrol),INTENT(IN) :: mixingratio, wtfdry
-    LOGICAL(4),INTENT(IN) :: xinput !"true" indicates input is in mole fraction ("false" indicates mass fraction input)
+    LOGICAL(4),INTENT(IN) :: xinput                                 !"true" indicates input is in mole fraction ("false" indicates mass fraction input)
     REAL(8),DIMENSION(nindcomp),INTENT(OUT) :: wtf
     !local variables:
-    INTEGER(4), DIMENSION(1) :: minlocwtf, maxlocwtf
+    INTEGER(4) :: minlocwtf, maxlocwtf
     REAL(8),PARAMETER :: lowval = 1.0D2*EPSILON(1.0D0)
     REAL(8),DIMENSION(nindcomp) :: x 
+    LOGICAL(4) :: defaultcase
     !...................................
     wtf = 0.0D0
-    IF (xinput) THEN
-        x(2:nindcomp) = inputconc(2:nindcomp)  !mole fraction (with respect to salts not dissociated into ions) of other components including salts!
-        x(1) = 1.0D0-SUM(x(2:nindcomp)) !for component water usually
-        CALL MoleFrac2MassFrac(x, Mmass, wtf)
-    ELSE
-        wtf(2:nindcomp) = inputconc(2:nindcomp)
-        wtf(1) = 1.0D0-SUM(wtf(2:nindcomp))
+    defaultcase = .true.
+    !===
+    IF (defaultcase) THEN                               !(defaultcase should be set .true. if SpecialInputConcConversion is not used)
+        IF (xinput) THEN
+            x(2:nindcomp) = inputconc(2:nindcomp)       !mole fraction (with respect to salts not dissociated into ions) of other components including salts!
+            x(1) = 1.0D0-SUM(x(2:nindcomp))             !for component (1); water usually
+            CALL MoleFrac2MassFrac(x, Mmass, wtf)
+        ELSE
+            wtf(2:nindcomp) = inputconc(2:nindcomp)
+            wtf(1) = 1.0D0-SUM(wtf(2:nindcomp))
+        ENDIF
     ENDIF
                     
     !check and correct mixture composition if necessary (avoiding floating point exceptions):
     IF (ANY(wtf(1:nindcomp) < 0.0D0)) THEN
         IF (ABS(MINVAL(wtf(1:nindcomp))) < 1.0D-8) THEN !correct floating point rounding problem
-            minlocwtf(1) = MINLOC(wtf(1:nindcomp), DIM=1)
-            maxlocwtf(1) = MAXLOC(wtf(1:nindcomp), DIM=1)
-            wtf(maxlocwtf(1)) = wtf(maxlocwtf(1))+wtf(minlocwtf(1))
-            wtf(minlocwtf(1)) = 0.0D0
+            minlocwtf = MINLOC(wtf(1:nindcomp), DIM=1)
+            maxlocwtf = MAXLOC(wtf(1:nindcomp), DIM=1)
+            wtf(maxlocwtf) = wtf(maxlocwtf)+wtf(minlocwtf)
+            wtf(minlocwtf) = 0.0D0
         ELSE !there is something wrong...
+            minlocwtf = MINLOC(wtf(1:nindcomp), DIM=1)
             WRITE(*,*) ""
-            WRITE(*,*) "WARNING from Inputconc_to_wtf: weight fraction of a component is less then 0.0 !!"
-            WRITE(*,*) "nd, wtf(1:nindcomp): ", nd, wtf(1:nindcomp)
+            WRITE(*,*) "WARNING from Inputconc_to_wtf: mass fraction of a component is less then 0.0 !!"
+            WRITE(*,*) "nd, wtf(minlocwtf): ", nd, wtf(minlocwtf)
             WRITE(*,*) ""
             !  READ(*,*)
             RETURN
@@ -199,11 +303,11 @@ PUBLIC
     ENDIF
     IF (SUM(wtf(1:nneutral)) < lowval .AND. SUM(wtf(nneutral+1:nindcomp)) > lowval) THEN  !there has to be some water in the mixture or some organic solvent!!
         wtf(2:nindcomp) = wtf(2:nindcomp)*(1.0D0 -lowval)
-        wtf(1) = 1.0D0-SUM(wtf(2:nindcomp))
+        wtf(1) = 1.0D0 - SUM(wtf(2:nindcomp))
     ENDIF
 
     END SUBROUTINE Inputconc_to_wtf
-!================================================================================================================================= 
+!========================================================================================================== 
     
     
     !********************************************************************************
@@ -273,7 +377,7 @@ PUBLIC
     ENDIF
 
     END SUBROUTINE MassFrac2MoleFracMolality
-!================================================================================================================================= 
+!========================================================================================================== 
     
       
     !****************************************************************************************
@@ -293,8 +397,8 @@ PUBLIC
     
     IMPLICIT NONE
     !interface variables:
-    REAL(8),DIMENSION(nindcomp),INTENT(IN) :: zl !input mole fraction (undissociated electrolytes)
-    REAL(8),DIMENSION(NKNpNGS),INTENT(OUT) :: ml !output molalities of neutral solvent components and dissociated ions (first cations then anions according to order in Ication, Ianion)
+    REAL(8),DIMENSION(nindcomp),INTENT(IN) :: zl    !input mole fraction (undissociated electrolytes)
+    REAL(8),DIMENSION(NKNpNGS),INTENT(OUT) :: ml    !output molalities of neutral solvent components and dissociated ions (first cations then anions according to order in Ication, Ianion)
     !local variables:
     INTEGER(4) :: i, cn, an, cid, aid
     REAL(8) :: Msolv
@@ -306,10 +410,10 @@ PUBLIC
     ml(1:nneutral) = zl(1:nneutral)/Msolv
     !molality of individual ions:
     DO i = 1,nelectrol  
-        cn = ElectComps(i,1) !the cation of this electrolyte
-        an = ElectComps(i,2) !the anion
-        cid = CatNr(cn) !the cation index ID within the cations of this mixture
-        aid = AnNr(an)  !the anion index ID
+        cn = ElectComps(i,1)    !the cation of this electrolyte
+        an = ElectComps(i,2)    !the anion
+        cid = CatNr(cn)         !the cation index ID within the cations of this mixture
+        aid = AnNr(an)          !the anion index ID
         ml(nneutral+cid) = ml(nneutral+cid) + zl(nneutral+i)*REAL(ElectNues(i,1), KIND=8)/Msolv
         ml(nneutral+Ncation+aid) = ml(nneutral+Ncation+aid) + zl(nneutral+i)*REAL(ElectNues(i,2), KIND=8)/Msolv
     ENDDO

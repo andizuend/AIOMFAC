@@ -11,7 +11,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2018 (based on non-module version from 2009)                    *
-!*   -> latest changes: 2020/07/18                                                      *
+!*   -> latest changes: 2021-09-14                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -37,24 +37,22 @@
 !****************************************************************************************
 MODULE ModSubgroupProp
 
-USE ModSystemProp, ONLY : Nmaingroups
+USE ModSystemProp, ONLY : Nmaingroups, topsubno
 
 IMPLICIT NONE
 
+INTEGER(4),PRIVATE :: i
 !module public vars:
-INTEGER(4),DIMENSION(261),PUBLIC :: NKTAB   !lists AIOMFAC subgroup affiliations with main groups
-INTEGER(4),DIMENSION(201:261),PUBLIC :: Ioncharge  !the (positive or negative) integer-valued relative el. charge of the ions.
-INTEGER(4),DIMENSION(200),PUBLIC :: subgC, subgH, subgO, subgN, subgS !the C, H, O, etc. atoms in organic subgroups
-REAL(8),DIMENSION(200),PUBLIC :: GroupMW    !list of subgroup molar masses [g/mol]
-REAL(8),DIMENSION(40),PUBLIC :: SMWA, SMWC  !lists of anion and cation molar masses [g/mol]
-CHARACTER(LEN=100),DIMENSION(261),PUBLIC :: subgrname, subgrnameTeX, subgrnameHTML
+INTEGER(4),DIMENSION(200),PUBLIC :: subgC, subgH, subgO, subgN, subgS   !the C, H, O, etc. atoms in organic subgroups
+CHARACTER(LEN=100),DIMENSION(topsubno),PUBLIC :: subgrname, subgrnameTeX, subgrnameHTML
 CHARACTER(LEN=50),DIMENSION(Nmaingroups),PUBLIC :: maingrname
 
-!load data arrays:
+!declare and populate module parameter arrays:
 !-----------------
-!NKTAB: assigns UNIFAC/AIOMFAC subgroups to corresponding main groups; listed is the main group of a subgroup (from subgroup 1 to 261). 
+!NKTAB: assigns UNIFAC/AIOMFAC subgroups to corresponding main groups; listed is the main group of a subgroup (from subgroup 1 to topsubno). 
 !subgroup no.: 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, etc. (21, ..., 40 on next row, etc.)
-DATA NKTAB /  01, 01, 01, 01, 02, 02, 02, 02, 03, 03, 04, 04, 04, 05, 06, 07, 08, 09, 09, 10, &
+INTEGER(4),DIMENSION(topsubno),PARAMETER,PUBLIC :: NKTAB = [ &
+            & 01, 01, 01, 01, 02, 02, 02, 02, 03, 03, 04, 04, 04, 05, 06, 07, 08, 09, 09, 10, &
             & 11, 11, 12, 13, 13, 13, 13, 14, 14, 14, 15, 15, 15, 16, 16, 17, 18, 18, 18, 19, &
             & 19, 20, 20, 21, 21, 21, 22, 22, 22, 23, 23, 24, 25, 26, 26, 26, 27, 28, 29, 29, &
             & 30, 31, 32, 33, 34, 34, 35, 36, 37, 02, 38, 39, 39, 40, 40, 40, 41, 42, 42, 42, &
@@ -62,58 +60,76 @@ DATA NKTAB /  01, 01, 01, 01, 02, 02, 02, 02, 03, 03, 04, 04, 04, 05, 06, 07, 08
             & 47, 48, 48, 48, 49, 50, 50, 50, 52, 52, 52, 52, 53, 54, 55, 55, 56, 56, 56, 56, &
             & 57, 57, 57, 58, 59, 59, 59, 59, 60, 61, 62, 62, 62, 62, 63, 64, 65, 00, 00, 00, &
             & 66, 66, 66, 66, 67, 67, 67, 67, 68, 68, 68, 68, 69, 70, 71, 71, 71, 72, 72, 72, &
-            & 73, 74, 74, 74, 74, 74, 74, 74, 74, 74, 74, 75, 00, 00, 00, 00, 00, 00, 00, 00, &
+            & 73, 74, 74, 74, 74, 74, 74, 74, 74, 74, 74, 75, 76, 00, 00, 00, 00, 00, 00, 00, &
             & 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, &
-            & 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, & !51 indicates that this main group is an ion
-            & 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, &
-            & 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, &
-            & 51 /
-    
-!Molecular mass of the neutral (UNIFAC) subgroups [g/mol]:
-!subgroup no.:       1,             2,            3,            4,            5,            6,            7,            8,            9,           10,  etc. (11, ..., 20 on next row, etc.)
-DATA GroupMW / 1.50340D+01,  1.40260D+01,  1.30180D+01,  1.20100D+01,  2.70440D+01,  2.60000D+01,  2.60000D+01,  2.50280D+01,  1.30180D+01,  1.20100D+01, &
-            &  2.70440D+01,  2.60000D+01,  2.50000D+01,  1.70080D+01,  3.20000D+01,  1.801528D+1,  2.90000D+01,  4.30000D+01,  4.20000D+01,  2.90000D+01, &
-            &  5.90000D+01,  5.80000D+01,  4.50000D+01,  3.10000D+01,  3.00268D+01,  2.90000D+01,  3.00000D+01,  3.10500D+01,  3.00000D+01,  2.90000D+01, &
-            &  3.00000D+01,  2.90000D+01,  2.80000D+01,  2.90000D+01,  2.80000D+01,  2.80000D+01,  7.90000D+01,  7.80000D+01,  7.70000D+01,  4.10000D+01, &
-            &  4.00000D+01,  4.50000D+01,  4.60000D+01,  4.95000D+01,  4.85000D+01,  4.75000D+01,  8.50000D+01,  8.40000D+01,  8.30000D+01,  1.19500D+02, &
-            &  1.18500D+02,  1.54000D+02,  4.75000D+01,  6.10000D+01,  6.00000D+01,  5.90000D+01,  5.80000D+01,  7.60000D+01,  4.80000D+01,  4.70000D+01, &
-            &  9.60900D+01,  1.90000D+01,  1.26900D+02,  7.99000D+01,  2.50000D+01,  2.40000D+01,  7.81300D+01,  5.30600D+01,  5.95000D+01,  2.40200D+01, &
-            &  7.30900D+01,  7.10000D+01,  6.90000D+01,  5.00000D+01,  3.10000D+01,  4.40000D+01,  3.10000D+01,  3.00000D+01,  3.00000D+01,  2.90000D+01, &
-            &  2.80000D+01,  4.60000D+01,  4.50000D+01,  4.40000D+01,  9.91300D+01,  1.37500D+02,  1.02000D+02,  1.03000D+02,  8.75000D+01,  8.55000D+01, &
-            &  8.65000D+01,  1.04500D+02,  1.21000D+02,  4.40000D+01,  5.80000D+01,  5.70000D+01,  7.20000D+01,  7.10000D+01,  7.00000D+01,  6.10000D+01, &
-            &  6.00000D+01,  4.70000D+01,  4.60000D+01,  4.50000D+01,  8.71200D+01,  8.40000D+01,  8.30000D+01,  8.20000D+01,  1.50000D+01,  1.40000D+01, &
-            &  1.30000D+01,  1.20000D+01,  1.70000D+01,  4.50000D+01,  4.30000D+01,  4.20000D+01,  1.50000D+01,  1.40000D+01,  1.30000D+01,  1.20000D+01, &
-            &  3.10000D+01,  3.00000D+01,  2.90000D+01,  1.70000D+01,  1.50000D+01,  1.40000D+01,  1.30000D+01,  1.20000D+01,  4.50000D+01,  1.70000D+01, &
-            &  1.50000D+01,  1.40000D+01,  1.30000D+01,  1.20000D+01,  4.50000D+01,  1.70000D+01,  4.50000D+01,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
-            &  1.50340D+01,  1.40260D+01,  1.30180D+01,  1.20100D+01,  1.50340D+01,  1.40260D+01,  1.30180D+01,  1.20100D+01,  1.50340D+01,  1.40260D+01, &
-            &  1.30180D+01,  1.20100D+01,  1.70080D+01,  4.40528D+01,  7.60260D+01,  7.50180D+01,  7.40100D+01,  4.70340D+01,  4.60260D+01,  4.50180D+01, &
-            &  6.10180D+01,  6.20680D+01,  6.10600D+01,  6.00520D+01,  5.90440D+01,  6.00520D+01,  5.90440D+01,  5.80360D+01,  5.80360D+01,  5.70280D+01, &
-            &  5.60200D+01,  1.06010D+02,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
-            &  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
-            &  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00 /
+            & (51, i = 201,topsubno) ]  !51 indicates that main group is an ion (same for all ions)
+
+!Molar masses of the neutral (UNIFAC) subgroups [g/mol]:
+REAL(8),DIMENSION(200),PARAMETER,PUBLIC :: GroupMW = [ &
+!subgroup no.: 1,         2,            3,            4,            5,            6,            7,            8,            9,           10,   etc. (11, ..., 20 on next row, etc.)
+    &  1.50340D+01,  1.40260D+01,  1.30180D+01,  1.20100D+01,  2.70440D+01,  2.60000D+01,  2.60000D+01,  2.50280D+01,  1.30180D+01,  1.20100D+01, &
+    &  2.70440D+01,  2.60000D+01,  2.50000D+01,  1.70080D+01,  3.20000D+01,  1.801528D+1,  2.90000D+01,  4.30000D+01,  4.20000D+01,  2.90000D+01, &
+    &  5.90000D+01,  5.80000D+01,  4.50000D+01,  3.10000D+01,  3.00268D+01,  2.90000D+01,  3.00000D+01,  3.10500D+01,  3.00000D+01,  2.90000D+01, &
+    &  3.00000D+01,  2.90000D+01,  2.80000D+01,  2.90000D+01,  2.80000D+01,  2.80000D+01,  7.90000D+01,  7.80000D+01,  7.70000D+01,  4.10000D+01, &
+    &  4.00000D+01,  4.50000D+01,  4.60000D+01,  4.95000D+01,  4.85000D+01,  4.75000D+01,  8.50000D+01,  8.40000D+01,  8.30000D+01,  1.19500D+02, &
+    &  1.18500D+02,  1.54000D+02,  4.75000D+01,  6.10000D+01,  6.00000D+01,  5.90000D+01,  5.80000D+01,  7.60000D+01,  4.80000D+01,  4.70000D+01, &
+    &  9.60900D+01,  1.90000D+01,  1.26900D+02,  7.99000D+01,  2.50000D+01,  2.40000D+01,  7.81300D+01,  5.30600D+01,  5.95000D+01,  2.40200D+01, &
+    &  7.30900D+01,  7.10000D+01,  6.90000D+01,  5.00000D+01,  3.10000D+01,  4.40000D+01,  3.10000D+01,  3.00000D+01,  3.00000D+01,  2.90000D+01, &
+    &  2.80000D+01,  4.60000D+01,  4.50000D+01,  4.40000D+01,  9.91300D+01,  1.37500D+02,  1.02000D+02,  1.03000D+02,  8.75000D+01,  8.55000D+01, &
+    &  8.65000D+01,  1.04500D+02,  1.21000D+02,  4.40000D+01,  5.80000D+01,  5.70000D+01,  7.20000D+01,  7.10000D+01,  7.00000D+01,  6.10000D+01, &
+    &  6.00000D+01,  4.70000D+01,  4.60000D+01,  4.50000D+01,  8.71200D+01,  8.40000D+01,  8.30000D+01,  8.20000D+01,  1.50000D+01,  1.40000D+01, &
+    &  1.30000D+01,  1.20000D+01,  1.70000D+01,  4.50000D+01,  4.30000D+01,  4.20000D+01,  1.50000D+01,  1.40000D+01,  1.30000D+01,  1.20000D+01, &
+    &  3.10000D+01,  3.00000D+01,  2.90000D+01,  1.70000D+01,  1.50000D+01,  1.40000D+01,  1.30000D+01,  1.20000D+01,  4.50000D+01,  1.70000D+01, &
+    &  1.50000D+01,  1.40000D+01,  1.30000D+01,  1.20000D+01,  4.50000D+01,  1.70000D+01,  4.50000D+01,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
+    &  1.50340D+01,  1.40260D+01,  1.30180D+01,  1.20100D+01,  1.50340D+01,  1.40260D+01,  1.30180D+01,  1.20100D+01,  1.50340D+01,  1.40260D+01, &
+    &  1.30180D+01,  1.20100D+01,  1.70080D+01,  4.40528D+01,  7.60260D+01,  7.50180D+01,  7.40100D+01,  4.70340D+01,  4.60260D+01,  4.50180D+01, &
+    &  6.10180D+01,  6.20680D+01,  6.10600D+01,  6.00520D+01,  5.90440D+01,  6.00520D+01,  5.90440D+01,  5.80360D+01,  5.80360D+01,  5.70280D+01, &
+    &  5.60200D+01,  1.06010D+02,  4.40100D+01,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
+    &  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
+    &  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00 ]
    
-!List of the molecular masses of the ions [g/mol]; The order is ion ID -200 for cations, e.g. SMWC(2) is molar mass of ion 202 = Na+, and ion-ID -240 for anions, e.g.(e.g. SMWA(3) is molar mass of ion 243 = Br-). 
-!cation no.:       1,             2,            3,            4,            5,            6,            7,            8,            9,           10,  etc. (11, ..., 20 on next row, etc.)
-DATA SMWC /  6.94100D+00,  2.29900D+01,  3.90980D+01,  1.80380D+01,  1.00800D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
-          &  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
-          &  4.00780D+01,  1.37330D+02,  2.43050D+01,  8.76200D+01,  5.89330D+01,  5.86930D+01,  6.35460D+01,  6.53900D+01,  2.00590D+02,  0.00000D+00, &
-          &  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00 /
-  
-!anion no.:       1,             2,            3,            4,            5,            6,            7,            8,            9,           10,  etc. (11, ..., 20 on next row, etc.)
-DATA SMWA /  1.89980D+01,  3.54530D+01,  7.99040D+01,  1.26905D+02,  6.20040D+01,  5.90440D+01,  5.80840D+01,  9.70710D+01,  9.50925D+01,  0.00000D+00, &
-          &  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
-          &  9.60630D+01,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
-          &  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00 /
+!List of the molecular masses of the ions [g/mol]; 
+!The order is ion ID -200 for cations, e.g. SMWC(2) is molar mass of ion 202 = Na+, 
+! and ion-ID -240 for anions, e.g.(e.g. SMWA(3) is molar mass of ion 243 = Br-). 
+REAL(8),DIMENSION(40),PARAMETER,PUBLIC :: SMWC = [ &  
+!cation no.: 1,             2,            3,            4,            5,            6,            7,            8,            9,           10,  etc. (11, ..., 20 on next row, etc.)
+    &  6.94100D+00,  2.29900D+01,  3.90980D+01,  1.80380D+01,  1.00800D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
+    &  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
+    &  4.00780D+01,  1.37330D+02,  2.43050D+01,  8.76200D+01,  5.89330D+01,  5.86930D+01,  6.35460D+01,  6.53900D+01,  2.00590D+02,  0.00000D+00, &
+    &  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00 ]
+
+!list of anion molar masses [g/mol]:
+REAL(8),DIMENSION(40),PARAMETER,PUBLIC :: SMWA = [ &  
+!anion no.:  1,             2,            3,            4,            5,            6,            7,            8,            9,           10,  etc. (11, ..., 20 on next row, etc.)
+    &  1.89980D+01,  3.54530D+01,  7.99040D+01,  1.26905D+02,  6.20040D+01,  1.74903D+02,  1.700728D+01, 9.70710D+01,  9.50925D+01,  6.10160D+01, &
+    &  1.03018D+02,  1.31070D+02,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
+    &  9.60630D+01,  6.00080D+01,  1.02010D+02,  1.30062D+02,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
+    &  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00 ]
 
 !assign the (positive or negative) integer-valued relative electric charges to the different ion categories.
-DATA Ioncharge(201:220) / 20*1 /     !single-charge cations
-DATA Ioncharge(221:240) / 20*2 /     !double-charge cations
-DATA Ioncharge(241:260) / 20*-1 /    !single-charge anion
-DATA Ioncharge(261:261) / -2 /       !double-charge anion   
+INTEGER(4),DIMENSION(201:topsubno),PARAMETER,PUBLIC :: Ioncharge = [ &
+    &  ( 1, i = 201,220), &      !single-charge cations
+    &  ( 2, i = 221,240), &      !double-charge cations
+    &  (-1, i = 241,260), &      !single-charge anions
+    &  (-2, i = 261,topsubno) ]  !double-charge anions
 
-!================================================================================================================================= 
+!Assign an O:C-equivalent value to each ion (which is used to compute mean electrolyte O:C equivalent values).
+!These values are used to generate initial guesses in PhaseSeparation.
+! (default values: 3.0 for single-charge ions, 4.0 for double-charge ions.)
+REAL(8),DIMENSION(201:topsubno),PARAMETER,PUBLIC :: IonO2Cequiv = [ &
+!ion ID.: 201,     202,     203,     204,     205,     206,     207,     208,     209,     210,  etc. (211, ..., 220 on next row, etc.)
+    &  3.60D0,  4.00D0,  3.00D0,  3.00D0,  2.80D0,  3.00D0,  3.00D0,  3.00D0,  3.00D0,  3.00D0, &
+    &  3.00D0,  3.00D0,  3.00D0,  3.00D0,  3.00D0,  3.00D0,  3.00D0,  3.00D0,  3.00D0,  3.00D0, &
+    &  4.00D0,  4.00D0,  4.00D0,  4.00D0,  4.00D0,  4.00D0,  4.00D0,  4.00D0,  4.00D0,  4.00D0, &
+    &  4.00D0,  4.00D0,  4.00D0,  4.00D0,  4.00D0,  4.00D0,  4.00D0,  4.00D0,  4.00D0,  4.00D0, &
+    &  3.00D0,  3.40D0,  3.00D0,  3.00D0,  2.80D0,  3.00D0,  3.00D0,  3.20D0,  3.20D0,  3.00D0, &
+    &  3.00D0,  3.00D0,  3.00D0,  3.00D0,  3.00D0,  3.00D0,  3.00D0,  3.00D0,  3.00D0,  3.00D0, &
+    &  (4.0D0, i = 261,topsubno) ]
+
+
+!========================================================================================================== 
     CONTAINS
-!================================================================================================================================= 
+!========================================================================================================== 
     
     !***********************************************************************************************************
     !*                                                                                                         *
@@ -169,11 +185,10 @@ DATA Ioncharge(261:261) / -2 /       !double-charge anion
     subgC(30) = 1; subgH(30) = 3; subgO(30) = 0; subgN(30) = 1; !(CHNH2)
     subgC(31) = 1; subgH(31) = 4; subgO(31) = 0; subgN(31) = 1; !(CH3NH)
     subgC(32) = 1; subgH(32) = 3; subgO(32) = 0; subgN(32) = 1; !(CH2NH)  
-    subgC(33) = 1; subgH(33) = 2; subgO(33) = 0; subgN(33) = 1; !(CHNH)         
+    subgC(33) = 1; subgH(33) = 2; subgO(33) = 0; subgN(33) = 1; !(CHNH)          
     subgC(42) = 1; subgH(42) = 1; subgO(42) = 2;  !subgrname(42) ="(COOH)"             
-    subgC(43) = 1; subgH(43) = 2; subgO(43) = 2;  !subgrname(43) = "(HCOOH)" 
-    subgC(137) = 1; subgH(137) = 1; subgO(137) = 2;  !subgrname(137) ="(COOH)"
-    
+    subgC(43) = 1; subgH(43) = 2; subgO(43) = 2;  !subgrname(43) = "(HCOOH)"   
+    subgC(137) = 1; subgH(137) = 1; subgO(137) = 2;  !subgrname(137) ="(COOH)"  
     subgC(54) = 1; subgH(54) = 3; subgO(54) = 2; subgN(54) = 1; !(CH3NO2) nitro
     subgC(55) = 1; subgH(55) = 2; subgO(55) = 2; subgN(55) = 1; !(CH2NO2) nitro
     subgC(56) = 1; subgH(56) = 1; subgO(56) = 2; subgN(56) = 1; !(CHNO2) nitro
@@ -213,7 +228,7 @@ DATA Ioncharge(261:261) / -2 /       !double-charge anion
     subgC(173) = 1; subgH(173) = 0; subgO(173) = 2; !CO2 (carbon dioxide)
     
     END SUBROUTINE SubgroupAtoms
-    !================================================================================================================================= 
+    !========================================================================================================== 
     
     
     !**********************************************************************************************************
@@ -288,7 +303,7 @@ DATA Ioncharge(261:261) / -2 /       !double-charge anion
     subgrname(150) ="(CH2[OH])"         ;  subgrnameTeX(150) ="(CH$_2$$^{[OH]}$)"        ;  subgrnameHTML(150) ="(CH<sub>2</sub><sup>[OH]</sup>)"
     subgrname(151) ="(CH[OH])"          ;  subgrnameTeX(151) ="(CH$^{[OH]}$)"            ;  subgrnameHTML(151) ="(CH<sup>[OH]</sup>)"
     subgrname(152) ="(C[OH])"           ;  subgrnameTeX(152) ="(C$^{[OH]}$)"             ;  subgrnameHTML(152) ="(C<sup>[OH]</sup>)"
-    subgrname(154) = "(CH2OCH2[PEG])";  subgrnameTeX(154) ="(CH$_2$OCH$_2$[PEG])";  subgrnameHTML(154) ="(CH<sub>2</sub>$OCH<sub>2</sub>[PEG])" !special oxyethylene group of Poly(ethylene glycols) = Poly(oxyethylene).
+    subgrname(154) = "(CH2OCH2[PEG])"   ;  subgrnameTeX(154) ="(CH$_2$OCH$_2$[PEG])"     ;  subgrnameHTML(154) ="(CH<sub>2</sub>OCH<sub>2</sub>[PEG])" !special oxyethylene group of Poly(ethylene glycols) = Poly(oxyethylene).
     !peroxides and organonitrates; [perox] indicates that it contains a peroxide group:
     subgrname(155) ="(CH2ONO2)"         ;  subgrnameTeX(155) ="(CH$_2$ONO$_2$)"          ;  subgrnameHTML(155) ="(CH<sub>2</sub>ONO<sub>2</sub>)"
     subgrname(156) ="(CHONO2)"          ;  subgrnameTeX(156) ="(CHONO$_2$)"              ;  subgrnameHTML(156) ="(CHONO<sub>2</sub>)"
@@ -323,12 +338,16 @@ DATA Ioncharge(261:261) / -2 /       !double-charge anion
     subgrname(243) = "(Br-)"     ;  subgrnameTeX(243) = "(Br$^-$)"           ;  subgrnameHTML(243) = "(Br<sup>-</sup>)"
     subgrname(244) = "(I-)"      ;  subgrnameTeX(244) = "(I$^-$)"            ;  subgrnameHTML(244) = "(I<sup>-</sup>)"
     subgrname(245) = "(NO3-)"    ;  subgrnameTeX(245) = "(NO$_3$$^-$)"       ;  subgrnameHTML(245) = "(NO<sub>3</sub><sup>-</sup>)"
+    subgrname(246) = "(IO3-)"    ;  subgrnameTeX(246) = "(IO$_3$$^-$)"       ;  subgrnameHTML(246) = "(IO<sub>3</sub><sup>-</sup>)"
+    subgrname(247) = "(OH-)"     ;  subgrnameTeX(247) = "(OH$^-$)"           ;  subgrnameHTML(247) = "(OH<sub>-</sub>)"
     subgrname(248) = "(HSO4-)"   ;  subgrnameTeX(248) = "(HSO$_4$$^-$)"      ;  subgrnameHTML(248) = "(HSO<sub>4</sub><sup>-</sup>)"
     subgrname(249) = "(CH3SO3-)" ;  subgrnameTeX(249) = "(CH$_3$SO$_3$$^-$)" ;  subgrnameHTML(249) = "(CH<sub>3</sub>SO<sub>3</sub><sup>-</sup>)"
+    subgrname(250) = "(HCO3-)"   ;  subgrnameTeX(250) = "(HCO$_3$$^-$)"      ;  subgrnameHTML(250) = "(HCO<sub>3</sub><sup>-</sup>)"
     subgrname(261) = "(SO4--)"   ;  subgrnameTeX(261) = "(SO$_4$$^{2-}$)"    ;  subgrnameHTML(261) = "(SO<sub>4</sub><sup>2-</sup>)"
+    subgrname(262) = "(CO3--)"   ;  subgrnameTeX(262) = "(CO$_3$$^{2-}$)"    ;  subgrnameHTML(262) = "(CO<sub>3</sub><sup>2-</sup>)"
 
     END SUBROUTINE SubgroupNames
-    !=================================================================================================================================
+    !==========================================================================================================
     
     
     !**********************************************************************************************************
@@ -337,11 +356,10 @@ DATA Ioncharge(261:261) / -2 /       !double-charge anion
     !*                                                                                                        *   
     !*  (c) Andi Zuend, IACETH, ETH Zurich, 06/2013                                                           *
     !**********************************************************************************************************
-
     SUBROUTINE MaingroupNames()
 
     IMPLICIT NONE
-    !...........................................................
+    !..........................
 
     maingrname = "-?-" !initialize
 
@@ -427,9 +445,11 @@ DATA Ioncharge(261:261) / -2 /       !double-charge anion
     maingrname(73) = "(C(=O)OOH[perox])"
     maingrname(74) = "(CHnOOCHm[perox])"
     maingrname(75) = "(C(=O)OONO2[perox])"
+    !Extension by Yin et al. (2021)
+    maingrname(76) = "(CO2)"
 
     END SUBROUTINE MaingroupNames
-    !=================================================================================================================================
+    !==========================================================================================================
     
     
     !**********************************************************************************************************
@@ -529,7 +549,7 @@ DATA Ioncharge(261:261) / -2 /       !double-charge anion
             !add cation:
             cn = ADJUSTL(cn) !adjust left and remove leading blanks
             compsubgroups(i) = TRIM(compsubgroups(i))//TRIM(subgrname(j))//"_"//TRIM(cn) !add subgroup to string
-            compsubgroupsTeX(i) = TRIM(compsubgroupsTeX(i))//TRIM(subgrnameTeX(j))//"$_"//TRIM(cn)//"$"
+            compsubgroupsTeX(i) = TRIM(compsubgroupsTeX(i))//TRIM(subgrnameTeX(j))//"$_"//TRIM(cn)//"$" !add subgroup to string
             compsubgroupsHTML(i) = TRIM(compsubgroupsHTML(i))//TRIM(subgrnameHTML(j))//"<sub>"//TRIM(cn)//"</sub>"
         ELSE
             compsubgroups(i) = TRIM(compsubgroups(i))//TRIM(subgrname(j))
@@ -539,7 +559,7 @@ DATA Ioncharge(261:261) / -2 /       !double-charge anion
     ENDDO !i
 
     END SUBROUTINE cpsubgrstring
-    !=================================================================================================================================
+    !==========================================================================================================
     
     
     !****************************************************************************************
@@ -574,11 +594,11 @@ DATA Ioncharge(261:261) / -2 /       !double-charge anion
     compH = 0.0D0
     compC = 0.0D0
     !loop over subgroups to count the O, H, and C atoms:
-    DO k = 1,NGN            !loop over organic subgroups (SolvSubs excl. water)
-        isub = SolvSubs(k)  !subgoup
-        IF (isub /= 16 .AND. isub /= 173) THEN  !exclude water (= subgroup 16) from the calculations; also exclude CO2(aq) (subgroup 173);
+    DO k = 1,NGN !loop over organic subgroups (SolvSubs excl. water)
+        isub = SolvSubs(k) !subgoup
+        IF (isub /= 16 .AND. isub /= 173) THEN !exclude water (= subgroup 16) from the calculations; also exclude CO2(aq) (subgroup 173);
             nsub = ITAB_dimflip(isub,ind)
-            IF (nsub > 0) THEN  !subgroup is present
+            IF (nsub > 0) THEN !subgroup is present
                 compO = compO +REAL(nsub*subgO(isub), KIND=8)
                 compH = compH +REAL(nsub*subgH(isub), KIND=8)
                 compC = compC +REAL(nsub*subgC(isub), KIND=8)
@@ -596,7 +616,7 @@ DATA Ioncharge(261:261) / -2 /       !double-charge anion
     ENDIF
 
     END SUBROUTINE O2C_H2C_component
-    !=================================================================================================================================
+    !==========================================================================================================
     
     
     !****************************************************************************************

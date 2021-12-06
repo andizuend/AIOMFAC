@@ -8,7 +8,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
 !*                                                                                      *
 !*   -> created:        2011                                                            *
-!*   -> latest changes: 2020/07/18                                                      *
+!*   -> latest changes: 2021-12-05                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -23,10 +23,12 @@
 !*   program. If not, see <http://www.gnu.org/licenses/>.                               *
 !*                                                                                      *
 !****************************************************************************************
-SUBROUTINE OutputTXT(fname, VersionNo, nspecmax, npoints, watercompno, cpnameinp, T_K, px, out_data, out_viscdata)
+SUBROUTINE OutputTXT(fname, VersionNo, nspecmax, npoints, watercompno, cpnameinp, T_K, &
+    & px, out_data, out_viscdata)
 
 !module variables:
-USE ModSystemProp, ONLY : compname, compsubgroups, compsubgroupsTeX, NGS, NKNpNGS, ninput, nneutral
+USE ModSystemProp, ONLY : compname, compsubgroups, compsubgroupsTeX, idCO2, NGS, NKNpNGS, &
+    & ninput, nneutral
 USE ModSubgroupProp, ONLY : subgrname, subgrnameTeX
 
 IMPLICIT NONE
@@ -90,7 +92,7 @@ WRITE(unitx,'(A)') "============================================================
 WRITE(unitx,*) ""
 mixturestring = "'"//TRIM(mixturestring)//"'"
 ![Note that Intel Fortran allows for variable format statements like A<LEN_TRIM(txtn)>, but that is a non-standard extension not supported by gfortran and other compilers - therefore avoided here.]
-WRITE(unitx, '(A,A)') "Mixture name:  ", ADJUSTL(mixturestring)
+WRITE(unitx, '(A,A)') "Mixture name:  ", TRIM(mixturestring)
 WRITE(unitx, '(A,I0.2)') "Number of independent input components: ", ninput
 WRITE(unitx, '(A,I0.2)') "Number of different neutral components: ", nneutral
 WRITE(unitx, '(A,I0.2)') "Number of different inorganic ions    : ", NGS
@@ -114,9 +116,9 @@ WRITE(unitx,'(A)') '                   with reference state of infinite dilution
 WRITE(unitx,'(A)') 'a_x(j) [-]       : activity of "j", defined on mole fraction basis (pure component reference state);'
 WRITE(unitx,'(A)') 'a_m(j) [-]       : activity of "j", defined on molality basis (used for inorg. ions) with reference '
 WRITE(unitx,'(A)') '                   state of infinite dilution of "j" in pure water;                                 '
-WRITE(unitx,'(A)') 'log_10(eta/[Pa.s]): base-10 log of the dynamic viscosity of the mixture;                            '
-WRITE(unitx,'(A)') 'log_10(s_eta/[Pa.s]): base-10 log of the estimated sensitivity of the dynamic viscosity; see details'
-WRITE(unitx,'(A)') '                   on the "Hints & Examples" webpage;                                               '
+WRITE(unitx,'(A)') 'log10(eta/[Pa.s]): base-10 log of the predicted dynamic viscosity of the mixture;                   '
+WRITE(unitx,'(A)') '+/-log10(eta sens./[Pa.s]): base-10 log of the estimated sensitivity/uncertainty of the dynamic     '
+WRITE(unitx,'(A)') '                   viscosity; see details on the "Hints & Examples" webpage;                        '
 WRITE(unitx,'(A)') 'flag             : error/warning flag, a non-zero value (error/warning number) indicates that a     '
 WRITE(unitx,'(A)') '                   numerical issue or a warning occurred at this data point, suggesting evaluation  '
 WRITE(unitx,'(A)') '                   with caution (warnings) or exclusion (errors) of this data point.                '
@@ -130,7 +132,8 @@ horizline = "-------------------------------------------------------------------
 WRITE(unitx,'(A)') "Properties of this phase: mixture viscosity"
 !write table column headers:
 WRITE(unitx,'(A)') ADJUSTL(horizline)
-WRITE(unitx,'(2X, A)') "no.   T_[K]     RH_[%]   log_10(eta/[Pa.s])   log_10(s_eta/[Pa.s])        flag "
+WRITE(unitx,'(2X, A)') "no.   T_[K]     RH_[%]    log10(eta/[Pa.s])   +/-log10(eta sens./[Pa.s])     flag "
+WRITE(unitx,'(A)') ADJUSTL(horizline)
 !write data to viscosity table
 DO pointi = 1,npoints  !loop over composition points
     IF (watercompno > 0) THEN
@@ -161,7 +164,11 @@ DO i = 1,nspecmax
         WRITE(unitx, '(A,A)') "Subgroups, TeX format : ", ADJUSTL(txtsubs)
         !write table column headers:
         WRITE(unitx,'(A)') ADJUSTL(horizline)
-        tablehead = "no.   T_[K]     RH_[%]   w("//cn//")          x_i("//cn//")        m_i("//cn//")        a_coeff_x("//cn//")   a_x("//cn//")        flag "
+        IF (i == idCO2) THEN  !check exception: CO2 has the activity defined on molality basis like ions:
+            tablehead = "no.   T_[K]     RH_[%]   w("//cn//")          x_i("//cn//")        m_i("//cn//")        a_coeff_m("//cn//")   a_m("//cn//")        flag "
+        ELSE        !regular case
+            tablehead = "no.   T_[K]     RH_[%]   w("//cn//")          x_i("//cn//")        m_i("//cn//")        a_coeff_x("//cn//")   a_x("//cn//")        flag "
+        ENDIF
         WRITE(unitx, '(2X,A)') ADJUSTL(tablehead)
         !--
     ELSE IF (INT(out_data(6,px(i),i)) < 240) THEN !cation

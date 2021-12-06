@@ -9,7 +9,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
 !*                                                                                      *
 !*   -> created:        2011                                                            *
-!*   -> latest changes: 2020/07/18                                                      *
+!*   -> latest changes: 2021-12-05                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -24,10 +24,11 @@
 !*   program. If not, see <http://www.gnu.org/licenses/>.                               *
 !*                                                                                      *
 !****************************************************************************************
-SUBROUTINE OutputHTML(fname, VersionNo, nspecmax, npoints, watercompno, cpnameinp, T_K, px, out_data, out_viscdata)
+SUBROUTINE OutputHTML(fname, VersionNo, nspecmax, npoints, watercompno, cpnameinp, T_K, &
+    & px, out_data, out_viscdata)
 
 !module variables:
-USE ModSystemProp, ONLY : compname, compsubgroupsHTML, NGS, NKNpNGS, ninput, nneutral
+USE ModSystemProp, ONLY : compname, compsubgroupsHTML, idCO2, NGS, NKNpNGS, ninput, nneutral
 USE ModSubgroupProp, ONLY : subgrnameHTML
 
 IMPLICIT NONE
@@ -110,7 +111,7 @@ WRITE(unitx,'(A)') ADJUSTL('<tr><td>a_x(j) [-]</td><td>: </td><td> activity of "
 WRITE(unitx,'(A)') ADJUSTL('<tr><td>a_m(j) [-]</td><td>: </td><td> activity of "j", defined on molality basis (used for inorg. ions) with reference &
     & state of infinite dilution of "j" in pure water;</td></tr>')
 WRITE(unitx,'(A)') ADJUSTL('<tr><td>log<sub>10</sub>(&eta;/[Pa.s])</td><td>: </td><td> base-10 log of the dynamic viscosity of the mixture;</td></tr>')
-WRITE(unitx,'(A)') ADJUSTL('<tr><td>log<sub>10</sub>(&eta;&nbsp;sens./[Pa.s])</td><td>: </td><td> base-10 log of the estimated sensitivity of &
+WRITE(unitx,'(A)') ADJUSTL('<tr><td>&plusmn;log<sub>10</sub>(&eta;&nbsp;sens./[Pa.s])</td><td>: </td><td> base-10 log of the estimated sensitivity/uncertainty of &
     & the dynamic viscosity of the mixture; see details <a href="../help.html#viscosity">here</a>;</td></tr>')
 WRITE(unitx,'(A)') ADJUSTL('<tr><td>flag</td><td>: </td><td> error/warning flag, a non-zero value (error/warning number) indicates that a numerical issue &
     & or a warning occurred at this data point, suggesting evaluation with caution (warnings) or exclusion (errors) of this data point; see also &
@@ -132,7 +133,7 @@ WRITE(unitx,'(A)') '</table>'
 WRITE(unitx,'(A)') ADJUSTL('<table class="datatable">')
 WRITE(unitx,'(A)') '<thead>'
 txtsubs = "<tr><th> no. </th><th>&nbsp;</th><th> T [K] </th><th>&nbsp;</th><th> RH [%] </th><th>&nbsp;</th><th> &
-    & log<sub>10</sub>(&eta;/[Pa.s])</th><th>&nbsp;</th><th> log<sub>10</sub>(&eta;&nbsp;sens./[Pa.s]) </th><th>&nbsp;</th><th> flag </th></tr> "
+    & log<sub>10</sub>(&eta;/[Pa.s])</th><th>&nbsp;</th><th> &plusmn;log<sub>10</sub>(&eta;&nbsp;sens./[Pa.s]) </th><th>&nbsp;</th><th> flag </th></tr> "
 WRITE(unitx,'(A)') ADJUSTL(txtsubs) 
 WRITE(unitx,'(A)') '</thead>'
 WRITE(unitx,'(A)') '<tbody>'
@@ -176,9 +177,15 @@ DO i = 1,nspecmax
         !write table column headers:
         WRITE(unitx,'(A)') ADJUSTL('<table class="datatable">')
         WRITE(unitx,'(A)') '<thead>'
-        outtxtleft = ADJUSTL("<tr><th> no. </th><th>&nbsp;</th><th> T [K] </th><th>&nbsp;</th><th> RH [%] </th><th>&nbsp;</th><th> &
+        IF (i == idCO2) THEN  !check exception: CO2 has the activity defined on molality basis like ions:
+            outtxtleft = ADJUSTL("<tr><th> no. </th><th>&nbsp;</th><th> T [K] </th><th>&nbsp;</th><th> RH [%] </th><th>&nbsp;</th><th> &
+            & w("//cn//")</th><th>&nbsp;</th><th> x_i("//cn//")</th><th>&nbsp;</th><th> m_i("//cn//")</th><th>&nbsp;</th><th> &
+            & a_coeff_m("//cn//")</th><th>&nbsp;</th><th> a_m("//cn//")</th><th>&nbsp;</th><th> flag </th></tr> ")
+        ELSE        !regular case
+            outtxtleft = ADJUSTL("<tr><th> no. </th><th>&nbsp;</th><th> T [K] </th><th>&nbsp;</th><th> RH [%] </th><th>&nbsp;</th><th> &
             & w("//cn//")</th><th>&nbsp;</th><th> x_i("//cn//")</th><th>&nbsp;</th><th> m_i("//cn//")</th><th>&nbsp;</th><th> &
             & a_coeff_x("//cn//")</th><th>&nbsp;</th><th> a_x("//cn//")</th><th>&nbsp;</th><th> flag </th></tr> ")
+        ENDIF
         WRITE(unitx,'(A)') outtxtleft
         !--
     ELSE IF (INT(out_data(6,px(i),i)) < 240) THEN !cation
@@ -229,7 +236,7 @@ DO i = 1,nspecmax
         outtxtleft = ADJUSTL("<tr><th> no. </th><th>&nbsp;</th><th> T [K] </th><th>&nbsp;</th><th> RH [%] </th><th>&nbsp;</th><th> &
             & w("//cn//")</th><th>&nbsp;</th><th> x_i("//cn//")</th><th>&nbsp;</th><th> m_i("//cn//")</th><th>&nbsp;</th><th> &
             & a_coeff_m("//cn//")</th><th>&nbsp;</th><th> a_m("//cn//")</th><th>&nbsp;</th><th> flag </th></tr> ")
-        WRITE(unitx,'(A400)') outtxtleft
+        WRITE(unitx,'(A)') outtxtleft
         !--
     ELSE
         !error

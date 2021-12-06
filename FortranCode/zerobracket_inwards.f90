@@ -1,5 +1,5 @@
 !****************************************************************************
-!*																		    *
+!*                                                                            *
 !*  Subroutine to calculate the interval limits of an univariate function,  *
 !*  such that the interval bounds bracket a root (zero) for input in a      *
 !*  root bracketing solver (e.g. Brent's method).                           *
@@ -9,16 +9,18 @@
 !*                                                                          *
 !****************************************************************************
 
+! "fx" is here a user-provided external object (an external function fx(x) with input arguments x and return function value fx)
+
 SUBROUTINE zerobracket_inwards(fx, xlower, xupper, ntry, geomscal, nb, xblow, xbup, success) 
 
 IMPLICIT NONE
 !..
 !interface variables:
-REAL(8),EXTERNAL :: fx                   !user-provided univariate external function fx(x)
-REAL(8),INTENT(INOUT) :: xlower, xupper  !user supplied lower and upper bounds for the bracketing search (adjust to huge (neg. / pos.) values if no limits are needed)
-INTEGER(4),INTENT(IN) :: ntry            !number of interval subdivisions (an input value) (= max. number of roots found this way)
-LOGICAL(4),INTENT(IN) :: geomscal        !set to true to use a geometric mean for scaling for chopping the interval between xlower and xupper.
-INTEGER(4),INTENT(OUT) :: nb             !number of root brackets found
+REAL(8),EXTERNAL :: fx !user-provided univariate external function fx(x)
+REAL(8),INTENT(INOUT) :: xlower, xupper !user supplied lower and upper bounds for the bracketing search (adjust to huge (neg. / pos.) values if no limits are needed)
+INTEGER(4),INTENT(IN) :: ntry  !number of interval subdivisions (an input value) (= max. number of roots found this way)
+LOGICAL(4),INTENT(IN) :: geomscal !set to true to use a geometric mean for scaling for chopping the interval between xlower and xupper.
+INTEGER(4),INTENT(OUT) :: nb !number of root brackets found
 REAL(8),DIMENSION(1:ntry+1),INTENT(OUT) :: xblow, xbup !arrays storing the bounds for the nb roots
 LOGICAL(4),INTENT(OUT) :: success
 !..

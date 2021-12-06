@@ -10,7 +10,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2006                                                            *
-!*   -> latest changes: 2018/05/22                                                      *
+!*   -> latest changes: 2021/10/01                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -37,29 +37,12 @@ IMPLICIT NONE
 
 !module public vars:
 CHARACTER(LEN=60),DIMENSION(1500),PUBLIC :: NKname, NKnameTeX !neutral component names (alphabetical names and DISLIN TeX-code version)
-CHARACTER(LEN=30),DIMENSION(40,40),PUBLIC :: electname, electnameTeX !ion combinations component names
 
-!================================================================================================================================= 
+!========================================================================================================== 
     CONTAINS
-!================================================================================================================================= 
+!========================================================================================================== 
     
-    !****************************************************************************************
-    !*   :: Purpose ::                                                                      *
-    !*   Subroutine to set the character strings for the names of the different independent *
-    !*   components in a mixture.                                                           *
-    !*                                                                                      *
-    !*   :: Author & Copyright ::                                                           *
-    !*   Andi Zuend,                                                                        *
-    !*   IACETH, ETH Zurich, 2009                                                           *
-    !*   Dept. Chem. Engineering, California Institute of Technology (2009 - 2012),         *
-    !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
-    !*                                                                                      *
-    !*   -> created:        2009                                                            *
-    !*   -> latest changes: 2016/10/05                                                      *
-    !*                                                                                      *
-    !****************************************************************************************
-
-    SUBROUTINE nametab()
+    SUBROUTINE nametab()  !not used specifically in web version of AIOMFAC
 
     IMPLICIT NONE
     !...........................................................
@@ -69,34 +52,42 @@ CHARACTER(LEN=30),DIMENSION(40,40),PUBLIC :: electname, electnameTeX !ion combin
     NKnameTeX = "not_defined"
 
     END SUBROUTINE nametab
-
-!=================================================================================================================================
+!==========================================================================================================
     
-    
-    !**********************************************************************************************************
-    !*                                                                                                        *
-    !*  Subroutine to set the character strings for the names of the different components in a mixture.       *
-    !*                                                                                                        *
-    !*                                                                                                        *   
-    !*                                      (c) Andi Zuend, IACETH, ETH Zurich, 2009                          *
-    !*                         Div. Chem. Engineering, California Institute of Technology, 2009 - 2012        *
-    !**********************************************************************************************************
-    PURE SUBROUTINE names_mix(ncomp, nneutral, CompN, compname, compnameTeX, ionname, ionnameTeX, OtoCratio, HtoCratio)
 
-    USE ModSystemProp, ONLY : ElectComps, ElectSubs, Ncation, Nanion, NGS, frominpfile, cpname
+    !****************************************************************************************
+    !*   :: Purpose ::                                                                      *
+    !*   Subroutine to set the character strings for the names of the different components  *
+    !*   and ions in a mixture.                                                             * 
+    !*                                                                                      *
+    !*   :: Author & Copyright ::                                                           *
+    !*   Andi Zuend,                                                                        *
+    !*   IACETH, ETH Zurich, (2004 - 2009)                                                  *
+    !*   Div. Chemistry and Chemical Engineering, Caltech, Pasadena, CA, USA (2009 - 2012)  *
+    !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
+    !*                                                                                      *
+    !*   -> created:        2006                                                            *
+    !*   -> latest changes: 2021/10/01                                                      *
+    !*                                                                                      *
+    !****************************************************************************************
+    PURE SUBROUTINE names_mix(CompN, compname, compnameTeX, ionname, ionnameTeX, OtoCratio, HtoCratio)
+
+    USE ModSystemProp, ONLY : ElectComps, ElectNues, ElectSubs, nneutral, Ncation, Nanion, NGS, frominpfile, cpname
     USE ModSubgroupProp, ONLY : O2C_H2C_component, subgrname, subgrnameTeX
+    USE ModStringFunctions, ONLY : Replace_Text, Replace_Text_Advance
 
     IMPLICIT NONE
 
     !interface vars:
-    INTEGER(4),INTENT(IN) :: ncomp, nneutral  !the component number (internal numbering as the compN in definemixtures, LRdata, etc.)
-    INTEGER(4),DIMENSION(ncomp),INTENT(IN) :: CompN
-    REAL(8),DIMENSION(ncomp),INTENT(OUT) :: OtoCratio, HtoCratio
-    CHARACTER(LEN=*),DIMENSION(ncomp),INTENT(OUT) :: compname, compnameTeX
-    CHARACTER(LEN=*),DIMENSION(NGS),INTENT(OUT) :: ionname, ionnameTeX
+    INTEGER(4),DIMENSION(:),INTENT(IN) :: CompN
+    REAL(8),DIMENSION(:),INTENT(OUT) :: OtoCratio, HtoCratio
+    CHARACTER(LEN=*),DIMENSION(:),INTENT(OUT) :: compname, compnameTeX
+    CHARACTER(LEN=*),DIMENSION(:),INTENT(OUT) :: ionname, ionnameTeX
     !local vars:
-    CHARACTER(LEN=16) :: txt
-    INTEGER(4) :: i, k, cnt, cn, an
+    CHARACTER(LEN=1) :: nchar
+    CHARACTER(LEN=16) :: catxt, antxt
+    CHARACTER(LEN=40) :: txt
+    INTEGER(4) :: i, k, nn, cnt, cn, an, nue_c, nue_a
     REAL(8) :: compC, compH, compO
     !...........................................................
 
@@ -125,15 +116,51 @@ CHARACTER(LEN=30),DIMENSION(40,40),PUBLIC :: electname, electnameTeX !ion combin
         ENDIF
     ENDDO
 
-    !electrolyte names are set in 'nametab':
+    !construct electrolyte names from ion subgroup names:
     cnt = Ncation*Nanion
     DO i = 1,cnt
         cn = ElectComps(i,1)
         an = ElectComps(i,2)  
-        cn = cn -200 !index shift for cations
-        an = an -240 !index shift for anions
-        compname(nneutral+i) = TRIM(electname(cn,an))
-        compnameTeX(nneutral+i) = TRIM(electnameTeX(cn,an)) 
+        !remove the parathensis ( ) around the ion subgroup as well as the charge characters:
+        catxt = TRIM( Replace_Text(TRIM(subgrname(cn)), '(', '') ) 
+        catxt = TRIM( Replace_Text(catxt, ')', '') )
+        catxt = TRIM( Replace_Text(catxt, '+', '') )
+        antxt = TRIM( Replace_Text(TRIM(subgrname(an)), '(', '') ) 
+        antxt = TRIM( Replace_Text(antxt, ')', '') )
+        antxt = TRIM( Replace_Text(antxt, '-', '') )
+        !construct 'neutral' electrolyte component name from ion info using
+        !common naming convention from chemistry:
+        nue_c = ElectNues(i,1)
+        nue_a = ElectNues(i,2)
+        IF (nue_c /= nue_a) THEN
+            IF (nue_c > nue_a) THEN
+                WRITE(nchar,'(I0)') nue_c/nue_a
+                k = LEN_TRIM(catxt)
+                nn = IACHAR(catxt(k:k))
+                IF (nn > 49 .AND. nn < 57) THEN     !the last character is the number
+                    compname(nneutral+i) = '('//TRIM(catxt)//')'//nchar//TRIM(antxt)
+                ELSE
+                    compname(nneutral+i) = TRIM(catxt)//nchar//TRIM(antxt)
+                ENDIF   
+            ELSE
+                WRITE(nchar,'(I0)') nue_a/nue_c
+                k = LEN_TRIM(antxt)
+                nn = IACHAR(antxt(k:k))
+                IF (nn > 49 .AND. nn < 57) THEN     !the last character is the number
+                    compname(nneutral+i) = TRIM(catxt)//'('//TRIM(antxt)//')'//nchar
+                ELSE
+                    compname(nneutral+i) = TRIM(catxt)//TRIM(antxt)//nchar
+                ENDIF 
+            ENDIF
+        ELSE   
+            compname(nneutral+i) = TRIM(catxt)//TRIM(antxt)        
+        ENDIF
+        !generate the name also using TeX formatting:
+        txt = TRIM(compname(nneutral+i))
+        txt = TRIM( Replace_Text_Advance(TRIM(txt), '2', '$_2$') ) 
+        txt = TRIM( Replace_Text_Advance(TRIM(txt), '3', '$_3$') ) 
+        txt = TRIM( Replace_Text_Advance(TRIM(txt), '4', '$_4$') ) 
+        compnameTeX(nneutral+i) = TRIM(txt)
     ENDDO
     !set the rest of the names to an empty string
     compname(nneutral+cnt+1:) = ""
@@ -146,15 +173,13 @@ CHARACTER(LEN=30),DIMENSION(40,40),PUBLIC :: electname, electnameTeX !ion combin
         k = ElectSubs(i)
         IF (k < 240) THEN !cation
             cnt = cnt +1
-            txt = TRIM(subgrname(k))
-            cn = VERIFY(txt, "( )", BACK = .false.) !first character index that is not ( or ) or a space
-            an = VERIFY(txt, "( )", BACK = .true.) !last character index that is not ( or ) or a space
             !remove the parathensis (...) around the ion subgroup:
-            ionname(cnt) = TRIM(txt(cn:an))
-            txt = TRIM(subgrnameTeX(k))
-            cn = VERIFY(txt, "( )", BACK = .false.) 
-            an = VERIFY(txt, "( )", BACK = .true.) 
-            ionnameTeX(cnt) = TRIM(txt(cn:an))
+            txt = TRIM( Replace_Text(TRIM(subgrname(k)), '(', '') ) 
+            txt = TRIM( Replace_Text(txt, ')', '') )
+            ionname(cnt) = TRIM(txt)
+            txt = TRIM( Replace_Text(TRIM(subgrnameTeX(k)), '(', '') ) 
+            txt = TRIM( Replace_Text(txt, ')', '') )
+            ionnameTeX(cnt) = TRIM(txt)
         ENDIF
     ENDDO
     !anions:
@@ -162,19 +187,17 @@ CHARACTER(LEN=30),DIMENSION(40,40),PUBLIC :: electname, electnameTeX !ion combin
         k = ElectSubs(i)
         IF (k > 240) THEN !anion
             cnt = cnt +1
-            txt = TRIM(subgrname(k))
-            cn = VERIFY(txt, "( )", BACK = .false.) 
-            an = VERIFY(txt, "( )", BACK = .true.) 
             !remove the parathensis (...) around the ion subgroup:
-            ionname(cnt) = TRIM(txt(cn:an))
-            txt = TRIM(subgrnameTeX(k))
-            cn = VERIFY(txt, "( )", BACK = .false.) 
-            an = VERIFY(txt, "( )", BACK = .true.)
-            ionnameTeX(cnt) = TRIM(txt(cn:an))
+            txt = TRIM( Replace_Text(TRIM(subgrname(k)), '(', '') ) 
+            txt = TRIM( Replace_Text(txt, ')', '') )
+            ionname(cnt) = TRIM(txt)
+            txt = TRIM( Replace_Text(TRIM(subgrnameTeX(k)), '(', '') ) 
+            txt = TRIM( Replace_Text(txt, ')', '') )
+            ionnameTeX(cnt) = TRIM(txt)
         ENDIF
     ENDDO
 
     END SUBROUTINE names_mix
-!================================================================================================================================= 
+!========================================================================================================== 
     
 END MODULE ModComponentNames

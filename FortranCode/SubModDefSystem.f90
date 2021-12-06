@@ -11,7 +11,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2005                                                            *
-!*   -> latest changes: 2018/05/31                                                      *
+!*   -> latest changes: 2021-10-03                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -30,7 +30,6 @@
 !*   -  SUBROUTINE definemixtures                                                       *
 !*   -  SUBROUTINE defElectrolytes                                                      *
 !*   -  SUBROUTINE SetMolarMass                                                         *
-!*   -  SUBROUTINE syncITAB_dimflip                                                     *
 !*                                                                                      *
 !****************************************************************************************
 SUBMODULE (ModSystemProp) SubModDefSystem
@@ -54,18 +53,19 @@ IMPLICIT NONE
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2018/05/24                                                      *
-    !*   -> latest changes: 2018/05/31                                                      *
+    !*   -> latest changes: 2021/09/30                                                      *
     !*                                                                                      *
     !****************************************************************************************
     MODULE SUBROUTINE SetSystem(ndi, datafromfile, ninp, cpnameinp, cpsubginp)
 
-    USE ModSystemProp, ONLY : ninput, topsubno, bisulfsyst, definemixtures, frominpfile, cpname
+    USE ModSystemProp, ONLY : ninput, topsubno, bisulfsyst, definemixtures, frominpfile, cpname, &
+        & bicarbsyst, noCO2input
 
     IMPLICIT NONE
     !interface variables:
-    INTEGER(4),INTENT(IN) :: ndi   !dataset no. identifier (when not using dataset input from a file).
-    LOGICAL(4),INTENT(IN) :: datafromfile  !set .true. if the system components are provided from an input file
-    INTEGER(4),INTENT(IN) :: ninp  !value known at input only in the case of input from a file
+    INTEGER(4),INTENT(IN) :: ndi            !dataset no. identifier (when not using dataset input from a file).
+    LOGICAL(4),INTENT(IN) :: datafromfile   !set .true. if the system components are provided from an input file
+    INTEGER(4),INTENT(IN) :: ninp           !value known at input only in the case of input from a file
     !optional input arguments:
     CHARACTER(LEN=200),DIMENSION(ninp),INTENT(IN),  OPTIONAL :: cpnameinp
     INTEGER(4),DIMENSION(ninp,topsubno),INTENT(IN), OPTIONAL :: cpsubginp
@@ -75,12 +75,13 @@ IMPLICIT NONE
     INTEGER(4),DIMENSION(:),ALLOCATABLE :: compID, compIDdat
     INTEGER(4),DIMENSION(:,:),ALLOCATABLE :: cpsubg, cpsubgdat
     LOGICAL(4) :: Hexists, HSO4exists, SO4exists, updbisulf
+    LOGICAL(4) :: HCO3exists, CO3exists, updbicarb
     !........................................................
 
     frominpfile = datafromfile
     !(1b) allocate temporary arrays to contain the component information of the system:
     ninputcomp = ninp
-    ALLOCATE( compID(ninputcomp+2), cpsubg(ninputcomp+2,topsubno), cpname(ninputcomp) ) 
+    ALLOCATE( compID(ninputcomp+6), cpsubg(ninputcomp+6,topsubno), cpname(ninputcomp+4) ) 
     compID = 1500 !in this input file case
     cpsubg = 0
     cpname = "!?!"
@@ -91,12 +92,19 @@ IMPLICIT NONE
     cpname(1:ninputcomp) = cpnameinp(1:ninputcomp)
     ninput = ninputcomp !save original number of cpsubg-defined input components; i.e. prior to potential automatic changes to ITAB.
 
-    !(3) check whether H+, HSO4- and SO4-- are part of the system or could be forming, which may then require an adjustment to cpsubg.
+    !(3) check whether H+, HSO4- and SO4-- are part of the system or could be forming, 
+    !    which may then require an adjustment to cpsubg.
+    !    Check also whether H+, HCO3- and CO3-- are part of the system.
     Hexists = .false.
     HSO4exists = .false. 
     SO4exists = .false. 
     bisulfsyst = .false.
     updbisulf = .false.
+    HCO3exists = .false. 
+    CO3exists = .false. 
+    bicarbsyst = .false.
+    noCO2input = .false. !check if CO2 is an input or not
+    updbicarb = .false.
     IF ( ANY(cpsubg(1:ninputcomp,205) > 0) ) THEN
         Hexists = .true.
     ENDIF
@@ -107,12 +115,21 @@ IMPLICIT NONE
     IF ( ANY(cpsubg(1:ninputcomp,261) > 0) ) THEN
         SO4exists = .true.
     ENDIF
+    IF ( ANY(cpsubg(1:ninputcomp,250) > 0) ) THEN
+        HCO3exists = .true.
+        bicarbsyst = .true.
+    ENDIF
+    IF ( ANY(cpsubg(1:ninputcomp,262) > 0) ) THEN
+        CO3exists = .true.
+    ENDIF
     IF (HSO4exists) THEN
         IF ( (.NOT. Hexists) .OR. (.NOT. SO4exists) ) THEN
-            updbisulf = .true. !HSO4- present but H+ and/or SO4-- not yet present at input
+            updbisulf = .true.  !HSO4- present but H+ and/or SO4-- not yet present at input
         ENDIF
     ELSE IF ( Hexists .AND. SO4exists ) THEN
-        updbisulf = .true. !H+ and SO4-- present but HSO4- not yet present at input
+        updbisulf = .true.      !H+ and SO4-- present but HSO4- not yet present at input
+    ELSE IF ( HCO3exists .AND. SO4exists ) THEN
+        updbisulf = .true.      !HCO3- and SO4-- present but HSO4- not yet present at input
     ENDIF
     IF (updbisulf) THEN
         bisulfsyst = .true.
@@ -177,21 +194,125 @@ IMPLICIT NONE
         !----------
     ENDIF !bisulfsyst
     
+    !(4) H+, HCO3- and CO3-- are part of the system or could be forming, 
+    !    which may then require an adjustment to cpsubg.
+    IF (HCO3exists) THEN
+        IF ( (.NOT. Hexists) .OR. (.NOT. CO3exists) ) THEN
+            updbicarb = .true. !HCO3- present but H+ and/or CO3-- not yet present at input
+        ENDIF
+    ELSE IF ( Hexists .AND. CO3exists ) THEN
+        updbicarb = .true. !H+ and CO3-- present but HCO3- not yet present at input
+    ELSE IF ( HSO4exists .AND. CO3exists ) THEN
+        updbicarb = .true. !HSO4- and CO3-- present but HCO3- not yet present at input
+    ENDIF
+    
+    !determine the component number of the first electrolyte component:
+    IF (bicarbsyst .OR. updbicarb) THEN
+        DO i = 1,ninputcomp 
+            IF ( ANY(cpsubg(i,201:240) > 0) ) THEN !loop over all cations (as one must be part of first electrolyte component);
+                nnp1 = i
+                EXIT !leave loop
+            ENDIF
+        ENDDO
+    ENDIF
+    IF (updbicarb) THEN
+        bicarbsyst = .true.
+        CatFree = 0
+        AnFree = 0
+        IF (.NOT. Hexists) THEN !there was no H+ before the dissociation:
+            !Find first "new" component in cpsubg that could contain the new cation:
+            IF (ALL(cpsubg(ninputcomp+1,201:240) == 0)) THEN !found first cation-free cpsubg component
+                CatFree = ninputcomp+1  !possibly anion free component...
+                cpsubg(CatFree,205) = 1  !1x H+ for now, potentially corrected below if paired with CO3--
+                ninputcomp = ninputcomp +1
+            ENDIF
+        ENDIF
+        IF (.NOT. CO3exists) THEN !there was no CO3-- before the dissociation = > create a new anion number group:
+            DO i = nnp1,ninputcomp+1
+                !Find first "new" component in cpsubg that could contain the new anion:
+                IF (ALL(cpsubg(i,241:topsubno) == 0)) THEN !found first anion-free cpsubg component
+                    AnFree = i  ! anion-free component...
+                    cpsubg(AnFree,262) = 1  !1x CO3--
+                    ninputcomp = MAX(ninputcomp, i)
+                    EXIT !leave the do-loop
+                ENDIF
+            ENDDO
+        ENDIF
+        IF (.NOT. HCO3exists) THEN !there was no HCO3- before the dissociation:
+            DO i = nnp1,ninputcomp+1
+                !Find first "new" component in cpsubg that could contain the new anion:
+                IF (ALL(cpsubg(i,241:topsubno) == 0)) THEN !found first anion-free cpsubg component
+                    AnFree = i  !possibly anion free component...
+                    cpsubg(AnFree,250) = 1  !1x HCO3-
+                    ninputcomp = MAX(ninputcomp, i)
+                    EXIT !leave the do-loop
+                ENDIF
+            ENDDO
+        ENDIF
+        !check and guarantee a neutral ion pairing of a new elecrolyte component in cpsubg:
+        IF (AnFree == CatFree) THEN
+            !check stoichimetric number of H+ cations in electrolyte
+            IF (cpsubg(CatFree,205) == 1) THEN
+                IF (cpsubg(CatFree,262) > 0) THEN
+                    cpsubg(CatFree,205) = 2 !it needs two H+ for one CO3--
+                ENDIF
+            ENDIF
+        ELSE IF (AnFree > CatFree) THEN
+            IF (cpsubg(AnFree,205) == 0) THEN
+                IF (cpsubg(AnFree,250) > 0) THEN !250 is corresp. anion
+                    cpsubg(AnFree,205) = 1
+                ELSE !262 is corresponding anion
+                    cpsubg(AnFree,205) = 2 !since it needs two H+ for one CO3--
+                ENDIF
+            ENDIF
+        ELSE IF (CatFree > AnFree) THEN !need to put an anion to match one H+ (choose HCO3-)
+            cpsubg(CatFree,250) = 1
+        ENDIF
+        !----------
+    ENDIF !updbicarb
+    
+    !Add CO2(aq) as an additional component if bicarbsys = .true.    
+    IF (bicarbsyst) THEN
+        IF (.NOT. ANY(cpsubg(1:ninputcomp,247) > 0)) THEN !Check for OH- existence
+            ninputcomp = ninputcomp + 1
+            cpsubg(ninputcomp,247) = 1  !1x OH-
+            cpsubg(ninputcomp,205) = 1  !1x H+
+        ENDIF
+        IF (.NOT. ANY(cpsubg(1:nnp1,173) > 0)) THEN   
+            noCO2input = .true.
+            ALLOCATE(cpsubgdat(nnp1+1:ninputcomp+1,201:topsubno))
+            cpsubgdat(nnp1+1:ninputcomp+1,201:topsubno) = cpsubg(nnp1:ninputcomp,201:topsubno)   !make a temporary array for the electrolytes
+            cpsubg(nnp1:ninputcomp,201:topsubno) = 0
+            cpsubg(nnp1,173) = 1        !add CO2(aq.) as the last neutral component
+            compID(nnp1) = 402
+            cpname(nnp1) = 'CO2(aq)'
+            idCO2 = nnp1
+            !transfer back the electrolyte component input information:
+            cpsubg(nnp1+1:ninputcomp+1,201:topsubno) = cpsubgdat(nnp1+1:ninputcomp+1,201:topsubno)
+            ninputcomp = ninputcomp +1
+            DEALLOCATE(cpsubgdat)
+        ELSE
+            idCO2 = FINDLOC(cpsubg(1:nnp1,173), 1, DIM=1)
+        ENDIF
+    ELSE
+        idCO2 = 0
+    ENDIF
+        
     !re-package data for transfer, since the number of input component and array sizes may have changed:
-    ALLOCATE( compIDdat(ninputcomp), cpsubgdat(ninputcomp,topsubno) )
+    ALLOCATE( compIDdat(ninputcomp), cpsubgdat(ninputcomp, topsubno) )
     compIDdat = 0
     cpsubgdat = 0
     compIDdat(1:ninputcomp) = compID(1:ninputcomp)
     DO i = 1,topsubno
-        cpsubgdat(1:ninputcomp,i) = cpsubg(1:ninputcomp, i)
+        cpsubgdat(1:ninputcomp, i) = cpsubg(1:ninputcomp, i)
     ENDDO
 
-    !(4) define mixture properties and component properties of this system, including mapping of cpsubg to ITAB:
+    !(final step) define mixture properties and component properties of this system, including mapping of cpsubg to ITAB:
     CALL definemixtures(ndi, ninputcomp, compIDdat, cpsubgdat) 
 
     DEALLOCATE(compID, cpsubg, cpname, cpsubgdat, compIDdat)
     
-    END SUBROUTINE SetSystem  
+    END SUBROUTINE SetSystem 
 !==========================================================================================================================
     
 
@@ -220,11 +341,10 @@ IMPLICIT NONE
     USE ModComponentNames, ONLY : names_mix
 
     IMPLICIT NONE
-
     !Interface variables:
     INTEGER(4),INTENT(IN) :: ndi, ninputcomp    
-    INTEGER(4),DIMENSION(ninputcomp),INTENT(IN) :: compID           
-    INTEGER(4),DIMENSION(ninputcomp,topsubno),INTENT(IN) :: cpsubg  !list of component subgroups and corresponding quantity (e.g. from input file or from dataset_components)
+    INTEGER(4),DIMENSION(:),INTENT(IN) :: compID           
+    INTEGER(4),DIMENSION(:,:),INTENT(IN) :: cpsubg                  !DIMENSION(ninputcomp,topsubno), list of component subgroups and corresponding quantity (e.g. from input file or from dataset_components)
     !Local variables:
     INTEGER(4) :: i, II, J, JJ, K, Icheck, countall, q, qq, ID
     INTEGER(4),DIMENSION(200) :: SolvSubs2                          !temporary array for solvent subgroups (we allow a maximum of 200)
@@ -234,7 +354,7 @@ IMPLICIT NONE
     !--------------------------------------
 
     !initialize arrays and parameters:
-    nd = 1 !for web-version (single data file / mixture only)
+    nd = 1          !for web-version (single data file / mixture only)
     solvmixrefnd = .false.
     errorflagmix = 0
     IF (ALLOCATED(ITAB)) THEN
@@ -242,10 +362,8 @@ IMPLICIT NONE
     ENDIF
     ALLOCATE( ITAB(ninputcomp, topsubno), ITAB_dimflip(topsubno, ninputcomp), compN(ninputcomp) )
     !assign the different mixture components from interface input data to ITAB:
-    DO i = 1,topsubno
-        ITAB(:,i) = cpsubg(:,i) !transfer data to module array ITAB
-    ENDDO
-    CALL syncITAB_dimflip()
+    ITAB = cpsubg
+    ITAB_dimflip = TRANSPOSE(ITAB)
     CompN = compID
 
     !count the number of neutral components, nneutral:
@@ -421,10 +539,16 @@ IMPLICIT NONE
             ENDDO
         ENDIF
     ENDDO
+    
     !save index locations of sulfuric acid / bisulfate ions (of use later if present in the mixture):
     idH = CatNr(205)
     idHSO4 = AnNr(248)
     idSO4 = AnNr(261)
+    idCa = CatNr(221)
+    
+    idHCO3 = AnNr(250)
+    idCO3 = AnNr(262)
+    idOH = AnNr(247)
 
     !------------------------------------------------------------
     !Calculation of the number of different cations and the number of different anions:
@@ -557,7 +681,8 @@ IMPLICIT NONE
     ENDIF
     ALLOCATE( OtoCratio(nindcomp), HtoCratio(nindcomp), compname(nindcomp), compnameTeX(nindcomp), ionname(NGS), ionnameTeX(NGS) )
     !set the name strings for the different independent components and the O:C ratio of the neutrals (when set already):
-    CALL names_mix(nindcomp, nneutral, CompN, compname, compnameTeX, ionname, ionnameTeX, OtoCratio, HtoCratio) !compname contains the name strings of all independent components of the present mixture nd
+    CALL names_mix(CompN, compname, compnameTeX, ionname, ionnameTeX, OtoCratio, HtoCratio)     
+    !now compname contains the name strings of all independent components of the present mixture nd;
 
     CALL cpsubgrstring() !generate for each component a subgroup-string stored in compsubgroups, compsubgroupsTeX, and compsubgroupsHTML
 
@@ -573,7 +698,7 @@ IMPLICIT NONE
     ENDIF
     ALLOCATE(Mmass(nindcomp))
     !calculate the molar masses of the different mixture species:
-    CALL SetMolarMass(Mmass)  !After this call, Mmass lists the molar mass in [kg/mol] of all mixture components
+    CALL SetMolarMass(Mmass)    !Mmass lists the molar mass in [kg/mol] of all mixture components
 
     !-- allocate several composition-dependent variables from module ModAIOMFACvar:
     CALL AllocModAIOMFACvar()
@@ -592,12 +717,12 @@ IMPLICIT NONE
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2014/07/21                                                      *
-    !*   -> latest changes: 2020/07/18                                                      *
+    !*   -> latest changes: 2018/05/24                                                      *
     !*                                                                                      *
     !**************************************************************************************** 
     MODULE SUBROUTINE defElectrolytes(nneutral, NGS, nelectrol)
 
-    USE ModSubgroupProp, ONLY : Ioncharge
+    USE ModSubgroupProp, ONLY : Ioncharge, IonO2Cequiv
 
     IMPLICIT NONE
     !Interface variables:
@@ -614,9 +739,9 @@ IMPLICIT NONE
     !cation-anion combinations (e.g. for gas-particle partitioning of different electrolytes):
     iel = Ncation*Nanion !maximum number of possible electrolyte components just formed by one cation and anion each.
     IF (ALLOCATED(ElectComps)) THEN
-        DEALLOCATE( ElectComps, ElectNues, ElectVolatile, K_el )
+        DEALLOCATE( ElectComps, ElectNues, ElectVolatile, ElectO2Cequiv, K_el )
     ENDIF
-    ALLOCATE( ElectComps(iel,2), ElectNues(iel,2), ElectVolatile(iel), K_el(nnp1:nneutral+iel) )
+    ALLOCATE( ElectComps(iel,2), ElectNues(iel,2), ElectVolatile(iel), ElectO2Cequiv(iel), K_el(nnp1:nneutral+iel) )
     IF (ALLOCATED(nuestoich)) DEALLOCATE(nuestoich)
     ALLOCATE( nuestoich(nneutral+iel) )
 
@@ -624,6 +749,7 @@ IMPLICIT NONE
     ElectComps = 0
     ElectNues = 0
     ElectVolatile = .false.
+    ElectO2Cequiv = 0.0D0
     K_el = 0.0D0
     nuestoich = 1.0D0
 
@@ -662,20 +788,24 @@ IMPLICIT NONE
         IF (zc == za) THEN !1:1 electrolyte (both the same charge of +-1 or +-2)
             ElectNues(iel,1) = 1
             ElectNues(iel,2) = 1
+            ElectO2Cequiv(iel) = (IonO2Cequiv(KK)*IonO2Cequiv(JJ))**0.5D0
             nuestoich(nneutral+iel) = 2.0D0
         ELSE
             SELECT CASE(zc)
             CASE(1) !2:1 electrolyte
                 ElectNues(iel,1) = 2
                 ElectNues(iel,2) = 1 !anion charge: -2
+                ElectO2Cequiv(iel) = (IonO2Cequiv(KK)**2 *IonO2Cequiv(JJ))**onethird
                 nuestoich(nneutral+iel) = 3.0D0
             CASE(2) !1:2 electrolyte
                 ElectNues(iel,1) = 1 !cation charge: +2
                 ElectNues(iel,2) = 2
+                ElectO2Cequiv(iel) = (IonO2Cequiv(KK)*IonO2Cequiv(JJ)**2)**onethird
                 nuestoich(nneutral+iel) = 3.0D0
             END SELECT
         ENDIF
-        IF (KK == 205 .AND. JJ /= 261 .AND. JJ /= 248 .OR. (KK == 204 .AND. JJ == 245)) THEN
+        IF (KK == 205 .AND. JJ /= 261 .AND. JJ /= 262 .AND. JJ /= 250 .AND. JJ /= 248 &
+        & .OR. (KK == 204 .AND. JJ == 245)) THEN
             ElectVolatile(iel) = .true.
         ENDIF
     ENDDO !i
@@ -703,20 +833,24 @@ IMPLICIT NONE
                 IF (zc == za) THEN !1:1 electrolyte (both the same charge of +-1 or +-2)
                     ElectNues(i,1) = 1
                     ElectNues(i,2) = 1
+                    ElectO2Cequiv(i) = (IonO2Cequiv(KK)*IonO2Cequiv(JJ))**0.5D0
                     nuestoich(nneutral+i) = 2.0D0
                 ELSE
                     SELECT CASE(zc)
                     CASE(1) !2:1 electrolyte
                         ElectNues(i,1) = 2
                         ElectNues(i,2) = 1 !anion charge: -2
+                        ElectO2Cequiv(i) = (IonO2Cequiv(KK)**2 *IonO2Cequiv(JJ))**onethird
                         nuestoich(nneutral+i) = 3.0D0
                     CASE(2) !1:2 electrolyte
                         ElectNues(i,1) = 1 !cation charge: +2
                         ElectNues(i,2) = 2
+                        ElectO2Cequiv(i) = (IonO2Cequiv(KK)*IonO2Cequiv(JJ)**2)**onethird
                         nuestoich(nneutral+i) = 3.0D0
                     END SELECT
                 ENDIF
-                IF (KK == 205 .AND. JJ /= 261 .AND. JJ /= 248 .OR. (KK == 204 .AND. JJ == 245)) THEN
+                IF (KK == 205 .AND. JJ /= 261 .AND. JJ /= 262 .AND. JJ /= 250 .AND. JJ /= 248 &
+                & .OR. (KK == 204 .AND. JJ == 245)) THEN
                     ElectVolatile(i) = .true.
                 ENDIF
             ENDIF
@@ -744,12 +878,12 @@ IMPLICIT NONE
     REAL(8),DIMENSION(:),INTENT(OUT) :: MolarM  !Molar mass in [kg/mol]
     INTEGER(4) :: i, J, K
     !...............................................
-    !  SMWA: list of the molar masses of the anions
-    !  SMWC: list of the molar masses of the cations
-    !  GroupMW : lost of molar masses of the organic/water subgroups
-    MolarM = 0.0D0 !initialize array
+    !SMWA     : list of the molar masses of the anions
+    !SMWC     : list of the molar masses of the cations
+    !GroupMW  : list of molar masses of the organic/water subgroups
+    MolarM = 0.0D0  !initialize array
     !calculate the neutral compounds' molar mass from the values of their subgroups listed in GroupMW array:
-    DO i = 1,NGN !loop over all solvent subgroups
+    DO i = 1,NGN    !loop over all solvent subgroups
         J = SolvSubs(i)
         MolarM(1:nneutral) = MolarM(1:nneutral) + ITAB(1:nneutral,J)*GroupMW(J)*1.0D-3  !compound molar mass in [kg/mol]
     ENDDO
@@ -761,24 +895,6 @@ IMPLICIT NONE
     ENDDO
 
     END SUBROUTINE SetMolarMass
-!==========================================================================================================================
-   
-    !************************************************************************
-    !*                                                                      *
-    !*  Synchronize data between ITAB and ITAB_dimflip, which share the     *
-    !*  same data but in flipped storage order (1st vs 2nd dimension).      *
-    !*                                                                      *
-    !************************************************************************
-    MODULE SUBROUTINE syncITAB_dimflip()
-    
-    IMPLICIT NONE
-    INTEGER(4) :: i
-    
-    DO i = 1,topsubno
-        ITAB_dimflip(i,:) = ITAB(:,i)
-    ENDDO
-    
-    END SUBROUTINE syncITAB_dimflip
 !==========================================================================================================================
     
 END SUBMODULE SubModDefSystem

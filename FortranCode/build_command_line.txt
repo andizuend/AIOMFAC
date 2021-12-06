@@ -1,0 +1,18 @@
+#instead of using the makefile (make), the following command lines should work with AIOMFAC-web 3.00
+#(those commands are for optimized code for release, not debugging)
+
+
+## using gfortran in a Linux terminal.
+## 1.) navigate to the local AIOMFAC Fortran source code directory
+## 2.) execute the below command line
+
+gfortran -o AIOMFAC-web.out -O3 -ffree-line-length-none  zerobracket_inwards.f90 RepErrorWarning.f90 brent.f90 ModStringFunctions.f90 ModSystemProp.f90 Mod_MINPACK.f90 ModAIOMFACvar.f90 ModSubgroupProp.f90 ModMRpart.f90 ModCompScaleConversion.f90 ModComponentNames.f90 ModPureViscosPar.f90 ModSRparam.f90 ModViscEyring.f90 ModSRunifac.f90 ModCalcActCoeff.f90 SubModDefSystem.f90 ModFiniteDiffSens.f90 SubModDissociationEquil.f90 OutputTXT.f90 OutputHTML.f90 Main_IO_driver.f90 AIOMFAC_inout.f90 ReadInputFile.f90
+
+
+## or:
+## using Intel oneAPI's "ifort" (classic) compiler (exampe here for Windows platform):
+## 1.) open a dedicated "Intel oneApi command prompt for Intel 64 Visual Studio"
+## 2.) navigate to your local AIOMFAC Fortran source code directory
+## 3.) execute the below command line
+
+ifort /o AIOMFAC-web.exe /O3  zerobracket_inwards.f90 RepErrorWarning.f90 brent.f90 ModStringFunctions.f90 ModSystemProp.f90 Mod_MINPACK.f90 ModAIOMFACvar.f90 ModSubgroupProp.f90 ModMRpart.f90 ModCompScaleConversion.f90 ModComponentNames.f90 ModPureViscosPar.f90 ModSRparam.f90 ModViscEyring.f90 ModSRunifac.f90 ModCalcActCoeff.f90 SubModDefSystem.f90 ModFiniteDiffSens.f90 SubModDissociationEquil.f90 OutputTXT.f90 OutputHTML.f90 Main_IO_driver.f90 AIOMFAC_inout.f90 ReadInputFile.f90

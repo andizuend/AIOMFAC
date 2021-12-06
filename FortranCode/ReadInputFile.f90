@@ -39,10 +39,10 @@ LOGICAL(4),INTENT(IN) :: verbose
 INTEGER(4),INTENT(OUT) :: ncp, npoints
 INTEGER(4),INTENT(INOUT) :: warningind, errorind
 LOGICAL(4),INTENT(OUT) :: filevalid
-CHARACTER(LEN=200),DIMENSION(:),INTENT(OUT) :: cpnameinp  !list of assigned component names (from input file)
-INTEGER(4),DIMENSION(:,:),INTENT(OUT) :: cpsubg          !list of input component subgroups and corresponding subgroup quantities
-REAL(8),DIMENSION(:),INTENT(OUT) :: T_K                  !temperature of data points in Kelvin
-REAL(8),DIMENSION(:,:),INTENT(OUT) :: composition        !array of mixture composition points for which calculations should be run
+CHARACTER(LEN=200),DIMENSION(:),INTENT(OUT) :: cpnameinp    !list of assigned component names (from input file)
+INTEGER(4),DIMENSION(:,:),INTENT(OUT) :: cpsubg             !list of input component subgroups and corresponding subgroup quantities
+REAL(8),DIMENSION(:),INTENT(OUT) :: T_K                     !temperature of data points in Kelvin
+REAL(8),DIMENSION(:,:),INTENT(OUT) :: composition           !array of mixture composition points for which calculations should be run
 LOGICAL(4),INTENT(OUT) :: xinputtype
 !--
 !local variables:
