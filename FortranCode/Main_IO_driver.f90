@@ -28,7 +28,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
 !*                                                                                      *
 !*   -> created:        2011  (this file)                                               *
-!*   -> latest changes: 2021-12-05                                                      *
+!*   -> latest changes: 2021-12-09                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -98,7 +98,7 @@ END INTERFACE
 !
 !==== INITIALIZATION section =======================================================
 !
-VersionNo = "3.00"      !AIOMFAC-web version number (change here if minor or major changes require a version number change)
+VersionNo = "3.01"      !AIOMFAC-web version number (change here if minor or major changes require a version number change)
 verbose = .true.        !if true, some debugging information will be printed to the unit "unito" (errorlog file)
 nspecmax = 0
 errorind = 0            !0 means no error found
