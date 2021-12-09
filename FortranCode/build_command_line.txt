@@ -14,7 +14,7 @@ gfortran -o AIOMFAC-web.out -O3 -ffree-line-length-none  zerobracket_inwards.f90
 
 
 ## for debugging with gfortran, use e.g.:
-gfortran -o AIOMFAC-web.out -O0 -ffree-line-length-none -fmax-stack-var-size= -Wall -fcheck=all  zerobracket_inwards.f90 RepErrorWarning.f90 brent.f90 ModStringFunctions.f90 ModSystemProp.f90 Mod_MINPACK.f90 ModAIOMFACvar.f90 ModSubgroupProp.f90 ModMRpart.f90 ModCompScaleConversion.f90 ModComponentNames.f90 ModPureViscosPar.f90 ModSRparam.f90 ModViscEyring.f90 ModSRunifac.f90 ModCalcActCoeff.f90 SubModDefSystem.f90 ModFiniteDiffSens.f90 SubModDissociationEquil.f90 OutputTXT.f90 OutputHTML.f90 Main_IO_driver.f90 AIOMFAC_inout.f90 ReadInputFile.f90
+gfortran -o AIOMFAC-web.out -O0 -ffree-line-length-none -Wall -fcheck=all  zerobracket_inwards.f90 RepErrorWarning.f90 brent.f90 ModStringFunctions.f90 ModSystemProp.f90 Mod_MINPACK.f90 ModAIOMFACvar.f90 ModSubgroupProp.f90 ModMRpart.f90 ModCompScaleConversion.f90 ModComponentNames.f90 ModPureViscosPar.f90 ModSRparam.f90 ModViscEyring.f90 ModSRunifac.f90 ModCalcActCoeff.f90 SubModDefSystem.f90 ModFiniteDiffSens.f90 SubModDissociationEquil.f90 OutputTXT.f90 OutputHTML.f90 Main_IO_driver.f90 AIOMFAC_inout.f90 ReadInputFile.f90
 
 
 
