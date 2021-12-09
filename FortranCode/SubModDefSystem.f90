@@ -52,8 +52,8 @@ IMPLICIT NONE
     !*   Andi Zuend,                                                                        *
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
-    !*   -> created:        2018/05/24                                                      *
-    !*   -> latest changes: 2021/09/30                                                      *
+    !*   -> created:        2018-05-24                                                      *
+    !*   -> latest changes: 2021-09-30                                                      *
     !*                                                                                      *
     !****************************************************************************************
     MODULE SUBROUTINE SetSystem(ndi, datafromfile, ninp, cpnameinp, cpsubginp)

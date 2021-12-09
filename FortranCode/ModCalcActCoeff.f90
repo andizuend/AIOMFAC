@@ -40,7 +40,6 @@ IMPLICIT NONE
 REAL(8),PARAMETER,PRIVATE :: lntiny = 0.49D0*LOG(TINY(1.0D0))
 REAL(8),PARAMETER,PRIVATE :: lnhuge = 0.49D0*LOG(HUGE(1.0D0))
 REAL(8),PARAMETER,PRIVATE :: logval_threshold = 0.4D0*lnhuge
-REAL(8),DIMENSION(8),PRIVATE :: solve_var_saved = -9.999D280      !initialized with an unfeasible value
 
 !interfaces to procedures in submodules:
 INTERFACE
@@ -71,8 +70,6 @@ INTERFACE
     END FUNCTION sum_sorted
     !--
 END INTERFACE
-
-!$OMP THREADPRIVATE(solve_var_saved)
     
 !============================================================================================
     CONTAINS

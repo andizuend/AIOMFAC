@@ -12,7 +12,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2004                                                            *
-!*   -> latest changes: 2021/09/22                                                      *
+!*   -> latest changes: 2021-12-07                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -45,16 +45,16 @@ IMPLICIT NONE
 REAL(8),DIMENSION(:,:),ALLOCATABLE,PUBLIC :: Ksp
 !** private module variables, which need to be set to public during parameter fitting...
 REAL(8),DIMENSION(:,:),ALLOCATABLE,PUBLIC :: bTABna, bTABnc, cTABna, cTABnc
-REAL(8),DIMENSION(40,40),PUBLIC :: Cn1TABAC, Cn2TABAC, omega2TAB, bTABAC, cTABAC
-REAL(8),DIMENSION(40,40),PUBLIC :: TABhighestWTF, TABKsp, omegaTAB
-REAL(8),DIMENSION(23,23),PUBLIC :: RccTAB !, RaaTAB     !limited array size because these values are only used for a few selected ion interactions
+REAL(8),DIMENSION(:,:),ALLOCATABLE,PUBLIC :: Cn1TABAC, Cn2TABAC, omega2TAB, bTABAC, cTABAC
+REAL(8),DIMENSION(:,:),ALLOCATABLE,PUBLIC :: TABhighestWTF, TABKsp, omegaTAB
 !private module variables:
 INTEGER(4),PRIVATE :: jj
 REAL(8),PRIVATE :: A_DebyeHw, B_DebyeHw  !the temperature-dependent Debye-Hueckel parameters for water as solvent
 REAL(8),DIMENSION(:,:),ALLOCATABLE,PRIVATE :: BAC, CAC, omega, omega2, Cnac1, Cnac2, Raa, Rcc
 REAL(8),DIMENSION(:,:),ALLOCATABLE,PRIVATE :: bnc, cnc, bna, cna, omegaNC, omegaNA
+REAL(8),DIMENSION(:,:),ALLOCATABLE,PRIVATE :: RccTAB
 REAL(8),DIMENSION(:,:,:),ALLOCATABLE,PRIVATE :: Qcca
-REAL(8),DIMENSION(23,23,40),PRIVATE :: qcca1TAB  !REAL(8),DIMENSION(40,40,40),PRIVATE :: qcca1TAB
+REAL(8),DIMENSION(:,:,:),ALLOCATABLE,PRIVATE :: qcca1TAB  !REAL(8),DIMENSION(40,40,40),PRIVATE :: qcca1TAB
 LOGICAL(4),PRIVATE :: QccaInteract, RccInteract
 !set CO2(aq) <--> ion parameters:
 REAL(8),DIMENSION(201:topsubno),PARAMETER,PRIVATE :: lambdaIN = [ &
@@ -654,6 +654,9 @@ REAL(8),DIMENSION(201:topsubno),PARAMETER,PRIVATE :: lambdaIN = [ &
     ! cTABAC(I,J): contains the c values of the midrange terms
     ! bAC(I,J): interaction parameter b between cation I and anion J.
     ! cAC(I,J): interaction parameter c between cation I and anion J.
+    ALLOCATE( Cn1TABAC(40,40), Cn2TABAC(40,40), omega2TAB(40,40), bTABAC(40,40), cTABAC(40,40), &
+        & TABhighestWTF(40,40), TABKsp(40,40), omegaTAB(40,40) )
+    
     bTABAC = 0.0D0
     cTABAC = 0.0D0
     cn1TABAC = 0.0D0
@@ -1264,9 +1267,10 @@ REAL(8),DIMENSION(201:topsubno),PARAMETER,PRIVATE :: lambdaIN = [ &
     !---------------------------------------------------------------- 
     !The interactions of three different ions are described with Qcca and Qcaa:
     !There is also an interaction parameter between NH4+ and H+ ions (Rcc) declared here:
+    !Allocate RccTAB with limited array size because these values are only used for a few selected ion interactions;
+    ALLOCATE( qcca1TAB(23,23,40), RccTAB(23,23) )  !qcca1TAB(40,40,40)
     qcca1TAB = 0.0D0
     RccTAB = 0.0D0
-    !RaaTAB = 0.0D0
 
     !Rcc interaction parameter between two cations: 
     !NH4+|H+ (= H+|NH4+)

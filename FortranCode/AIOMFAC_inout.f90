@@ -23,7 +23,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2011                                                            *
-!*   -> latest changes: 2021-12-05                                                      *
+!*   -> latest changes: 2021-12-08                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -82,7 +82,7 @@ IF (noCO2input) THEN
     IF (idCO2 > 0) THEN !CO2 present, but not as input component;
         !shift input components since CO2 had been automatically added as the 
         !last neutral (non-electrolyte) component in SetSystem
-        inputconcZ(idCO2+1:) = inputconc(idCO2:)
+        inputconcZ(idCO2+1:nindcomp) = inputconc(idCO2:nindcomp-1)
         inputconcZ(idCO2) = 0.0D0
         NKSinput = NKSinput +1
         NKSinputp1 = NKSinputp1 +1

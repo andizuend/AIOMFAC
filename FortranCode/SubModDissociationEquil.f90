@@ -67,14 +67,14 @@ REAL(8) :: nCarb, nCO2, nH, nHCO3, nHSO4, nOH, nSulf            !molar amounts f
 REAL(8),DIMENSION(8) :: ln_maxval_inp
 REAL(8),DIMENSION(:),ALLOCATABLE :: mNeutral, molNeutral        !molalities and moles of neutral species
 REAL(8),DIMENSION(:),ALLOCATABLE :: SNA, SNC                    !moles of ions
-REAL(8),DIMENSION(:),ALLOCATABLE :: solve_var, solve_var_maxval
+REAL(8),DIMENSION(:),ALLOCATABLE :: solve_var, solve_var_maxval, solve_var_saved
 LOGICAL(4) :: use_CO2gas_equil
 
-!$OMP THREADPRIVATE(use_CO2gas_equil, solve_var, solve_var_maxval, map_solver2molarinp, mCarb, mCO2, mH, mHCO3, mHSO4,  &
-    !$OMP & mOH, mSulf, nCarb, nCO2, nH, nHCO3, nHSO4, nOH, nSulf, mNeutral, molNeutral, lngbisulf, lngK1bicarb,        &
-    !$OMP & lngK2bicarb, lngKbisulf, lngKOH, lnK1HCO3atT, lnK2HCO3atT, lnKCO2atT, lnKH2OatT, lnKHSO4atT, ln_maxval_inp, &
-    !$OMP & mHmax, mHSO4max, mHSO4min, mSulfmax, nCarbmax, nCO2_init, nCO2gas, nCO2max, nH2O_init, nHCO3max, nHmax,     &
-    !$OMP & nHSO4max, nOH_init, nOHmax, nSulfmax, ntiny, nVmax, SNA, SNC, target_CO2gas_ppm, V)
+!$OMP THREADPRIVATE(use_CO2gas_equil, solve_var, solve_var_maxval, solve_var_saved, map_solver2molarinp, mCarb, mCO2,   &
+    !$OMP & mH, mHCO3, mHSO4, mOH, mSulf, nCarb, nCO2, nH, nHCO3, nHSO4, nOH, nSulf, mNeutral, molNeutral, lngbisulf,   &
+    !$OMP & lngK1bicarb, lngK2bicarb, lngKbisulf, lngKOH, lnK1HCO3atT, lnK2HCO3atT, lnKCO2atT, lnKH2OatT, lnKHSO4atT,   &
+    !$OMP & ln_maxval_inp, mHmax, mHSO4max, mHSO4min, mSulfmax, nCarbmax, nCO2_init, nCO2gas, nCO2max, nH2O_init,       &
+    !$OMP & nHCO3max, nHmax, nHSO4max, nOH_init, nOHmax, nSulfmax, ntiny, nVmax, SNA, SNC, target_CO2gas_ppm, V)
 
 !======================
     CONTAINS
@@ -515,7 +515,11 @@ LOGICAL(4) :: use_CO2gas_equil
     
     !n: the number of unknowns / equations to solve:
     ALLOCATE(solve_var(n), solve_var_maxval(n), map_solver2molarinp(n), randomval(n), diffK(n))
-    map_solver2molarinp = 0 
+    map_solver2molarinp = 0                          
+    IF (.NOT. ALLOCATED(solve_var_saved)) THEN
+        ALLOCATE(solve_var_saved(n))                   !allocate submodule variable on first use, but not subsequently
+        solve_var_saved = -9.999D280                   !initialized with an unfeasible value
+    ENDIF
 
     !if Ca++ is part of the input, remove all the CaSO4(s) that could form;
     IF (idCa > 0) THEN
@@ -593,7 +597,7 @@ LOGICAL(4) :: use_CO2gas_equil
         ENDIF
 
         CALL RANDOM_SEED (SIZE = nrd)
-        CALL RANDOM_SEED(PUT=[(k*2118398431, k=1,nrd)])     !initialize the pseudo-random number generator each time with the same seed (for debugging reproducability)
+        CALL RANDOM_SEED(PUT=[(k*211839831, k=1,nrd)])     !initialize the pseudo-random number generator each time with the same seed (for debugging reproducability)
         IF (HighPrecSolving) THEN
             maxiloop = 40
             tol = 1.0D-2*sqrtdeps

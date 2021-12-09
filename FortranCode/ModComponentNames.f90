@@ -10,7 +10,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2006                                                            *
-!*   -> latest changes: 2021/10/01                                                      *
+!*   -> latest changes: 2021-12-08                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -36,7 +36,7 @@ MODULE ModComponentNames
 IMPLICIT NONE
 
 !module public vars:
-CHARACTER(LEN=60),DIMENSION(1500),PUBLIC :: NKname, NKnameTeX !neutral component names (alphabetical names and DISLIN TeX-code version)
+CHARACTER(LEN=60),DIMENSION(:),ALLOCATABLE,PUBLIC :: NKname, NKnameTeX
 
 !========================================================================================================== 
     CONTAINS
@@ -45,8 +45,10 @@ CHARACTER(LEN=60),DIMENSION(1500),PUBLIC :: NKname, NKnameTeX !neutral component
     SUBROUTINE nametab()  !not used specifically in web version of AIOMFAC
 
     IMPLICIT NONE
-    !...........................................................
-
+    !..............................................
+    
+    ALLOCATE( NKname(1500), NKnameTeX(1500) )
+    
     !list of neutral component names:
     NKname = "not_defined"
     NKnameTeX = "not_defined"

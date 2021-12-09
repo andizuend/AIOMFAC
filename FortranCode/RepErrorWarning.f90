@@ -137,10 +137,10 @@ ELSE
             WRITE(unito,*) ""
             WRITE(unito,*) "======================================================="
             WRITE(unito,*) "AIOMFAC-VISC WARNING 16: Mixture viscosity issue.      "
-            WRITE(unito,*) "Note that mixture viscosity is currently not computed  " 
-            WRITE(unito,*) "for electrolyte-containing mixtures. Therefore, an     "
-            WRITE(unito,*) "unrealistic mixture viscosity of                       "
-            WRITE(unito,*) "log_10(eta/[Pa.s]) = -999.999 is output.               "
+            WRITE(unito,'(A)') "A problem occurred during the viscosity prediction, &
+                &likely related to a missing pure-component viscosity value. &
+                &Therefore, an unrealistic mixture viscosity of log_10(eta/[Pa.s]) = &
+                &-9999.9999 is output."
             WRITE(unito,*) "Data point no.: ", pointi
             WRITE(unito,*) "======================================================="
             WRITE(unito,*) ""

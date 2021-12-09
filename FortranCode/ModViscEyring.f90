@@ -37,7 +37,7 @@ INTEGER(4),PRIVATE :: i
 INTEGER(4),DIMENSION(1:69),PARAMETER,PRIVATE :: fitmapfwd = [(i, i = 1,69)]
 INTEGER(4),DIMENSION(2,201:topsubno),PRIVATE :: ionfitmapfwd          
 INTEGER(4),DIMENSION(2,201:240,241:topsubno),PRIVATE :: catanfitmapfwd
-INTEGER(4),DIMENSION(:),ALLOCATABLE,PRIVATE :: catlist, anlist, ions  
+INTEGER(4),DIMENSION(:),ALLOCATABLE,PRIVATE :: ions  
 REAL(8),DIMENSION(201:topsubno),PRIVATE :: Vion, Zion                 
 REAL(8),DIMENSION(201:240,241:topsubno),PRIVATE :: nuecat, nuean      
 REAL(8),PUBLIC :: delGstar_by_RT_w, ionicstrengthsave
@@ -71,7 +71,7 @@ PUBLIC :: AqueousElecViscosity, WaterMolefracCorrection
 PRIVATE     !default setting for procedures and variables
 
 !make certain variables of this module threadprivate for use in parallel execution with openMP:
-!$OMP THREADPRIVATE( catlist, anlist, ions, delGstar_by_RT_w, Zion, ionicstrengthsave)
+!$OMP THREADPRIVATE( ions, delGstar_by_RT_w, Zion, ionicstrengthsave)
 
 !=====================================
     CONTAINS
@@ -178,7 +178,7 @@ PRIVATE     !default setting for procedures and variables
     icat = 0
     ian = 0
     
-    !define catlist, mole fraction, activity of cations
+    !define mole fraction, activity of cations
     DO I = 1,Ncation
        !save activity and mole fraction of this ion in an array by actual AIOMFAC ion index:
         iion = Ication(I)   !iion is ion index number (201:topsubno)
@@ -188,7 +188,7 @@ PRIVATE     !default setting for procedures and variables
         X_ion(iion) = X_(nneutral+I)                            !these ion mole fractions are based on the full system (water, orgs, cation, anion)        
     ENDDO
 
-    !define anlist, mole fraction, activity of anions
+    !define mole fraction, activity of anions
     DO I = 1,Nanion 
         iion = Ianion(I)
         ions(Ncation+I) = Ianion(I)
@@ -278,9 +278,9 @@ PRIVATE     !default setting for procedures and variables
         !use ion molalities
         sumXz = SUM(xin_(201:240)*ABS(Zion(201:240)))
         DO icat = 1,Ncation!ncat
-            cation = Ication(icat)  !catlist
+            cation = Ication(icat)
             DO ian = 1,Nanion
-                anion = Ianion(ian) !anlist
+                anion = Ianion(ian)
                 !only one fitpar per catan pair
                 IF (catanfitmapfwd(1,cation,anion) /= 0 ) THEN
                     Garg_both = fitpar(catanfitmapfwd(1,cation,anion)) * SQRT(ionicstrength_)

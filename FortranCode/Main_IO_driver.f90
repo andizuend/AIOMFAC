@@ -109,7 +109,7 @@ warningind = 0          !0 means no warnings found
 !read command line for text-file name (which contains the input parameters to run the AIOMFAC progam):
 CALL GET_COMMAND_ARGUMENT(1, txtfilein)
 IF (LEN_TRIM(txtfilein) < 4) THEN               !no command line argument; use specific input file for tests;
-    txtfilein = './Inputfiles/input_0004.txt'   !just use this for debugging with a specific input file, otherwise comment out;
+    txtfilein = './Inputfiles/input_0927.txt'   !just use this for debugging with a specific input file, otherwise comment out;
 ENDIF
 filepath = ADJUSTL(TRIM(txtfilein))
 WRITE(*,*) ""
