@@ -11,7 +11,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2005                                                            *
-!*   -> latest changes: 2021-09-22                                                      *
+!*   -> latest changes: 2022-01-17                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -51,7 +51,7 @@ IMPLICIT NONE
 INTEGER(4),PUBLIC,PARAMETER :: Nmaingroups = 76     !total number of SR (UNIFAC) main groups
 INTEGER(4),PUBLIC,PARAMETER :: topsubno = 264       !index no. of the last subgroup considered (top boundary of ITAB subgroups)
 !--
-INTEGER(4),PUBLIC :: nd, NGS, NGN, NGI, NG, NKNpNGS, nindcomp, nneutral, nelectrol, ninput, errorflagmix, errorflagcalc
+INTEGER(4),PUBLIC :: nd, NGS, NGN, NGI, NG, NKNpNGS, nindcomp, nneutral, nelectrol, ninput, errorflagmix
 INTEGER(4),PUBLIC :: Nanion, Ncation                !Nanion = number of anions, Ncation = number of cations
 INTEGER(4),PUBLIC :: idH, idHSO4, idSO4, idHCO3, idCO3, idOH, idCO2, idCa   !the index locations of these ions in the cation and anion arrays (e.g., in SMC, and SMA); idH = CatNr(205), idHSO4 = AnNr(248), idSO4 = AnNr(261)
 INTEGER(4),DIMENSION(:),ALLOCATABLE,PUBLIC :: CompN
@@ -77,6 +77,7 @@ LOGICAL(4),PUBLIC :: bisulfsyst, calcviscosity, elpresent, frominpfile, waterpre
 LOGICAL(4),PUBLIC :: bicarbsyst, noCO2input
 LOGICAL(4),PUBLIC :: isPEGsystem                            !to mark a special case: systems containing a PEG polymer
 LOGICAL(4),DIMENSION(:),ALLOCATABLE,PUBLIC :: ElectVolatile
+LOGICAL(4),DIMENSION(50),PUBLIC :: errorflag_clist
 !----
 !interfaces to subroutines in submodule SubModDefSystem:
 INTERFACE
@@ -113,6 +114,6 @@ END INTERFACE
     !$OMP & compnameTeX, compsubgroups, compsubgroupsTeX, compsubgroupsHTML, ionname, ionnameTeX, solvmixrefnd,  &
     !$OMP & frominpfile, bisulfsyst, waterpresent, calcviscosity, elpresent, isPEGsystem, maingrindexofsubgr,   &
     !$OMP & ElectComps, ElectNues, ElectVolatile, IAPcoeffs, KVLE_298K, K_el, SubGroupMW, ElectO2Cequiv, cationZ,  &
-    !$OMP & anionZ, errorflagmix, errorflagcalc, nuestoich, idHCO3, idCO3, idOH, idCO2, idCa, bicarbsyst, noCO2input)
+    !$OMP & anionZ, errorflagmix, errorflag_clist, nuestoich, idHCO3, idCO3, idOH, idCO2, idCa, bicarbsyst, noCO2input)
 
 END MODULE ModSystemProp

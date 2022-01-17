@@ -12,7 +12,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2020                                                            *
-!*   -> latest changes: 2021-11-29                                                      *
+!*   -> latest changes: 2022-01-17                                                      *
 !*                                                                                      *
 !*   :: List of subroutines and functions contained in this module:                     *
 !*   --------------------------------------------------------------                     *
@@ -28,7 +28,8 @@ MODULE ModViscEyring
 USE ModAIOMFACvar, ONLY : galrln, gamrln, gasrln, gclrln, gcmrln, gcsrln, gnlrln, &
     & gnmrln, gnsrln, lnactcoeff_a, lnactcoeff_c, SMA, SMC, solvmixcorrMRc, Tmolal, &
     & TmolalSolvmix
-USE ModSystemProp, ONLY : Ianion, Ication, Mmass, Nanion, Ncation, nd, solvmixrefnd, topsubno
+USE ModSystemProp, ONLY : errorflag_clist, Ianion, Ication, Mmass, Nanion, Ncation, &
+    & nd, solvmixrefnd, topsubno
 USE ModSRparam, ONLY : SR_RR
 
 IMPLICIT NONE
@@ -185,7 +186,10 @@ PRIVATE     !default setting for procedures and variables
         ions(I) = iion
         Zion(iion) = cationZ(I)
         act_ion(iion) = actcoeff_c(I)*SMC(I) * ionicstrengthfactor !ionicstrengthfactor to change solvent in molality to H2O instead of all neutral components
-        X_ion(iion) = X_(nneutral+I)                            !these ion mole fractions are based on the full system (water, orgs, cation, anion)        
+        X_ion(iion) = X_(nneutral+I)                            !these ion mole fractions are based on the full system (water, orgs, cation, anion)     
+        !!add an error/warning flag, indicating that this ion has not been considered:
+        !WRITE(*,'(A,I0,A)') "WARNING from ModViscEyring: ion, ", iion, ", &
+        !    &has not been included into the viscosity calculation part of the model."
     ENDDO
 
     !define mole fraction, activity of anions
@@ -194,7 +198,10 @@ PRIVATE     !default setting for procedures and variables
         ions(Ncation+I) = Ianion(I)
         Zion(iion) = ABS(anionZ(I))
         act_ion(iion) = actcoeff_a(I)*SMA(I)*ionicstrengthfactor
-        X_ion(iion) = X_(nneutral+Ncation+I)
+        X_ion(iion) = X_(nneutral+Ncation+I)    
+        !!add an error/warning flag, indicating that this ion has not been considered:
+        !WRITE(*,'(A,I0,A)') "WARNING from ModViscEyring: ion, ", iion, ", &
+        !    &has not been included into the viscosity calculation part of the model."  
     ENDDO
     
     !ionicstrengthfactor  is used to change solvent to H2O instead of all neutral components:
@@ -205,12 +212,12 @@ PRIVATE     !default setting for procedures and variables
         sumXion = SUM(X_ion(:))
         X_ion_organicfree = X_ion(:) / (X_(1) + sumXion)
         xw = 1.0D0 - SUM(X_ion_organicfree(:))
-        CALL GoldsackViscEqn(X_ion_organicfree, act_ion, ionicstrength1, xw, Vw, ln_etaw, ln_eta_aquelec)
+        CALL GoldsackViscEqn(X_ion_organicfree, act_ion, ionicstrength1, xw, Vw, ln_etaw, ln_eta_aquelec, errorflag_clist)
     ELSE !aquorg. in GoldsackViscEqn, xw = 1 - sum(X_ion), so mole fractions of organics are effectively counted as mole fraction of water
         xw = 1.0D0 - SUM(X_ion(:))
         sumX = SUM(X(1:nneutral))
         Vcomp = 15.17D-06 * SUM((X(1:nneutral)/sumX) * RS_(1:nneutral))   !use X (full system mole fractions to calc solvent volume)
-        CALL GoldsackViscEqn(X_ion, act_ion, ionicstrength1, xw, Vcomp, ln_etaw, ln_eta_aquelec) !
+        CALL GoldsackViscEqn(X_ion, act_ion, ionicstrength1, xw, Vcomp, ln_etaw, ln_eta_aquelec, errorflag_clist) !
     ENDIF
     
     DEALLOCATE( ions )
@@ -220,7 +227,7 @@ PRIVATE     !default setting for procedures and variables
     
     
     !-------------------------------------------------------------------------------------
-    PURE SUBROUTINE GoldsackViscEqn(xin_, actin_, ionicstrength_, xw, Vw, ln_etaw, ln_etacalc)
+    PURE SUBROUTINE GoldsackViscEqn(xin_, actin_, ionicstrength_, xw, Vw, ln_etaw, ln_etacalc, errorflag_clist)
     
     USE ModSystemProp, ONLY : Ianion, Ication, Nanion, Ncation, topsubno
 
@@ -229,6 +236,7 @@ PRIVATE     !default setting for procedures and variables
     REAL(8),DIMENSION(201:topsubno),INTENT(IN) :: xin_, actin_
     REAL(8),INTENT(IN) :: ionicstrength_, ln_etaw, Vw, xw
     REAL(8),INTENT(OUT) :: ln_etacalc
+    LOGICAL(4),DIMENSION(:),INTENT(INOUT) :: errorflag_clist
     !local variables:
     INTEGER(4) :: iion, icat, ian
     ! Goldsack & Franchetto vars and parameters:
@@ -262,7 +270,6 @@ PRIVATE     !default setting for procedures and variables
             delGstar_ion(numion) = xin_(numion) * (fitpar(ionfitmapfwd(1,numion)) * LOG(Garg_ion) + fitpar(ionfitmapfwd(2,numion)))
         ELSE
             delGstar_ion(numion) = 0.0D0
-            !add an error flag, indicating that this ion has not been considered
         ENDIF
     ENDDO
     delGstar_ions = SUM( delGstar_ion(:) )
@@ -293,6 +300,7 @@ PRIVATE     !default setting for procedures and variables
                     delGstar_catan(cation,anion) = Garg_both
                 ELSE
                     delGstar_catan(cation,anion) = 0.0D0
+                    errorflag_clist(18) = .true.
                 ENDIF
             ENDDO
         ENDDO

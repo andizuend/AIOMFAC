@@ -38,7 +38,7 @@
 !****************************************************************************************
 SUBMODULE (ModCalcActCoeff) SubModDissociationEquil
 
-USE ModSystemProp, ONLY : bisulfsyst, calcviscosity, errorflagcalc, frominpfile, idH, idHCO3, &
+USE ModSystemProp, ONLY : bisulfsyst, calcviscosity, errorflag_clist, frominpfile, idH, idHCO3, &
     & idCO3, idOH, idCO2, idHSO4, idSO4, idCa, nneutral, NGI 
 !USE ModAIOMFACvar, ONLY : alphaHSO4, diffKHSO4, SMA, SMC, SumIonMolalities, T_K, wtf   !accessible via parent module use statement
 USE ModCompScaleConversion, ONLY : MassFrac2SolvMolalities, MassFrac2IonMolalities, Moles2solvmass, &
@@ -717,19 +717,18 @@ LOGICAL(4) :: use_CO2gas_equil
             k = 88 !for breakpoint
             r = SUM(ABS(diffK))
             IF (r > sqrtdeps) THEN
-                IF (errorflagcalc == 0) THEN    !report back issues in solving dissociation equilibrium
-                    errorflagcalc = 17
-                    IF (.NOT. frominpfile) THEN
-                        !$OMP CRITICAL
-                        WRITE(*,'(A)') "AIOMFAC ERROR 17: Issue with ion dissociation equilibria calculations."
-                        WRITE(*,'(A)') "The numerical solution of electrolyte/ion dissociation equilibria was &
-                            &not accomplished to the desired tolerance level. Model output for this data &
-                            &point is unreliable and likely incorrect."
-                        WRITE(*,'(A,I0,ES13.6)') "iloop, wtf_water_init = ", iloop, wtf_water_init
-                        WRITE(*,'(A,ES13.6)') "SUM(ABS(diffK)) = ", r
-                        WRITE(*,*)
-                        !$OMP END CRITICAL
-                    ENDIF
+                !report back issues in solving dissociation equilibrium
+                errorflag_clist(17) = .true.
+                IF (.NOT. frominpfile) THEN
+                    !$OMP CRITICAL
+                    WRITE(*,'(A)') "AIOMFAC ERROR 17: Issue with ion dissociation equilibria calculations."
+                    WRITE(*,'(A)') "The numerical solution of electrolyte/ion dissociation equilibria was &
+                        &not accomplished to the desired tolerance level. Model output for this data &
+                        &point is unreliable and likely incorrect."
+                    WRITE(*,'(A,I0,ES13.6)') "iloop, wtf_water_init = ", iloop, wtf_water_init
+                    WRITE(*,'(A,ES13.6)') "SUM(ABS(diffK)) = ", r
+                    WRITE(*,*)
+                    !$OMP END CRITICAL
                 ENDIF
             ENDIF
         ENDIF

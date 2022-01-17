@@ -8,7 +8,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
 !*                                                                                      *
 !*   -> created:        2011                                                            *
-!*   -> latest changes: 2021-12-06                                                      *
+!*   -> latest changes: 2022-01-17                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -23,12 +23,17 @@
 !*   program. If not, see <http://www.gnu.org/licenses/>.                               *
 !*                                                                                      *
 !****************************************************************************************
-SUBROUTINE RepErrorWarning(unito, errorflagmix, warningflag, errorflagcalc, pointi, errorind, warningind)
+SUBROUTINE RepErrorWarning(unito, errorflagmix, warningflag, errorflag_list, pointi, errorind, warningind)
+
+USE ModSystemProp, ONLY : errorflag_clist
 
 IMPLICIT NONE
 !interface variables:
-INTEGER(4),INTENT(IN) :: unito, errorflagmix, warningflag, errorflagcalc, pointi
+INTEGER(4),INTENT(IN) :: unito, errorflagmix, warningflag, pointi
+LOGICAL(4),DIMENSION(SIZE(errorflag_clist)),INTENT(IN) :: errorflag_list
 INTEGER(4),INTENT(OUT) :: errorind, warningind
+!local variables:
+INTEGER(4) :: en, n
 !...................................................................................
 
 IF (errorflagmix /= 0) THEN !some mixture related error occured:
@@ -154,85 +159,100 @@ ELSE
         END SELECT
         warningind = warningflag
     ENDIF !warningflag
-    IF (errorflagcalc > 0) THEN
-        SELECT CASE(errorflagcalc)
-        CASE(3)
-            WRITE(unito,*) ""
-            WRITE(unito,*) "======================================================="
-            WRITE(unito,*) "AIOMFAC ERROR 3: Mixture composition related."
-            WRITE(unito,*) "Composition data for this point is missing or incorrect!"
-            WRITE(unito,*) "The sum of the mole or mass fractions of all components"
-            WRITE(unito,*) "has to be equal to 1.0 and individual mole or mass "
-            WRITE(unito,*) "fractions have to be positive values <= 1.0!"
-            WRITE(unito,*) "Composition point no.: ", pointi
-            WRITE(unito,*) "======================================================="
-            WRITE(unito,*) ""
-        CASE(4,5)
-            WRITE(unito,*) ""
-            WRITE(unito,*) "======================================================="
-            WRITE(unito,*) "AIOMFAC ERROR 4: Mixture composition related."
-            WRITE(unito,*) "Composition data for this point is incorrect!"
-            WRITE(unito,*) "The sum of the mole or mass fractions of all components"
-            WRITE(unito,*) "has to be equal to 1.0 and individual mole or mass "
-            WRITE(unito,*) "fractions have to be positive values <= 1.0!"
-            WRITE(unito,*) "Composition point no.: ", pointi
-            WRITE(unito,*) "======================================================="
-            WRITE(unito,*) ""
-        CASE(6,7)
-            WRITE(unito,*) ""
-            WRITE(unito,*) "======================================================="
-            WRITE(unito,*) "AIOMFAC ERROR 6: Numerical issue."
-            WRITE(unito,*) "A numerical issue occurred during computation of the"
-            WRITE(unito,*) "data points flagged in the output tables."
-            WRITE(unito,*) "This error was possibly caused due to input of very"
-            WRITE(unito,*) "high electrolyte concentrations."
-            WRITE(unito,*) "Composition point no.: ", pointi
-            WRITE(unito,*) "======================================================="
-            WRITE(unito,*) ""
-        CASE(8)
-            WRITE(unito,*) ""
-            WRITE(unito,*) "======================================================="
-            WRITE(unito,*) "AIOMFAC ERROR 8: Mixture composition related."
-            WRITE(unito,*) "At least one neutral component must be present in the  "
-            WRITE(unito,*) "system! "
-            WRITE(unito,*) "Composition point no.: ", pointi
-            WRITE(unito,*) "======================================================="
-            WRITE(unito,*) ""
-        CASE(12)
-            WRITE(unito,*) ""
-            WRITE(unito,*) "======================================================="
-            WRITE(unito,*) "AIOMFAC ERROR 12: Charge neutrality violated."
-            WRITE(unito,*) "The mixture violates the electrical charge neutrality  "
-            WRITE(unito,*) "condition (moles cation*[cation charge] =              "
-            WRITE(unito,*) "                          moles anion*[anion charge]). "
-            WRITE(unito,*) "Make sure that selected integer amounts of cation and  "
-            WRITE(unito,*) "anion 'subgroups' fulfill the charge balance (in the   "
-            WRITE(unito,*) "inorganic component definition of the input file).     "
-            WRITE(unito,*) "Composition point no.: ", pointi
-            WRITE(unito,*) "======================================================="
-            WRITE(unito,*) ""
-        CASE(17)
-            WRITE(unito,*) ""
-            WRITE(unito,*) "======================================================="
-            WRITE(unito,'(A)') "AIOMFAC ERROR 17: Issue with ion dissociation &
-                            &equilibria calculations."
-            WRITE(unito,'(A)') "The numerical solution of electrolyte/ion dissociation &
-                            &equilibria was not accomplished to the desired tolerance &
-                            &level. Model output for this point is unreliable and likely &
-                            &incorrect."
-            WRITE(unito,*) "Composition point no.: ", pointi
-            WRITE(unito,*) "======================================================="
-            WRITE(unito,*) ""
-        CASE DEFAULT
-            WRITE(unito,*) ""
-            WRITE(unito,*) "======================================================="
-            WRITE(unito,*) "AIOMFAC ERROR XX: an undefined calculation error occurred!"
-            WRITE(unito,*) "errorflagcalc = ", errorflagcalc
-            WRITE(unito,*) "======================================================="
-            WRITE(unito,*) ""
-        END SELECT
-        errorind = errorflagcalc
-    ENDIF !errorflagcalc
+    IF ( ANY(errorflag_list) ) THEN
+        en = 0
+        DO n = 1,COUNT(errorflag_list)
+            en = en + FINDLOC(errorflag_list(en+1:), VALUE = .true., DIM=1)
+            SELECT CASE(en)
+            CASE(3)
+                WRITE(unito,*) ""
+                WRITE(unito,*) "======================================================="
+                WRITE(unito,*) "AIOMFAC ERROR 3: Mixture composition related."
+                WRITE(unito,*) "Composition data for this point is missing or incorrect!"
+                WRITE(unito,*) "The sum of the mole or mass fractions of all components"
+                WRITE(unito,*) "has to be equal to 1.0 and individual mole or mass "
+                WRITE(unito,*) "fractions have to be positive values <= 1.0!"
+                WRITE(unito,*) "Composition point no.: ", pointi
+                WRITE(unito,*) "======================================================="
+                WRITE(unito,*) ""
+            CASE(4,5)
+                WRITE(unito,*) ""
+                WRITE(unito,*) "======================================================="
+                WRITE(unito,*) "AIOMFAC ERROR 4: Mixture composition related."
+                WRITE(unito,*) "Composition data for this point is incorrect!"
+                WRITE(unito,*) "The sum of the mole or mass fractions of all components"
+                WRITE(unito,*) "has to be equal to 1.0 and individual mole or mass "
+                WRITE(unito,*) "fractions have to be positive values <= 1.0!"
+                WRITE(unito,*) "Composition point no.: ", pointi
+                WRITE(unito,*) "======================================================="
+                WRITE(unito,*) ""
+            CASE(6,7)
+                WRITE(unito,*) ""
+                WRITE(unito,*) "======================================================="
+                WRITE(unito,*) "AIOMFAC ERROR 6: Numerical issue."
+                WRITE(unito,*) "A numerical issue occurred during computation of the"
+                WRITE(unito,*) "data points flagged in the output tables."
+                WRITE(unito,*) "This error was possibly caused due to input of very"
+                WRITE(unito,*) "high electrolyte concentrations."
+                WRITE(unito,*) "Composition point no.: ", pointi
+                WRITE(unito,*) "======================================================="
+                WRITE(unito,*) ""
+            CASE(8)
+                WRITE(unito,*) ""
+                WRITE(unito,*) "======================================================="
+                WRITE(unito,*) "AIOMFAC ERROR 8: Mixture composition related."
+                WRITE(unito,*) "At least one neutral component must be present in the  "
+                WRITE(unito,*) "system! "
+                WRITE(unito,*) "Composition point no.: ", pointi
+                WRITE(unito,*) "======================================================="
+                WRITE(unito,*) ""
+            CASE(12)
+                WRITE(unito,*) ""
+                WRITE(unito,*) "======================================================="
+                WRITE(unito,*) "AIOMFAC ERROR 12: Charge neutrality violated."
+                WRITE(unito,*) "The mixture violates the electrical charge neutrality  "
+                WRITE(unito,*) "condition (moles cation*[cation charge] =              "
+                WRITE(unito,*) "                          moles anion*[anion charge]). "
+                WRITE(unito,*) "Make sure that selected integer amounts of cation and  "
+                WRITE(unito,*) "anion 'subgroups' fulfill the charge balance (in the   "
+                WRITE(unito,*) "inorganic component definition of the input file).     "
+                WRITE(unito,*) "Composition point no.: ", pointi
+                WRITE(unito,*) "======================================================="
+                WRITE(unito,*) ""
+            CASE(17)
+                WRITE(unito,*) ""
+                WRITE(unito,*) "======================================================="
+                WRITE(unito,'(A)') "AIOMFAC ERROR 17: Issue with ion dissociation &
+                                &equilibria calculations."
+                WRITE(unito,'(A)') "The numerical solution of electrolyte/ion dissociation &
+                                &equilibria was not accomplished to the desired tolerance &
+                                &level. Model output for this point is unreliable and likely &
+                                &incorrect."
+                WRITE(unito,*) "Composition point no.: ", pointi
+                WRITE(unito,*) "======================================================="
+                WRITE(unito,*) ""
+            CASE(18)
+                WRITE(unito,*) ""
+                WRITE(unito,*) "======================================================="
+                WRITE(unito,'(A)') "AIOMFAC-VISC WARNING 18: Mixture viscosity issue."
+                WRITE(unito,'(A)') "At least one of the cation–anion combinations included &
+                    &in the mixture have not yet been supported for mixture viscosity &
+                    &calculations. Therefore, the predicted viscosity is not reliable."
+                WRITE(unito,*) "Composition point no.: ", pointi
+                WRITE(unito,*) "======================================================="
+                WRITE(unito,*) ""
+                
+            CASE DEFAULT
+                WRITE(unito,*) ""
+                WRITE(unito,*) "======================================================="
+                WRITE(unito,*) "AIOMFAC ERROR XX: an undefined calculation error occurred!"
+                WRITE(unito,*) "error flag = ", errorflag_list(en)
+                WRITE(unito,*) "======================================================="
+                WRITE(unito,*) ""
+            END SELECT
+        ENDDO
+        errorind = FINDLOC(errorflag_list(:), VALUE = .true., DIM=1)
+    ENDIF
 ENDIF !errorflagmix
         
 END SUBROUTINE RepErrorWarning

@@ -28,7 +28,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
 !*                                                                                      *
 !*   -> created:        2011  (this file)                                               *
-!*   -> latest changes: 2021-12-09                                                      *
+!*   -> latest changes: 2022-01-17                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -47,7 +47,7 @@
 PROGRAM Main_IO_driver
 
 !module variables:
-USE ModSystemProp, ONLY : errorflagmix, idCO2, nindcomp, NKNpNGS, SetSystem, topsubno, waterpresent
+USE ModSystemProp, ONLY : errorflag_clist, errorflagmix, idCO2, nindcomp, NKNpNGS, SetSystem, topsubno, waterpresent
 USE ModSubgroupProp, ONLY : SubgroupAtoms, SubgroupNames
 USE ModMRpart, ONLY : MRdata
 USE ModSRparam, ONLY : SRdata
@@ -62,7 +62,7 @@ CHARACTER(LEN=200) :: filename
 CHARACTER(LEN=3000) :: filepath, folderpathout, fname, txtfilein  
 CHARACTER(LEN=200),DIMENSION(:),ALLOCATABLE :: cpnameinp   !list of assigned component names (from input file)
 CHARACTER(LEN=200),DIMENSION(:),ALLOCATABLE :: outnames
-INTEGER(4) :: allocstat, errorflagcalc, errorind, i, nc, ncp, npoints, nspecies, nspecmax, pointi, &
+INTEGER(4) :: allocstat, errorind, i, nc, ncp, npoints, nspecies, nspecmax, pointi, &
     & unito, warningflag, warningind, watercompno
 INTEGER(4),DIMENSION(ninpmax) :: px
 INTEGER(4),DIMENSION(:,:),ALLOCATABLE :: cpsubg   !list of input component subgroups and corresponding subgroup quantities
@@ -72,6 +72,7 @@ REAL(8),DIMENSION(:),ALLOCATABLE :: inputconc, outputviscvars
 REAL(8),DIMENSION(:,:),ALLOCATABLE :: composition, compos2, outputvars, out_viscdata
 REAL(8),DIMENSION(:,:,:),ALLOCATABLE :: out_data
 LOGICAL(4) :: filevalid, verbose, xinputtype
+LOGICAL(4),DIMENSION(SIZE(errorflag_clist)) :: errflag_list
 !--
 !explicit interfaces:
 INTERFACE
@@ -98,7 +99,7 @@ END INTERFACE
 !
 !==== INITIALIZATION section =======================================================
 !
-VersionNo = "3.01"      !AIOMFAC-web version number (change here if minor or major changes require a version number change)
+VersionNo = "3.02"      !AIOMFAC-web version number (change here if minor or major changes require a version number change)
 verbose = .true.        !if true, some debugging information will be printed to the unit "unito" (errorlog file)
 nspecmax = 0
 errorind = 0            !0 means no error found
@@ -109,7 +110,7 @@ warningind = 0          !0 means no warnings found
 !read command line for text-file name (which contains the input parameters to run the AIOMFAC progam):
 CALL GET_COMMAND_ARGUMENT(1, txtfilein)
 IF (LEN_TRIM(txtfilein) < 4) THEN               !no command line argument; use specific input file for tests;
-    txtfilein = './Inputfiles/input_0927.txt'   !just use this for debugging with a specific input file, otherwise comment out;
+    txtfilein = './Inputfiles/input_0002.txt'   !just use this for debugging with a specific input file, otherwise comment out;
 ENDIF
 filepath = ADJUSTL(TRIM(txtfilein))
 WRITE(*,*) ""
@@ -155,7 +156,7 @@ IF (filevalid) THEN
     DEALLOCATE(cpsubg, composition, STAT=allocstat)
     
     IF (errorflagmix /= 0) THEN     !a mixture-related error occured:
-        CALL RepErrorWarning(unito, errorflagmix, warningflag, errorflagcalc, i, errorind, warningind)
+        CALL RepErrorWarning(unito, errorflagmix, warningflag, errflag_list, i, errorind, warningind)
     ENDIF
 
     IF (errorind == 0) THEN         !perform AIOMFAC calculations; else jump to termination section
@@ -178,21 +179,24 @@ IF (filevalid) THEN
             TKelvin = T_K(pointi)
             !--
             CALL AIOMFAC_inout(inputconc, xinputtype, TKelvin, nspecies, outputvars, outputviscvars, &
-                & outnames, errorflagcalc, warningflag)
+                & outnames, errflag_list, warningflag)
             !--
-            IF (warningflag > 0 .OR. errorflagcalc > 0) THEN
+            IF (warningflag > 0 .OR. ANY(errflag_list)) THEN
                 !$OMP CRITICAL errwriting
-                CALL RepErrorWarning(unito, errorflagmix, warningflag, errorflagcalc, pointi, errorind, warningind)
+                CALL RepErrorWarning(unito, errorflagmix, warningflag, errflag_list, pointi, errorind, warningind)
                 !$OMP END CRITICAL errwriting
             ENDIF
             nspecmax = MAX(nspecmax, nspecies)  !figure out the maximum number of different species in mixture (accounting for the 
                                                 !possibility of HSO4- dissoc. and different species at different data points due to zero mole fractions).
             DO nc = 1,nspecmax                  !loop over species (ions dissociated and treated as individual species):
-                out_data(1:6,pointi,nc) = outputvars(1:6,nc)            !out_data general structure: | data columns 1:7 | data point | component no.|
-                out_data(7,pointi,nc) = REAL(errorflagcalc, KIND=8)
-                out_viscdata(3,pointi) = REAL(errorflagcalc, KIND=8)
-                IF (errorflagcalc == 0 .AND. warningflag > 0) THEN      !do not overwrite an errorflag if present!
-                    IF (warningflag == 16) THEN                         !a warning that only affects viscosity calc.
+                out_data(1:6,pointi,nc) = outputvars(1:6,nc)                !out_data general structure: | data columns 1:7 | data point | component no.|
+                out_data(7,pointi,nc) = REAL(FINDLOC(errflag_list(:), VALUE = .true., DIM=1), KIND=8)
+                out_viscdata(3,pointi) = REAL(FINDLOC(errflag_list(:), VALUE = .true., DIM=1), KIND=8)
+                IF (ABS(out_viscdata(3,pointi) -18.0D0) < 0.1D0) THEN       !error 18 is only an error/warning for viscosity prediction, not activity coeff.
+                    out_data(7,pointi,nc) = 0.0D0
+                ENDIF
+                IF ((.NOT. ANY(errflag_list)) .AND. warningflag > 0) THEN   !do not overwrite an errorflag if present!
+                    IF (warningflag == 16) THEN                             !a warning that only affects viscosity calc.
                         out_viscdata(3,pointi) = REAL(warningflag, KIND=8)
                     ELSE
                         out_data(7,pointi,nc) = REAL(warningflag, KIND=8)

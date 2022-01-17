@@ -93,7 +93,7 @@ REAL(8),DIMENSION(201:topsubno),PARAMETER,PRIVATE :: lambdaIN = [ &
     SUBROUTINE LR_MR_activity()
 
     USE ModSystemProp, ONLY : anionZ, cationZ, Imaingroup, ITAB, ITABMG, maingrindexofsubgr, Mmass, &
-        & nelectrol, NGI, NGN, nneutral, solvmixrefnd, SolvSubs, SubGroupMW, errorflagcalc
+        & nelectrol, NGI, NGN, nneutral, solvmixrefnd, SolvSubs, SubGroupMW, errorflag_clist
     USE ModAIOMFACvar, ONLY : DebyeHrefresh, galrln, gamrln, gclrln, gcmrln, gnlrln, gnmrln,        &
         & Ionicstrength, meanSolventMW, SumIonMolalities, SMA, SMC, solvmixcorrMRa, solvmixcorrMRc, &
         & T_K, Tmolal, TmolalSolvmix, XN
@@ -174,7 +174,7 @@ REAL(8),DIMENSION(201:topsubno),PARAMETER,PRIVATE :: lambdaIN = [ &
     Test11 = Test11 - Test12
     IF (.NOT. ANY([bicarbsyst])) THEN
         IF (SI < 1.0D6 .AND. ABS(Test11) > 1.0D-9) THEN     !test
-            errorflagcalc = 12                              !overall charge neutrality violation error
+            errorflag_clist(12) = .true.                    !overall charge neutrality violation error
             IF (.NOT. frominpfile) THEN
                 WRITE(*,*) "WARNING: Electrical charge neutrality condition in the solution is violated! ", Test11
             ENDIF

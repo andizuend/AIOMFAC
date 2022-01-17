@@ -97,7 +97,7 @@ END INTERFACE
     !Public Variables:
     USE ModSystemProp, ONLY : anNr, catNr, ElectComps, ElectNues, Ianion, Ication, &
         Nanion, Ncation, nelectrol, nindcomp, nneutral, SolvMixRefnd, bisulfsyst, &
-        errorflagcalc, bicarbsyst, noCO2input
+        errorflag_clist, bicarbsyst, noCO2input
     USE ModCompScaleConversion, ONLY : MassFrac2IonMolalities
 
     IMPLICIT NONE
@@ -118,7 +118,7 @@ END INTERFACE
     !ENDIF
     
     !initialize the variables/arrays:
-    errorflagcalc = 0
+    errorflag_clist = .false.
     gnmrln = 0.0D0
     gnlrln = 0.0D0
     gnsrln = 0.0D0
@@ -228,7 +228,7 @@ END INTERFACE
 
     !!!notify exception in case of floating point overflow problems and return:
     !!IF (floatingproblem) THEN
-    !!    errorflagcalc = 6
+    !!    errorflag_clist(6) = .true.
     !!    activity(1:nindcomp) = -9999.9D0
     !!    actcoeff_n(1:nneutral) = -9999.9D0
     !!    actcoeff_c(1:nelectrol) = -9999.9D0
@@ -263,11 +263,11 @@ END INTERFACE
                     ELSE                                        !numerical issue, so output a large number (smaller than overflow risk)
                         trunc = 0.1D0*LOG( ABS(ma1) )
                         meanmolalactcoeff(ii) = EXP(lnhuge + trunc)
-                        errorflagcalc = 7
+                        errorflag_clist(7) = .true.
                     ENDIF
                 ELSE !underflow risk
                     meanmolalactcoeff(ii) = EXP(lntiny)         !i.e. tiny number, almost zero
-                    errorflagcalc = 7
+                    errorflag_clist(7) = .true.
                 ENDIF
                 t1 = nuelngc + nuelnga + nuec*LOG(SMC(i)) + nuea*LOG(SMA(k))
                 IF (t1 > lntiny) THEN                           !no floating point underflow problem expected
@@ -276,12 +276,12 @@ END INTERFACE
                     ELSE                                        !numerical issue, so output a large number (smaller than overflow risk)
                         trunc = 0.1D0*LOG( ABS(t1) )
                         ionactivityprod(ii) = EXP(lnhuge + trunc)
-                        errorflagcalc = 7
+                        errorflag_clist(7) = .true.
                     ENDIF
                 ELSE                                            !underflow risk
                     trunc = 0.1D0*LOG( ABS(t1) )
                     ionactivityprod(ii) = EXP(lntiny - trunc)   !i.e. tiny number, almost zero
-                    errorflagcalc = 7
+                    errorflag_clist(7) = .true.
                 ENDIF
             ENDIF
         ENDIF

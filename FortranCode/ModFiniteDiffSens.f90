@@ -137,7 +137,7 @@ PRIVATE
     !****************************************************************************************
     SUBROUTINE partialdactcoeff(xin, TKelvin, j, i, partdact_ji, partdactcoeff_ji)
 
-    USE ModSystemProp, ONLY : nindcomp, nneutral, nd, Mmass, errorflagcalc, calcviscosity
+    USE ModSystemProp, ONLY : nindcomp, nneutral, nd, Mmass, errorflag_clist, calcviscosity
     USE ModCompScaleConversion
     USE ModAIOMFACvar, ONLY : activity, meanmolalactcoeff, actcoeff_n, partial_log10_etamix, ln_etamix
     USE ModCalcActCoeff, ONLY : AIOMFAC_calc
@@ -243,11 +243,11 @@ PRIVATE
         !there is some amount of a component in the mixture, but the model activity coefficient is too large (thus, very steep derivative)
         partdact_ji = 1.11111111D5  !value indicating a floating point overflow in AIOMFAC_calc, while not suppressing the feedback of such a value.
         partdactcoeff_ji = 1.11111111D5
-        errorflagcalc = 2
+        errorflag_clist(2) = .true.
     ELSE !exceptions where problem occurred
         partdact_ji = 0.0D0
         partdactcoeff_ji = 0.0D0
-        errorflagcalc = 3
+        errorflag_clist(3) = .true.
     ENDIF
    
     END SUBROUTINE partialdactcoeff
