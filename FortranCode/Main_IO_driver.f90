@@ -20,7 +20,7 @@
 !*   including I-, IO3-, CO3--, HCO3- and CO2(aq), are included based on Yin et al.     *
 !*   (2021, Atmos. Chem. Phys.).                                                        *
 !*   Viscosity predictions via AIOMFAC-VISC are included based on the articles by       *
-!*   Gervasi et al. (2020) and Lilek and Zuend (2021).                                  *
+!*   Gervasi et al. (2020) and Lilek and Zuend (2022, Atmos. Chem. Phys.).              *
 !*                                                                                      *
 !*   :: Author & Copyright ::                                                           *
 !*   Andi Zuend, (andi.zuend@gmail.com)                                                 *
@@ -28,7 +28,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
 !*                                                                                      *
 !*   -> created:        2011  (this file)                                               *
-!*   -> latest changes: 2022-01-17                                                      *
+!*   -> latest changes: 2022-02-11                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -99,7 +99,7 @@ END INTERFACE
 !
 !==== INITIALIZATION section =======================================================
 !
-VersionNo = "3.02"      !AIOMFAC-web version number (change here if minor or major changes require a version number change)
+VersionNo = "3.03"      !AIOMFAC-web version number (change here if minor or major changes require a version number change)
 verbose = .true.        !if true, some debugging information will be printed to the unit "unito" (errorlog file)
 nspecmax = 0
 errorind = 0            !0 means no error found
@@ -110,7 +110,7 @@ warningind = 0          !0 means no warnings found
 !read command line for text-file name (which contains the input parameters to run the AIOMFAC progam):
 CALL GET_COMMAND_ARGUMENT(1, txtfilein)
 IF (LEN_TRIM(txtfilein) < 4) THEN               !no command line argument; use specific input file for tests;
-    txtfilein = './Inputfiles/input_0002.txt'   !just use this for debugging with a specific input file, otherwise comment out;
+    txtfilein = './Inputfiles/input_0007.txt'   !just use this for debugging with a specific input file, otherwise comment out;
 ENDIF
 filepath = ADJUSTL(TRIM(txtfilein))
 WRITE(*,*) ""

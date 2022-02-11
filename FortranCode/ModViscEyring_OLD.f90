@@ -2,7 +2,7 @@
 !*   :: Purpose ::                                                                      *
 !*   This module contains subroutines to compute the viscosity of aqueous electrolyte   *
 !*   solutions with treatment of single-ion and cation--anion pair contributions and    *
-!*   associated parameters; see paper by Lilek and Zuend (2022, ACP).                   *
+!*   associated parameters; see paper by Lilek and Zuend (2021, ACP).                   *
 !*                                                                                      *
 !*   Options for viscosity calculation modes for organic--inorganic mixtures are set in *
 !*   the module declaration part below.                                                 *
@@ -12,7 +12,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2020                                                            *
-!*   -> latest changes: 2022-02-11                                                      *
+!*   -> latest changes: 2022-01-17                                                      *
 !*                                                                                      *
 !*   :: List of subroutines and functions contained in this module:                     *
 !*   --------------------------------------------------------------                     *
@@ -20,6 +20,7 @@
 !*   -  SUBROUTINE WaterMolefracCorrection                                              *
 !*   -  SUBROUTINE GoldsackViscEqn                                                      *
 !*   -  SUBROUTINE MapIons2Fitpars3                                                     *
+!*   -  SUBROUTINE ViscGelContribution                                                  *
 !*                                                                                      *
 !****************************************************************************************
 MODULE ModViscEyring
@@ -34,7 +35,7 @@ USE ModSRparam, ONLY : SR_RR
 IMPLICIT NONE
 
 INTEGER(4),PRIVATE :: i
-INTEGER(4),DIMENSION(1:105),PARAMETER,PRIVATE :: fitmapfwd = [(i, i = 1,105)]
+INTEGER(4),DIMENSION(1:69),PARAMETER,PRIVATE :: fitmapfwd = [(i, i = 1,69)]
 INTEGER(4),DIMENSION(2,201:topsubno),PRIVATE :: ionfitmapfwd          
 INTEGER(4),DIMENSION(2,201:240,241:topsubno),PRIVATE :: catanfitmapfwd
 INTEGER(4),DIMENSION(:),ALLOCATABLE,PRIVATE :: ions  
@@ -44,7 +45,7 @@ REAL(8),PUBLIC :: delGstar_by_RT_w, ionicstrengthsave
 !LOGICAL(4),PRIVATE :: gel_eqn1, gel_eqn2 
 
 !private variables with initial values that may change:
-LOGICAL(4),PRIVATE :: fitmap_complete = .true.                  !fitmap for viscosity model parameter init; needs to be .true. here; changes after first use
+LOGICAL(4),PRIVATE :: fitmap_complete = .true.                  !fitmap for viscosity model parameter init; needs to be .true. here; changed after first use
 LOGICAL(4),PRIVATE :: calc_gel = .false.                        !false by default; currently gel effects are in development
 !****
 !**** set a few parameters viscosity model calculation options:
@@ -54,19 +55,17 @@ LOGICAL(4),PARAMETER,PRIVATE :: calc_catan = .true.
 LOGICAL(4),PARAMETER,PRIVATE :: newcatanPrime = .true.          !if true, use the non-normalized tau'. If false (default) use normalized tau.
 !****
 !****
-REAL(8),DIMENSION(1:105),PARAMETER,PUBLIC :: fitpar = [ &
-! 28 Dec 2021 (Lilek and Zuend revised, updated, DEFAULT)
-& 1.67983D+00,  1.73760D-03,  8.20090D+00,  1.57456D-01,  9.57170D+00,  4.35501D-01,  3.52182D+00,  2.32051D-01,  8.70806D+00,  4.90251D-02, &
-& 1.22486D+01,  2.20685D-01,  4.39636D+00,  3.25016D-02,  2.97547D+01,  2.58001D-02,  3.83450D+00,  9.70421D-03,  9.00033D-01,  1.42443D+00, &
-& 1.63357D+00,  1.01039D-11,  1.84540D+01,  2.14728D-02,  7.64053D+00,  2.13062D-01,  1.92583D-02,  1.01039D-11,  2.42196D+01,  1.17449D+00, &
-& 1.51967D+01,  1.01039D-11,  1.52129D+01,  1.60020D+01,  3.39381D+01,  3.26414D-01,  1.44456D+00,  3.39242D-01,  4.59481D-01,  4.69448D+00, &
-& 1.01039D-11,  2.47812D+00,  1.43264D+00,  1.70274D+00,  1.42802D+00,  1.55456D+00,  4.69448D+00,  1.01039D-11,  2.47812D+00,  1.01039D-11, &
-& 1.82254D-02,  1.74929D+00,  1.80425D+00,  6.77700D+00,  5.67534D-01,  8.19343D-01,  2.53147D-01,  3.70756D+00,  6.87103D-02,  3.17849D-01, &
-& 3.39729D+00,  1.01039D-11,  3.39729D+00,  2.50423D-01,  1.44456D+00,  3.39242D-01,  1.31901D+00,  4.69448D+00,  1.01039D-11,  2.47812D+00, &
-& 1.10588D+00,  1.34544D+00,  1.71202D+00,  1.85803D+00,  4.69448D+00,  1.01039D-11,  2.47812D+00,  2.30706D+01,  3.80327D+00,  1.52573D+00, &
-& 3.80327D+00,  3.39729D+00,  1.52573D+00,  3.39729D+00,  2.37260D+01,  1.39357D-02,  1.01039D-11,  1.39357D-02,  6.77700D+00,  1.01039D-11, &
-& 8.19343D-01,  2.45867D+01,  1.70520D+00,  3.45063D-02,  1.01039D-11,  4.69448D+00,  3.45063D-02,  2.47812D+00,  3.40645D+00,  1.82254D-02, &
-& 1.74929D+00,  1.80425D+00,  6.77700D+00,  5.67534D-01,  8.19343D-01 ]
+REAL(8),DIMENSION(1:69),PARAMETER,PUBLIC :: fitpar = [ &
+! 1 august 2021 (newcatan, newcatanprime; 46 input files)
+&  1.55863D+00,  1.01039D-11,  4.98498D+00,  2.85945D-02,  5.81319D+00,  1.33891D-01,  7.27692D-01,  1.99747D-01, & 
+&  5.20662D+00,  1.73959D+00,  1.52373D+01,  1.14135D-01,  1.98746D+00,  1.01039D-11,  1.45522D+01,  1.01039D-11, &
+&  6.27643D+00,  2.06176D-01,  3.39886D+00,  7.30610D-01,  4.47385D+00,  1.01039D-11,  1.89144D+01,  3.58274D-01, &
+&  5.20066D+00,  3.33591D-02,  2.47602D+00,  5.25846D-01,  1.90547D+00,  6.68723D-01,  8.80106D-01,  1.17183D+00, &
+&  1.01039D-11,  5.23501D+00,  1.61773D+00,  1.64799D+00,  1.58764D+00,  1.67362D+00,  1.17183D+00,  1.18587D-01, &
+&  5.23501D+00,  4.88160D-01,  1.01044D+00,  1.65761D+00,  2.01138D+00,  5.16958D+00,  6.11219D-01,  4.40650D+00, &
+&  3.40868D+00,  6.02049D+00,  3.67356D+00,  4.06981D+00,  8.28882D+00,  9.75043D-01,  8.28882D+00,  2.04407D-01, &
+&  2.40928D+00,  2.40928D+00,  2.40928D+00,  2.40928D+00,  2.40928D+00,  2.40928D+00,  1.54187D+00,  2.60910D+00, &
+&  2.07340D+00,  2.41020D+00,  1.17183D+00,  1.01039D-11,  5.23501D+00 ]
 
 !public procedures:
 PUBLIC :: AqueousElecViscosity, WaterMolefracCorrection
@@ -187,7 +186,10 @@ PRIVATE     !default setting for procedures and variables
         ions(I) = iion
         Zion(iion) = cationZ(I)
         act_ion(iion) = actcoeff_c(I)*SMC(I) * ionicstrengthfactor !ionicstrengthfactor to change solvent in molality to H2O instead of all neutral components
-        X_ion(iion) = X_(nneutral+I)                            !these ion mole fractions are based on the full system (water, orgs, cation, anion)        
+        X_ion(iion) = X_(nneutral+I)                            !these ion mole fractions are based on the full system (water, orgs, cation, anion)     
+        !!add an error/warning flag, indicating that this ion has not been considered:
+        !WRITE(*,'(A,I0,A)') "WARNING from ModViscEyring: ion, ", iion, ", &
+        !    &has not been included into the viscosity calculation part of the model."
     ENDDO
 
     !define mole fraction, activity of anions
@@ -196,7 +198,10 @@ PRIVATE     !default setting for procedures and variables
         ions(Ncation+I) = Ianion(I)
         Zion(iion) = ABS(anionZ(I))
         act_ion(iion) = actcoeff_a(I)*SMA(I)*ionicstrengthfactor
-        X_ion(iion) = X_(nneutral+Ncation+I)
+        X_ion(iion) = X_(nneutral+Ncation+I)    
+        !!add an error/warning flag, indicating that this ion has not been considered:
+        !WRITE(*,'(A,I0,A)') "WARNING from ModViscEyring: ion, ", iion, ", &
+        !    &has not been included into the viscosity calculation part of the model."  
     ENDDO
     
     !ionicstrengthfactor  is used to change solvent to H2O instead of all neutral components:
@@ -242,10 +247,10 @@ PRIVATE     !default setting for procedures and variables
     REAL(8),DIMENSION(201:240,241:topsubno) :: delGstar_catan
     REAL(8),DIMENSION(201:240,241:topsubno) :: tauPrime, tau
     REAL(8),PARAMETER :: deps = EPSILON(1.0D0)
-    REAL(8),PARAMETER :: R = 8.3144598D0                    !J K^-1 mol^-1 ideal gas constant
+    REAL(8),PARAMETER :: R = 8.3144598D0
     REAL(8),PARAMETER :: hPlanck = 6.62607015D-34           ![J s]        Planck's constant
     REAL(8),PARAMETER :: NA = 6.02214076D23                 ![#/mol]      Avogadro's constant
-    REAL(8),PARAMETER :: MmassH2O = 1.801528D-02            !kg mol^-1
+    REAL(8),PARAMETER :: MmassH2O = 1.801528D-02            !kg mol-1
     REAL(8),PARAMETER :: hNA = hPlanck*NA                   ![J s #/mol]
     REAL(8),PARAMETER :: ln_hNA = LOG(hNA)                  ![-] (normalized)
     !............................................
@@ -315,6 +320,7 @@ PRIVATE     !default setting for procedures and variables
         delGstar_catans = 0.0D0
     ENDIF !calc_catan
     
+    !*@#! delGstar_by_RT_w = xw * LOG( etaw * Vw / hNA )
     delGstar_by_RT_w = xw *(ln_etaw +LOG(Vw) -ln_hNA)
     !(4) deltaG_water + delGstar_ions + delGstar_catan
     delGstar_over_RT = &
@@ -322,6 +328,7 @@ PRIVATE     !default setting for procedures and variables
         & + delGstar_catans &       !ion strength term multiplied by tau weighting
         & + delGstar_by_RT_w        !water contribution multiplied by xw
 
+    !*@#! etacalc_ = (hNA / V) * EXP(delGstar_over_RT)  ![Pa s] the calculated mixture viscosity at this composition and T;
     ln_etacalc = ln_hNA -LOG(V) + delGstar_over_RT      !normalized ln(eta/[Pa s])
 
     END SUBROUTINE GoldsackViscEqn
@@ -346,8 +353,8 @@ PRIVATE     !default setting for procedures and variables
     !(1) Calculate mass of water + organics:
     wtfaquorg = SUM(wtf(1:nneutral))
     !(2) Calculate avg molar mass of the aquorg mixture:
-    AquorgMmass = SUM( (X_(1:nneutral)/SUM(X_(1:nneutral))) * Mmass(1:nneutral) )
-    TotalAvgMmass = SUM(X_ * Mmass )         
+    AquorgMmass = SUM( (wtf(1:nneutral)/SUM(wtf(1:nneutral))) * Mmass(1:nneutral) )
+    TotalAvgMmass = SUM(wtf * Mmass )       
         
     !(3) Calculate mole fraction amount for aquorg mixture:
     Xaquorg = (wtfaquorg / AquorgMmass) * TotalAvgMmass
@@ -363,14 +370,17 @@ PRIVATE     !default setting for procedures and variables
     
     !===============================================================================================    
     ! This subroutine maps ions to fit parameters.
-
+    !    
+    !*** AIOMFAC: ions: **************************************************************************************
+    !    201 = Li+, 202 = Na+, 203 = K+, 204 = NH4+, 205 = H+, 221 = Ca2+, 222 = Ba2+
+    !    223 = Mg2+, 224 = Sr2+, 225 = Co2+, 226 = Ni2+, 227 = Cu2+,
+    !    228 = Zn2+, 229 = Hg2+, 241 = F-, 242 = Cl-, 243 = Br-, 244 = I-
+    !    245 = NO3-, 246 = CH3COO-, 247 = SCN-, 248 = HSO4-, 249 = CH3SO3-, 261 = SO4--
+    !*******************************************************************************************************    
     SUBROUTINE MapIons2Fitpars3()
 
     IMPLICIT NONE
     !......................
-    !initialize arrays (fitmapfwd is simply integers 1:105)
-    ionfitmapfwd = 0
-    catanfitmapfwd = 0
     
     !==========Ion fitpars=====================
     ionfitmapfwd(:,205) = fitmapfwd(2:3)   !H+
@@ -386,125 +396,70 @@ PRIVATE     !default setting for procedures and variables
     ionfitmapfwd(:,261) = fitmapfwd(22:23) !SO4--
     ionfitmapfwd(:,248) = fitmapfwd(24:25) !HSO4-
     ionfitmapfwd(:,244) = fitmapfwd(26:27) !I-
-    
-    !Add ions CO3--, HCO3-, OH-, IO3-
-    ionfitmapfwd(:,262) = fitmapfwd(28:29) !CO3--
-    ionfitmapfwd(:,250) = fitmapfwd(30:31) !HCO3-
-    ionfitmapfwd(:,247) = fitmapfwd(32:33) !OH-
-    ionfitmapfwd(:,246) = fitmapfwd(34:35) !IO3-
 
     !==========Catan fitpars=====================
     nuecat = 1.0D0
     nuean = 1.0D0
-    
-    catanfitmapfwd(1,205,242) = fitmapfwd(36) !HCl
-    catanfitmapfwd(1,201,242) = fitmapfwd(37) !LiCl
-    catanfitmapfwd(1,203,242) = fitmapfwd(38) !KCl
-    catanfitmapfwd(1,202,242) = fitmapfwd(39) !NaCl
-    catanfitmapfwd(1,221,242) = fitmapfwd(40) !CaCl2
+
+    catanfitmapfwd(1,205,242) = fitmapfwd(28) !HCl
+    catanfitmapfwd(1,201,242) = fitmapfwd(29) !LiCl
+    catanfitmapfwd(1,203,242) = fitmapfwd(30) !KCl
+    catanfitmapfwd(1,202,242) = fitmapfwd(31) !NaCl
+    catanfitmapfwd(1,221,242) = fitmapfwd(32) !CaCl2
     nuean(221,242) = 2.0D0
-    catanfitmapfwd(1,204,242) = fitmapfwd(41) !NH4Cl
-    catanfitmapfwd(1,223,242) = fitmapfwd(42) !MgCl2
+    catanfitmapfwd(1,204,242) = fitmapfwd(33) !NH4Cl
+    catanfitmapfwd(1,223,242) = fitmapfwd(34) !MgCl2
     nuean(223,242) = 2.0D0
-    !
-    catanfitmapfwd(1,205,243) = fitmapfwd(43) !HBr
-    catanfitmapfwd(1,201,243) = fitmapfwd(44) !LiBr
-    catanfitmapfwd(1,203,243) = fitmapfwd(45) !KBr
-    catanfitmapfwd(1,202,243) = fitmapfwd(46) !NaBr
-    catanfitmapfwd(1,221,243) = fitmapfwd(47) !CaBr2
+    catanfitmapfwd(1,205,243) = fitmapfwd(35) !HBr
+    catanfitmapfwd(1,201,243) = fitmapfwd(36) !LiBr
+    catanfitmapfwd(1,203,243) = fitmapfwd(37) !KBr
+    catanfitmapfwd(1,202,243) = fitmapfwd(38) !NaBr
+    catanfitmapfwd(1,221,243) = fitmapfwd(39) !CaBr2
     nuean(221,243) = 2.0D0
-    catanfitmapfwd(1,204,243) = fitmapfwd(48) !NH4Br
-    catanfitmapfwd(1,223,243) = fitmapfwd(49) !MgBr2
+    catanfitmapfwd(1,204,243) = fitmapfwd(40) !NH4Br
+    catanfitmapfwd(1,223,243) = fitmapfwd(41) !MgBr2
     nuean(223,243) = 2.0D0
-    !
-    catanfitmapfwd(1,205,245) = fitmapfwd(50) !HNO3
-    catanfitmapfwd(1,201,245) = fitmapfwd(51) !LiNO3
-    catanfitmapfwd(1,203,245) = fitmapfwd(52) !KNO3
-    catanfitmapfwd(1,202,245) = fitmapfwd(53) !NaNO3
-    catanfitmapfwd(1,221,245) = fitmapfwd(54) !CaNO32
+    catanfitmapfwd(1,205,245) = fitmapfwd(42) !HNO3
+    catanfitmapfwd(1,201,245) = fitmapfwd(43) !LiNO3
+    catanfitmapfwd(1,203,245) = fitmapfwd(44) !KNO3
+    catanfitmapfwd(1,202,245) = fitmapfwd(45) !NaNO3
+    catanfitmapfwd(1,221,245) = fitmapfwd(46) !CaNO32
     nuean(221,245) = 2.0D0
-    catanfitmapfwd(1,204,245) = fitmapfwd(55) !NH4NO3
-    catanfitmapfwd(1,223,245) = fitmapfwd(56) !MgNO32
+    catanfitmapfwd(1,204,245) = fitmapfwd(47) !NH4NO3
+    catanfitmapfwd(1,223,245) = fitmapfwd(48) !MgNO32
     nuean(223,245) = 2.0D0
-    !
-    catanfitmapfwd(1,205,261) = fitmapfwd(57) !H2SO4 (H+ and SO4--)
+    catanfitmapfwd(1,205,261) = fitmapfwd(49) !H2SO4 (H+ and SO4--)
     nuecat(205,261) = 2.0D0
-    catanfitmapfwd(1,201,261) = fitmapfwd(58) !Li2SO4
+    catanfitmapfwd(1,201,261) = fitmapfwd(50) !Li2SO4
     nuecat(201,261) = 2.0D0
-    catanfitmapfwd(1,203,261) = fitmapfwd(59) !K2SO4
+    catanfitmapfwd(1,203,261) = fitmapfwd(51) !K2SO4
     nuecat(203,261) = 2.0D0
-    catanfitmapfwd(1,202,261) = fitmapfwd(60) !Na2SO4
+    catanfitmapfwd(1,202,261) = fitmapfwd(52) !Na2SO4
     nuecat(202,261) = 2.0D0
-    catanfitmapfwd(1,221,261) = fitmapfwd(61) !CaSO4
-    catanfitmapfwd(1,204,261) = fitmapfwd(62) !NH42SO4
+    catanfitmapfwd(1,221,261) = fitmapfwd(53) !CaSO4
+    catanfitmapfwd(1,204,261) = fitmapfwd(54) !NH42SO4
     nuecat(204,261) = 2.0D0
-    !
-    catanfitmapfwd(1,223,261) = fitmapfwd(63) !MgSO4
-    catanfitmapfwd(1,205,248) = fitmapfwd(64) !H2SO4 (H+ and HSO4-)
-    catanfitmapfwd(1,201,248) = fitmapfwd(65) !LiHSO4
-    catanfitmapfwd(1,203,248) = fitmapfwd(66) !KHSO4
-    catanfitmapfwd(1,202,248) = fitmapfwd(67) !NaHSO4
-    catanfitmapfwd(1,221,248) = fitmapfwd(68) !Ca(HSO4)2
+    catanfitmapfwd(1,223,261) = fitmapfwd(55) !MgSO4
+    catanfitmapfwd(1,205,248) = fitmapfwd(56) !H2SO4 (H+ and HSO4-)
+    catanfitmapfwd(1,201,248) = fitmapfwd(57) !LiHSO4
+    catanfitmapfwd(1,203,248) = fitmapfwd(58) !KHSO4
+    catanfitmapfwd(1,202,248) = fitmapfwd(59) !NaHSO4
+    catanfitmapfwd(1,221,248) = fitmapfwd(60) !Ca(HSO4)2
     nuean(221,248) = 2.0D0
-    catanfitmapfwd(1,204,248) = fitmapfwd(69) !NH4HSO4
-    catanfitmapfwd(1,223,248) = fitmapfwd(70) !Mg(HSO4)2
+    catanfitmapfwd(1,204,248) = fitmapfwd(61) !NH4HSO4
+    catanfitmapfwd(1,223,248) = fitmapfwd(62) !Mg(HSO4)2
     nuean(223,248) = 2.0D0
-    !
-    catanfitmapfwd(1,205,244) = fitmapfwd(71) !HI
-    catanfitmapfwd(1,201,244) = fitmapfwd(72) !LiI
-    catanfitmapfwd(1,203,244) = fitmapfwd(73) !KI
-    catanfitmapfwd(1,202,244) = fitmapfwd(74) !NaI
-    catanfitmapfwd(1,221,244) = fitmapfwd(75) !CaI2
+    catanfitmapfwd(1,205,244) = fitmapfwd(63) !HI
+    catanfitmapfwd(1,201,244) = fitmapfwd(64) !LiI
+    catanfitmapfwd(1,203,244) = fitmapfwd(65) !KI
+    catanfitmapfwd(1,202,244) = fitmapfwd(66) !NaI
+    catanfitmapfwd(1,221,244) = fitmapfwd(67) !CaI2
     nuean(221,244) = 2.0D0
-    catanfitmapfwd(1,204,244) = fitmapfwd(76) !NH4I
-    catanfitmapfwd(1,223,244) = fitmapfwd(77) !MgI2
+    catanfitmapfwd(1,204,244) = fitmapfwd(68) !NH4I
+    catanfitmapfwd(1,223,244) = fitmapfwd(69) !MgI2
     nuean(223,244) = 2.0D0
-    !
-    catanfitmapfwd(1,205,262) = fitmapfwd(78) !H2CO3 (H+ and CO3--)
-    nuecat(205,262) = 2.0D0
-    catanfitmapfwd(1,201,262) = fitmapfwd(79) !Li2CO3
-    nuecat(201,262) = 2.0D0
-    catanfitmapfwd(1,203,262) = fitmapfwd(80) !K2CO3
-    nuecat(203,262) = 2.0D0
-    catanfitmapfwd(1,202,262) = fitmapfwd(81) !Na2CO3
-    nuecat(202,262) = 2.0D0
-    catanfitmapfwd(1,221,262) = fitmapfwd(82) !CaCO3
-    catanfitmapfwd(1,204,262) = fitmapfwd(83) !NH42CO3
-    nuecat(204,262) = 2.0D0
-    catanfitmapfwd(1,223,262) = fitmapfwd(84) !MgCO3
-    !
-    catanfitmapfwd(1,205,250) = fitmapfwd(85) !H2CO3 (H+ and HCO3-)
-    catanfitmapfwd(1,201,250) = fitmapfwd(86) !LiHCO3
-    catanfitmapfwd(1,203,250) = fitmapfwd(87) !KHCO3
-    catanfitmapfwd(1,202,250) = fitmapfwd(88) !NaHCO3
-    catanfitmapfwd(1,221,250) = fitmapfwd(89) !Ca(HCO3)2
-    nuean(221,250) = 2.0D0
-    catanfitmapfwd(1,204,250) = fitmapfwd(90) !NH4HCO3
-    catanfitmapfwd(1,223,250) = fitmapfwd(91) !Mg(HCO3)2
-    nuean(223,250) = 2.0D0
-    !
-    catanfitmapfwd(1,205,247) = fitmapfwd(92) !H2O (H+ and OH-)
-    catanfitmapfwd(1,201,247) = fitmapfwd(93) !LiOH
-    catanfitmapfwd(1,203,247) = fitmapfwd(94) !KOH
-    catanfitmapfwd(1,202,247) = fitmapfwd(95) !NaOH
-    catanfitmapfwd(1,221,247) = fitmapfwd(96) !Ca(OH)2
-    nuean(221,247) = 2.0D0
-    catanfitmapfwd(1,204,247) = fitmapfwd(97) !NH4OH
-    catanfitmapfwd(1,223,247) = fitmapfwd(98) !Mg(OH)2
-    nuean(223,247) = 2.0D0
-    !
-    catanfitmapfwd(1,205,246) = fitmapfwd(99) !HIO3 (H+ and IO3-)
-    catanfitmapfwd(1,201,246) = fitmapfwd(100) !LiIO3
-    catanfitmapfwd(1,203,246) = fitmapfwd(101) !KIO3
-    catanfitmapfwd(1,202,246) = fitmapfwd(102) !NaIO3
-    catanfitmapfwd(1,221,246) = fitmapfwd(103) !Ca(IO3)2
-    nuean(221,246) = 2.0D0
-    catanfitmapfwd(1,204,246) = fitmapfwd(104) !NH4IO3
-    catanfitmapfwd(1,223,246) = fitmapfwd(105) !Mg(IO3)2
-    nuean(223,246) = 2.0D0
 
     END SUBROUTINE MapIons2Fitpars3
     !-------------------------------------------------------------------------------------
- 
 
 END MODULE ModViscEyring
