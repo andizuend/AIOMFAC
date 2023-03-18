@@ -68,7 +68,7 @@ INTERFACE
         REAL(8),DIMENSION(:),INTENT(IN) :: list
         REAL(8) :: summed
     END FUNCTION sum_sorted
-    !--
+    !-- 
 END INTERFACE
     
 !============================================================================================
@@ -97,8 +97,9 @@ END INTERFACE
     !Public Variables:
     USE ModSystemProp, ONLY : anNr, catNr, ElectComps, ElectNues, Ianion, Ication, &
         Nanion, Ncation, nelectrol, nindcomp, nneutral, SolvMixRefnd, bisulfsyst, &
-        errorflag_clist, bicarbsyst, noCO2input
+        errorflag_clist, bicarbsyst
     USE ModCompScaleConversion, ONLY : MassFrac2IonMolalities
+    USE ModNumericalTransformations, ONLY : safe_exp
 
     IMPLICIT NONE
     !interface variables declarations
@@ -131,19 +132,22 @@ END INTERFACE
     actcoeff_ion = 0.0D0
     molality_ion = 0.0D0
 
-    !convert mass fraction input to ion molalities for use in MR and LR parts:
+    !convert mass fraction input (potentially involving mass frac. of electrolytes) to molalities 
+    !of specific ions for use in MR and LR parts:
     CALL MassFrac2IonMolalities(wtf, SMC, SMA)
     SumIonMolalities = SUM(SMA(1:Nanion)) +SUM(SMC(1:Ncation))
     
     IF (bicarbsyst) THEN            !includes case for 'bisulfsyst .AND. bicarbsyst'
         CALL HSO4_and_HCO3_dissociation()
     ELSE IF (bisulfsyst) THEN
-        !Perform the dissociation check for bisulfate-system ions and, via this subroutine, the activity coefficient calculations:
+        !Perform the dissociation check for bisulfate-system ions and, via this 
+        !subroutine, the activity coefficient calculations:
         CALL HSO4_dissociation()    !many variables are referenced through the module ModAIOMFACvar
     ELSE
         alphaHSO4 = -9.999999D0
         alphaHCO3 = -9.999999D0
-        CALL Gammas()   !No dissociation of specific ions/electrolytes, so call Gammas for activity coefficient calculation separately.
+        CALL Gammas()               !no partial dissociation of specific ions/electrolytes, so call Gammas for activity 
+                                    !coefficient calculation separately.
     ENDIF
     
     !initialize the output arrays:
@@ -154,23 +158,14 @@ END INTERFACE
     actcoeff_n = 0.0D0
     actcoeff_c = 0.0D0
     actcoeff_a = 0.0D0
-    actcoeff_ion = 0.0D0 !to save activity coefficients of ions at their ID number
+    actcoeff_ion = 0.0D0        !to save activity coefficients of ions at their ID number
     molality_ion = 0.0D0
     
     !ln of the activity coefficient for the neutrals:
     DO I = 1,nneutral
         IF (wtf(I) > dtiny) THEN
             lnactcoeff_n(I) = gnmrln(I) +gnsrln(I) +gnlrln(I)
-            IF (lnactcoeff_n(I) < -logval_threshold .OR. lnactcoeff_n(I) > logval_threshold) THEN 
-                trunc = 1.0D-2*LOG( ABS(lnactcoeff_n(I)) )     !reduce magnitude via log and scaling
-                IF (lnactcoeff_n(I) < -logval_threshold) THEN
-                    actcoeff_n(I) = EXP(-logval_threshold - trunc)     
-                ELSE
-                    actcoeff_n(I) = EXP(logval_threshold + trunc)
-                ENDIF
-            ELSE
-                actcoeff_n(I) = EXP(lnactcoeff_n(I))
-            ENDIF
+            actcoeff_n(I) = safe_exp(lnactcoeff_n(I), logval_threshold)     !apply safe exponentiation function
         ENDIF
     ENDDO
 
@@ -181,16 +176,7 @@ END INTERFACE
             IF (solvmixrefnd) THEN !correction terms for MR and SR part, because reference solution is the solvent mixture
                 lnactcoeff_c(I) = lnactcoeff_c(I) +solvmixcorrMRc(I) +Tmolal -TmolalSolvmix    
             ENDIF
-            IF (lnactcoeff_c(I) < -logval_threshold .OR. lnactcoeff_c(I) > logval_threshold) THEN 
-                trunc = 1.0D-2*LOG( ABS(lnactcoeff_c(I)) )
-                IF (lnactcoeff_c(I) < -logval_threshold) THEN
-                    actcoeff_c(I) = EXP(-logval_threshold - trunc)    
-                ELSE
-                    actcoeff_c(I) = EXP(logval_threshold + trunc)
-                ENDIF
-            ELSE
-                actcoeff_c(I) = EXP(lnactcoeff_c(I))
-            ENDIF
+            actcoeff_c(I) = safe_exp(lnactcoeff_c(I), logval_threshold)
         ENDIF
         !save activity coefficient and molality of this ion in an array by actual AIOMFAC ion index:
         ii = Ication(I)
@@ -205,16 +191,7 @@ END INTERFACE
             IF (solvmixrefnd) THEN  !correction terms for MR and SR because reference solution is the solvent mixture
                 lnactcoeff_a(I) = lnactcoeff_a(I) +solvmixcorrMRa(I) +Tmolal -TmolalSolvmix 
             ENDIF
-            IF (lnactcoeff_a(I) < -logval_threshold .OR. lnactcoeff_a(I) > logval_threshold) THEN 
-                trunc = 1.0D-2*LOG( ABS(lnactcoeff_a(I)) )
-                IF (lnactcoeff_a(I) < -logval_threshold) THEN
-                    actcoeff_a(I) = EXP(-logval_threshold - trunc)  
-                ELSE
-                    actcoeff_a(I) = EXP(logval_threshold + trunc) 
-                ENDIF
-            ELSE
-                actcoeff_a(I) = EXP(lnactcoeff_a(I))
-            ENDIF
+            actcoeff_a(I) = safe_exp(lnactcoeff_a(I), logval_threshold)
         ENDIF
         !save activity coefficient and molality of this ion in an array by actual AIOMFAC ion index:
         ii = Ianion(I)
@@ -226,18 +203,6 @@ END INTERFACE
     Xwdissoc = x(1)
     activity(1:nneutral) = actcoeff_n(1:nneutral)*x(1:nneutral)
 
-    !!!notify exception in case of floating point overflow problems and return:
-    !!IF (floatingproblem) THEN
-    !!    errorflag_clist(6) = .true.
-    !!    activity(1:nindcomp) = -9999.9D0
-    !!    actcoeff_n(1:nneutral) = -9999.9D0
-    !!    actcoeff_c(1:nelectrol) = -9999.9D0
-    !!    actcoeff_a(1:nelectrol) = -9999.9D0
-    !!    meanmolalactcoeff(1:nelectrol) = -9999.9D0
-    !!    ionactivityprod(1:nelectrol) = -9999.9D0
-    !!    lnmeanmactcoeff = -9999.9D0
-    !!    RETURN
-    !!ENDIF
 
     !loop over all identified electrolyte components and calculate the corresponding mean molal activity coefficient and molal ion activity product:
     ii = 0
@@ -304,7 +269,7 @@ END INTERFACE
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2004                                                            *
-    !*   -> latest changes: 2018/05/27                                                      *
+    !*   -> latest changes: 2023-03-17                                                      *
     !*                                                                                      *
     !**************************************************************************************** 
     SUBROUTINE Gammas()
@@ -312,18 +277,20 @@ END INTERFACE
     USE ModSystemProp, ONLY : nneutral, NKNpNGS, Ncation, Nanion, Mmass, bisulfsyst, bicarbsyst
     USE ModSRunifac, ONLY : SRsystm, SRunifac
     USE ModMRpart, ONLY : LR_MR_activity, GammaCO2
+    USE ModAIOMFACvar, ONLY : meanSolventMW
+    USE ModCompScaleConversion, ONLY : MassFrac2SolvMolalities
 
     IMPLICIT NONE
     !local variables:
     INTEGER(4) :: NKNpNcat, nnp1
-    REAL(8) :: summolal, sumXN
+    REAL(8) :: sum_molalities, sumXN
     REAL(8),DIMENSION(NKNpNGS) :: lnGaSR
     REAL(8),DIMENSION(nneutral) :: wtfbycompMW, mNeutral
     LOGICAL(4) :: refreshgref
     !........................................................................................................
     
     nnp1 = nneutral +1
-    !initialize the mole fraction composition arrays
+    !initialize the mole fraction composition arrays:
     X = 0.0D0
     XN = 0.0D0
     !Calculation of the electrolyte-free mole fractions of the neutral components, XN:
@@ -331,23 +298,23 @@ END INTERFACE
     sumXN = SUM(wtfbycompMW)
     XN(1:nneutral) = wtfbycompMW/sumXN
     
-    meanSolventMW = SUM(Mmass(1:nneutral)*XN(1:nneutral)) !mean molecular mass of the solvent mixture (non-electrolytes)
-    mNeutral = XN(1:nneutral)/meanSolventMW  ![mol/kg], the molality of the neutrals
+    meanSolventMW = SUM(Mmass(1:nneutral)*XN(1:nneutral))               !mean molar mass of the solvent mixture (only non-electrolytes)
+    mNeutral = XN(1:nneutral)/meanSolventMW                             ![mol/kg], the molalities of the neutrals
 
     !Addition of the moles of substance (neutral and ionic) per 1 kg of electrolyte-free solvent mixture
-    IF (bisulfsyst .OR. bicarbsyst) THEN    !update since it changes in DiffKsulfuricDissoc and DiffKcarbonateDissoc
+    IF (bisulfsyst .OR. bicarbsyst) THEN                                !update since it changes in DiffKsulfuricDissoc and DiffKcarbonateDissoc
         SumIonMolalities = SUM(SMA(1:Nanion)) +SUM(SMC(1:Ncation))
     ENDIF
-    summolal = SUM(mNeutral) +SumIonMolalities !sum of all molalities
+    sum_molalities = SUM(mNeutral) + SumIonMolalities                   !sum of all molalities
 
     !Calculation of the mole fraction (X) of the neutral components and the ions with respect to dissociated electrolytes/ions.
     !==> the structure of the mole fraction array X is: 
     !1) neutral components in component order,
     !2) ions: first the cations, then the anions
-    X(1:nneutral) = mNeutral/summolal                          !Mole fraction of the neutral components (on the basis of dissociated electrolytes)    
+    X(1:nneutral) = mNeutral/sum_molalities                             !mole fraction of the neutral components (on the basis of dissociated electrolytes)    
     NKNpNcat = nneutral + Ncation
-    X(nnp1:NKNpNcat) = SMC(1:Ncation)/summolal                 !Mole fractions of the cations
-    X(NKNpNcat+1:NKNpNcat+Nanion) = SMA(1:Nanion)/summolal     !Mole fractios of the anions
+    X(nnp1:NKNpNcat) = SMC(1:Ncation)/sum_molalities                    !mole fractions of the cations
+    X(NKNpNcat+1:NKNpNcat+Nanion) = SMA(1:Nanion)/sum_molalities        !mole fractios of the anions
 
     !check whether temperature-dependent parameters need to be updated in SR and LR parts:
     IF (ABS(T_K - lastTK) > 1.0D-2) THEN !detected a change in temperature --> PsiT and other coeff. need to be updated
@@ -374,5 +341,5 @@ END INTERFACE
 
     END SUBROUTINE Gammas 
     !==========================================================================================
-
+    
 END MODULE ModCalcActCoeff

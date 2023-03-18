@@ -19,7 +19,7 @@
 !*   Foundation, either version 3 of the License, or (at your option) any later         *
 !*   version.                                                                           *
 !*   The AIOMFAC model code is distributed in the hope that it will be useful, but      *
-!*   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or      *
+!*   WITHOUT any WARRANTY; without even the implied warranty of MERCHANTABILITY or      *
 !*   FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more      *
 !*   details.                                                                           *
 !*   You should have received a copy of the GNU General Public License along with this  *
@@ -67,7 +67,7 @@ REAL(8),DIMENSION(:),ALLOCATABLE,PUBLIC :: OtoCratio, HtoCratio, ElectO2Cequiv
 REAL(8),DIMENSION(201:240, 241:topsubno, 1:3),PUBLIC :: IAPcoeffs
 REAL(8),DIMENSION(201:240, 241:topsubno),PUBLIC :: KVLE_298K
 REAL(8),DIMENSION(:),ALLOCATABLE :: K_el, nuestoich, SubGroupMW
-REAL(8),DIMENSION(:),ALLOCATABLE :: Mmass                    !component molar mass in order of neutrals then electrolytes
+REAL(8),DIMENSION(:),ALLOCATABLE :: Mmass                   !component molar mass in order of neutrals then electrolytes
 !--
 CHARACTER(LEN=200),DIMENSION(:),ALLOCATABLE,PUBLIC :: cpname, compname, compnameTeX  !component names in order of mixture components
 CHARACTER(LEN=16),DIMENSION(:),ALLOCATABLE,PUBLIC :: ionname, ionnameTeX
@@ -102,7 +102,7 @@ INTERFACE
     END SUBROUTINE defElectrolytes
     !--
     PURE MODULE SUBROUTINE SetMolarMass(MolarM)
-        REAL(8),DIMENSION(:),INTENT(OUT) :: MolarM
+        real(8),DIMENSION(:),INTENT(OUT) :: MolarM
     END SUBROUTINE SetMolarMass
     !--
 END INTERFACE

@@ -11,7 +11,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2018 (based on non-module version from 2009)                    *
-!*   -> latest changes: 2021-09-14                                                      *
+!*   -> latest changes: 2022-05-09                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -57,14 +57,14 @@ INTEGER(4),DIMENSION(topsubno),PARAMETER,PUBLIC :: NKTAB = [ &
             & 19, 20, 20, 21, 21, 21, 22, 22, 22, 23, 23, 24, 25, 26, 26, 26, 27, 28, 29, 29, &
             & 30, 31, 32, 33, 34, 34, 35, 36, 37, 02, 38, 39, 39, 40, 40, 40, 41, 42, 42, 42, &
             & 42, 43, 43, 43, 44, 45, 45, 45, 45, 45, 45, 45, 45, 46, 46, 46, 46, 46, 46, 47, &
-            & 47, 48, 48, 48, 49, 50, 50, 50, 52, 52, 52, 52, 53, 54, 55, 55, 56, 56, 56, 56, &
+            & 47, 48, 48, 48, 49, 50, 50, 50, 00, 00, 00, 00, 53, 54, 55, 55, 56, 56, 56, 56, &
             & 57, 57, 57, 58, 59, 59, 59, 59, 60, 61, 62, 62, 62, 62, 63, 64, 65, 00, 00, 00, &
-            & 66, 66, 66, 66, 67, 67, 67, 67, 68, 68, 68, 68, 69, 70, 71, 71, 71, 72, 72, 72, &
+            & 66, 66, 66, 66, 67, 67, 67, 67, 68, 68, 52, 52, 69, 70, 71, 71, 71, 72, 72, 72, &
             & 73, 74, 74, 74, 74, 74, 74, 74, 74, 74, 74, 75, 76, 00, 00, 00, 00, 00, 00, 00, &
             & 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, &
             & (51, i = 201,topsubno) ]  !51 indicates that main group is an ion (same for all ions)
 
-!Molar masses of the neutral (UNIFAC) subgroups [g/mol]:
+!Molar masses of the neutral subgroups [g/mol]:
 REAL(8),DIMENSION(200),PARAMETER,PUBLIC :: GroupMW = [ &
 !subgroup no.: 1,         2,            3,            4,            5,            6,            7,            8,            9,           10,   etc. (11, ..., 20 on next row, etc.)
     &  1.50340D+01,  1.40260D+01,  1.30180D+01,  1.20100D+01,  2.70440D+01,  2.60000D+01,  2.60000D+01,  2.50280D+01,  1.30180D+01,  1.20100D+01, &
@@ -80,31 +80,32 @@ REAL(8),DIMENSION(200),PARAMETER,PUBLIC :: GroupMW = [ &
     &  6.00000D+01,  4.70000D+01,  4.60000D+01,  4.50000D+01,  8.71200D+01,  8.40000D+01,  8.30000D+01,  8.20000D+01,  1.50000D+01,  1.40000D+01, &
     &  1.30000D+01,  1.20000D+01,  1.70000D+01,  4.50000D+01,  4.30000D+01,  4.20000D+01,  1.50000D+01,  1.40000D+01,  1.30000D+01,  1.20000D+01, &
     &  3.10000D+01,  3.00000D+01,  2.90000D+01,  1.70000D+01,  1.50000D+01,  1.40000D+01,  1.30000D+01,  1.20000D+01,  4.50000D+01,  1.70000D+01, &
-    &  1.50000D+01,  1.40000D+01,  1.30000D+01,  1.20000D+01,  4.50000D+01,  1.70000D+01,  4.50000D+01,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
+    &  1.50000D+01,  1.40000D+01,  1.30000D+01,  1.20000D+01,  4.50000D+01,  1.70000D+01,  4.50000D+01,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05, &
     &  1.50340D+01,  1.40260D+01,  1.30180D+01,  1.20100D+01,  1.50340D+01,  1.40260D+01,  1.30180D+01,  1.20100D+01,  1.50340D+01,  1.40260D+01, &
     &  1.30180D+01,  1.20100D+01,  1.70080D+01,  4.40528D+01,  7.60260D+01,  7.50180D+01,  7.40100D+01,  4.70340D+01,  4.60260D+01,  4.50180D+01, &
     &  6.10180D+01,  6.20680D+01,  6.10600D+01,  6.00520D+01,  5.90440D+01,  6.00520D+01,  5.90440D+01,  5.80360D+01,  5.80360D+01,  5.70280D+01, &
-    &  5.60200D+01,  1.06010D+02,  4.40100D+01,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
-    &  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
-    &  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00 ]
+    &  5.60200D+01,  1.06010D+02,  4.40100D+01,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05, &
+    &  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05, &
+    &  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05 ]
    
 !List of the molecular masses of the ions [g/mol]; 
 !The order is ion ID -200 for cations, e.g. SMWC(2) is molar mass of ion 202 = Na+, 
 ! and ion-ID -240 for anions, e.g.(e.g. SMWA(3) is molar mass of ion 243 = Br-). 
+! values of -8.8888D+05 indicate that the actual value is not set for the pertaining ion/component; it will trigger an error when used.
 REAL(8),DIMENSION(40),PARAMETER,PUBLIC :: SMWC = [ &  
 !cation no.: 1,             2,            3,            4,            5,            6,            7,            8,            9,           10,  etc. (11, ..., 20 on next row, etc.)
-    &  6.94100D+00,  2.29900D+01,  3.90980D+01,  1.80380D+01,  1.00800D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
-    &  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
-    &  4.00780D+01,  1.37330D+02,  2.43050D+01,  8.76200D+01,  5.89330D+01,  5.86930D+01,  6.35460D+01,  6.53900D+01,  2.00590D+02,  0.00000D+00, &
-    &  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00 ]
+    &  6.94100D+00,  2.29900D+01,  3.90980D+01,  1.80380D+01,  1.00800D+00,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05, &
+    &  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05, &
+    &  4.00780D+01,  1.37330D+02,  2.43050D+01,  8.76200D+01,  5.89330D+01,  5.86930D+01,  6.35460D+01,  6.53900D+01,  2.00590D+02,  -8.8888D+05, &
+    &  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05 ]
 
 !list of anion molar masses [g/mol]:
 REAL(8),DIMENSION(40),PARAMETER,PUBLIC :: SMWA = [ &  
 !anion no.:  1,             2,            3,            4,            5,            6,            7,            8,            9,           10,  etc. (11, ..., 20 on next row, etc.)
     &  1.89980D+01,  3.54530D+01,  7.99040D+01,  1.26905D+02,  6.20040D+01,  1.74903D+02,  1.700728D+01, 9.70710D+01,  9.50925D+01,  6.10160D+01, &
-    &  1.03018D+02,  1.31070D+02,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
-    &  9.60630D+01,  6.00080D+01,  1.02010D+02,  1.30062D+02,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00, &
-    &  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00,  0.00000D+00 ]
+    &  1.03018D+02,  1.31070D+02,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05, &
+    &  9.60630D+01,  6.00080D+01,  1.02010D+02,  1.30062D+02,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05, &
+    &  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05,  -8.8888D+05 ]
 
 !assign the (positive or negative) integer-valued relative electric charges to the different ion categories.
 INTEGER(4),DIMENSION(201:topsubno),PARAMETER,PUBLIC :: Ioncharge = [ &
@@ -285,24 +286,31 @@ REAL(8),DIMENSION(201:topsubno),PARAMETER,PUBLIC :: IonO2Cequiv = [ &
     subgrname(33) = "(CHNH)"            ;  subgrnameTeX(33) = "(CHNH)"                   ;  subgrnameHTML(33) = "(CHNH)"
     subgrname(42) = "(COOH)"            ;  subgrnameTeX(42) = "(COOH)"                   ;  subgrnameHTML(42) = "(COOH)"
     subgrname(43) = "(HCOOH)"           ;  subgrnameTeX(43) = "(HCOOH)"                  ;  subgrnameHTML(43) = "(HCOOH)"
-    subgrname(137) = "(COOH)"           ;  subgrnameTeX(137) = "(COOH)"                  ;  subgrnameHTML(137) = "(COOH)"
+    subgrname(44) = "(CH2Cl)"           ;  subgrnameTeX(44) = "(CH2Cl)"                  ;  subgrnameHTML(44) = "(CH2Cl)"
+    subgrname(45) = "(CHCl)"            ;  subgrnameTeX(45) = "(CHCl)"                   ;  subgrnameHTML(45) = "(CHCl)"
+    subgrname(46) = "(CCl)"             ;  subgrnameTeX(46) = "(CCl)"                    ;  subgrnameHTML(46) = "(CCl)"
+    subgrname(47) = "(CH2Cl2)"          ;  subgrnameTeX(47) = "(CH2Cl2)"                 ;  subgrnameHTML(47) = "(CH2Cl2)"
+    subgrname(48) = "(CHCl2)"           ;  subgrnameTeX(48) = "(CHCl2)"                  ;  subgrnameHTML(48) = "(CHCl2)"
+    subgrname(49) = "(CCl2)"            ;  subgrnameTeX(49) = "(CCl2)"                   ;  subgrnameHTML(49) = "(CCl2)"
+    
     subgrname(54) = "(CH3NO2)"          ;  subgrnameTeX(54) = "(CH$_3$NO$_2$)"          ;  subgrnameHTML(54) = "(CH<sub>3</sub>NO<sub>2</sub>)"
     subgrname(55) = "(CH2NO2)"          ;  subgrnameTeX(55) = "(CH$_2$NO$_2$)"          ;  subgrnameHTML(55) = "(CH<sub>2</sub>NO<sub>2</sub>)"
     subgrname(56) = "(CHNO2)"           ;  subgrnameTeX(56) = "(CHNO$_2$)"              ;  subgrnameHTML(56) = "(CHNO<sub>2</sub>)"
     subgrname(57) = "(ACNO2)"           ;  subgrnameTeX(57) = "(ACNO$_2$)"              ;  subgrnameHTML(57) = "(ACNO<sub>2</sub>)"
     
-    subgrname(141) ="(CH3[alc])"        ;  subgrnameTeX(141) ="(CH$_3$$^{[alc]}$)"       ;  subgrnameHTML(141) ="(CH<sub>3</sub><sup>[alc]</sup>)"
-    subgrname(142) ="(CH2[alc])"        ;  subgrnameTeX(142) ="(CH$_2$$^{[alc]}$)"       ;  subgrnameHTML(142) ="(CH<sub>2</sub><sup>[alc]</sup>)"
-    subgrname(143) ="(CH[alc])"         ;  subgrnameTeX(143) ="(CH$^{[alc]}$)"           ;  subgrnameHTML(143) ="(CH<sup>[alc]</sup>)"
-    subgrname(144) ="(C[alc])"          ;  subgrnameTeX(144) ="(C$^{[alc]}$)"            ;  subgrnameHTML(144) ="(C<sup>[alc]</sup>)"
-    subgrname(145) ="(CH3[alc-tail])"   ;  subgrnameTeX(145) ="(CH$_3$$^{[alc-tail]}$)"  ;  subgrnameHTML(145) ="(CH<sub>3</sub><sup>[alc-tail]</sup>)"
-    subgrname(146) ="(CH2[alc-tail])"   ;  subgrnameTeX(146) ="(CH$_2$$^{[alc-tail]}$)"  ;  subgrnameHTML(146) ="(CH<sub>2</sub><sup>[alc-tail]</sup>)"
-    subgrname(147) ="(CH[alc-tail])"    ;  subgrnameTeX(147) ="(CH$^{[alc-tail]}$)"      ;  subgrnameHTML(147) ="(CH<sup>[alc-tail]</sup>)"
-    subgrname(148) ="(C[alc-tail])"     ;  subgrnameTeX(148) ="(C$^{[alc-tail]}$)"       ;  subgrnameHTML(148) ="(C<sup>[alc-tail]</sup>)"
-    subgrname(149) ="(CH3[OH])"         ;  subgrnameTeX(149) ="(CH$_3$$^{[OH]}$)"        ;  subgrnameHTML(149) ="(CH<sub>3</sub><sup>[OH]</sup>)"
-    subgrname(150) ="(CH2[OH])"         ;  subgrnameTeX(150) ="(CH$_2$$^{[OH]}$)"        ;  subgrnameHTML(150) ="(CH<sub>2</sub><sup>[OH]</sup>)"
-    subgrname(151) ="(CH[OH])"          ;  subgrnameTeX(151) ="(CH$^{[OH]}$)"            ;  subgrnameHTML(151) ="(CH<sup>[OH]</sup>)"
-    subgrname(152) ="(C[OH])"           ;  subgrnameTeX(152) ="(C$^{[OH]}$)"             ;  subgrnameHTML(152) ="(C<sup>[OH]</sup>)"
+    subgrname(137) = "(COOH)"           ;  subgrnameTeX(137) = "(COOH)"                  ;  subgrnameHTML(137) = "(COOH)"
+    subgrname(141) = "(CH3[alc])"       ;  subgrnameTeX(141) = "(CH$_3$$^{[alc]}$)"      ;  subgrnameHTML(141) = "(CH<sub>3</sub><sup>[alc]</sup>)"
+    subgrname(142) = "(CH2[alc])"       ;  subgrnameTeX(142) = "(CH$_2$$^{[alc]}$)"      ;  subgrnameHTML(142) = "(CH<sub>2</sub><sup>[alc]</sup>)"
+    subgrname(143) = "(CH[alc])"        ;  subgrnameTeX(143) = "(CH$^{[alc]}$)"          ;  subgrnameHTML(143) = "(CH<sup>[alc]</sup>)"
+    subgrname(144) = "(C[alc])"         ;  subgrnameTeX(144) = "(C$^{[alc]}$)"           ;  subgrnameHTML(144) = "(C<sup>[alc]</sup>)"
+    subgrname(145) = "(CH3[alc-tail])"  ;  subgrnameTeX(145) = "(CH$_3$$^{[alc-tail]}$)" ;  subgrnameHTML(145) = "(CH<sub>3</sub><sup>[alc-tail]</sup>)"
+    subgrname(146) = "(CH2[alc-tail])"  ;  subgrnameTeX(146) = "(CH$_2$$^{[alc-tail]}$)" ;  subgrnameHTML(146) = "(CH<sub>2</sub><sup>[alc-tail]</sup>)"
+    subgrname(147) = "(CH[alc-tail])"   ;  subgrnameTeX(147) = "(CH$^{[alc-tail]}$)"     ;  subgrnameHTML(147) = "(CH<sup>[alc-tail]</sup>)"
+    subgrname(148) = "(C[alc-tail])"    ;  subgrnameTeX(148) = "(C$^{[alc-tail]}$)"      ;  subgrnameHTML(148) = "(C<sup>[alc-tail]</sup>)"
+    subgrname(149) = "(CH3[OH])"        ;  subgrnameTeX(149) = "(CH$_3$$^{[OH]}$)"       ;  subgrnameHTML(149) = "(CH<sub>3</sub><sup>[OH]</sup>)"
+    subgrname(150) = "(CH2[OH])"        ;  subgrnameTeX(150) = "(CH$_2$$^{[OH]}$)"       ;  subgrnameHTML(150) = "(CH<sub>2</sub><sup>[OH]</sup>)"
+    subgrname(151) = "(CH[OH])"         ;  subgrnameTeX(151) = "(CH$^{[OH]}$)"           ;  subgrnameHTML(151) = "(CH<sup>[OH]</sup>)"
+    subgrname(152) = "(C[OH])"          ;  subgrnameTeX(152) = "(C$^{[OH]}$)"            ;  subgrnameHTML(152) = "(C<sup>[OH]</sup>)"
     subgrname(154) = "(CH2OCH2[PEG])"   ;  subgrnameTeX(154) ="(CH$_2$OCH$_2$[PEG])"     ;  subgrnameHTML(154) ="(CH<sub>2</sub>OCH<sub>2</sub>[PEG])" !special oxyethylene group of Poly(ethylene glycols) = Poly(oxyethylene).
     !peroxides and organonitrates; [perox] indicates that it contains a peroxide group:
     subgrname(155) ="(CH2ONO2)"         ;  subgrnameTeX(155) ="(CH$_2$ONO$_2$)"          ;  subgrnameHTML(155) ="(CH<sub>2</sub>ONO<sub>2</sub>)"
@@ -339,12 +347,16 @@ REAL(8),DIMENSION(201:topsubno),PARAMETER,PUBLIC :: IonO2Cequiv = [ &
     subgrname(244) = "(I-)"      ;  subgrnameTeX(244) = "(I$^-$)"            ;  subgrnameHTML(244) = "(I<sup>-</sup>)"
     subgrname(245) = "(NO3-)"    ;  subgrnameTeX(245) = "(NO$_3$$^-$)"       ;  subgrnameHTML(245) = "(NO<sub>3</sub><sup>-</sup>)"
     subgrname(246) = "(IO3-)"    ;  subgrnameTeX(246) = "(IO$_3$$^-$)"       ;  subgrnameHTML(246) = "(IO<sub>3</sub><sup>-</sup>)"
-    subgrname(247) = "(OH-)"     ;  subgrnameTeX(247) = "(OH$^-$)"           ;  subgrnameHTML(247) = "(OH<sup>-</sup>)"
+    subgrname(247) = "(OH-)"     ;  subgrnameTeX(247) = "(OH$^-$)"           ;  subgrnameHTML(247) = "(OH<sub>-</sub>)"
     subgrname(248) = "(HSO4-)"   ;  subgrnameTeX(248) = "(HSO$_4$$^-$)"      ;  subgrnameHTML(248) = "(HSO<sub>4</sub><sup>-</sup>)"
     subgrname(249) = "(CH3SO3-)" ;  subgrnameTeX(249) = "(CH$_3$SO$_3$$^-$)" ;  subgrnameHTML(249) = "(CH<sub>3</sub>SO<sub>3</sub><sup>-</sup>)"
     subgrname(250) = "(HCO3-)"   ;  subgrnameTeX(250) = "(HCO$_3$$^-$)"      ;  subgrnameHTML(250) = "(HCO<sub>3</sub><sup>-</sup>)"
+    subgrname(251) = "(HMalo-)"  ;  subgrnameTeX(251) = "(HMalo$^{-}$)"      ;  subgrnameHTML(251) = "(HMalo<sup>-</sup>)"
+    subgrname(252) = "(HGlut-)"  ;  subgrnameTeX(252) = "(HGlut$^{-}$)"      ;  subgrnameHTML(252) = "(HGlut<sup>-</sup>)"
     subgrname(261) = "(SO4--)"   ;  subgrnameTeX(261) = "(SO$_4$$^{2-}$)"    ;  subgrnameHTML(261) = "(SO<sub>4</sub><sup>2-</sup>)"
     subgrname(262) = "(CO3--)"   ;  subgrnameTeX(262) = "(CO$_3$$^{2-}$)"    ;  subgrnameHTML(262) = "(CO<sub>3</sub><sup>2-</sup>)"
+    subgrname(263) = "(Malo--)"  ;  subgrnameTeX(263) = "(Malo$^{2-}$)"      ;  subgrnameHTML(263) = "(Malo<sup>2-</sup>)"
+    subgrname(264) = "(Glut--)"  ;  subgrnameTeX(264) = "(Glut$^{2-}$)"      ;  subgrnameHTML(264) = "(Glut<sup>2-</sup>)"
 
     END SUBROUTINE SubgroupNames
     !==========================================================================================================
@@ -416,8 +428,8 @@ REAL(8),DIMENSION(201:topsubno),PARAMETER,PUBLIC :: IonO2Cequiv = [ &
     maingrname(50) = "(THIOPHENE)"
     !Inorganic ions (not further specified in UNIFAC/AIOMFAC main groups (since subgroup = main group)
     maingrname(51) = "(Inorg_Ions)"
-    !Extension by Ming and Russell (2001)
-    maingrname(52) = "(CHn[MingR_long-chain])"
+    maingrname(52) = "(CH[OH])"
+    !Extension by Ming and Russell (2001); to be replaced...
     maingrname(53) = "(OH[MingR_long-chain])"
     maingrname(54) = "(COOH[MingR_long-chain])"
     maingrname(55) = "(CHnCO[MingR_long-chain])"
@@ -435,7 +447,7 @@ REAL(8),DIMENSION(201:topsubno),PARAMETER,PUBLIC :: IonO2Cequiv = [ &
     !Extension by Marcolli and Peter (2005):
     maingrname(66) = "(CHn[alc])"
     maingrname(67) = "(CHn[alc-tail])"
-    maingrname(68) = "(CHn[OH])"
+    maingrname(68) = "(CH2[OH])"
     maingrname(69) = "(OH)"
     !Extension by A. Zuend
     maingrname(70) = "(CH2OCH2[PEG])"
@@ -461,7 +473,7 @@ REAL(8),DIMENSION(201:topsubno),PARAMETER,PUBLIC :: IonO2Cequiv = [ &
     !*              Div. Chem. Engineering, California Institute of Technology, 2009 - 2012                   *
     !**********************************************************************************************************
 
-    SUBROUTINE cpsubgrstring() !compsubgroups, compsubgroupsTeX as output 
+    SUBROUTINE cpsubgrstring()  !compsubgroups, compsubgroupsTeX as output 
 
     USE ModSystemProp, ONLY : nindcomp, nneutral, nelectrol, ITAB_dimflip, compsubgroups, compsubgroupsTeX, &
         & compsubgroupsHTML, ElectComps, ElectNues
@@ -483,14 +495,14 @@ REAL(8),DIMENSION(201:topsubno),PARAMETER,PUBLIC :: IonO2Cequiv = [ &
     compsubgroupsHTML = ""
 
     !subgroup string for neutral components
-    DO i = 1,nneutral !loop over neutral components
-        DO k = 1,152 !loop first over standard CHn subgroups and different types of special CHn subgroups for alcohols / polyols
+    DO i = 1,nneutral   !loop over neutral components
+        DO k = 1,152    !loop first over standard CHn subgroups and different types of special CHn subgroups for alcohols / polyols
             SELECT CASE(k)
-            CASE(1:4,141:152) !CHn subgroups
-                IF (ITAB_dimflip(k,i) > 0) THEN !subgroup is present
+            CASE(1:4,52,141:152)                                !CHn subgroups
+                IF (ITAB_dimflip(k,i) > 0) THEN                 !subgroup is present
                     IF (ITAB_dimflip(k,i) > 1) THEN
-                        WRITE(cn,'(I4)') ITAB_dimflip(k,i) !string for number of subgroups k
-                        cn = ADJUSTL(cn) !adjust left and remove leading blanks
+                        WRITE(cn,'(I4)') ITAB_dimflip(k,i)      !string for number of subgroups k
+                        cn = ADJUSTL(cn)                        !adjust left and remove leading blanks
                         compsubgroups(i) = TRIM(compsubgroups(i))//TRIM(subgrname(k))//"_"//TRIM(cn) !add subgroup to string
                         compsubgroupsTeX(i) = TRIM(compsubgroupsTeX(i))//TRIM(subgrnameTeX(k))//"$_"//TRIM(cn)//"$"
                         compsubgroupsHTML(i) = TRIM(compsubgroupsHTML(i))//TRIM(subgrnameHTML(k))//"<sub>"//TRIM(cn)//"</sub>"
@@ -501,16 +513,16 @@ REAL(8),DIMENSION(201:topsubno),PARAMETER,PUBLIC :: IonO2Cequiv = [ &
                     ENDIF
                 ENDIF
             CASE DEFAULT 
-                CYCLE  !to omit other subgroups for now
+                CYCLE   !to omit other subgroups for now
             END SELECT
         ENDDO
-        DO k = 5,200 !loop over the rest of implemented subgroups
+        DO k = 5,200    !loop over the rest of implemented subgroups
             SELECT CASE(k)
-            CASE(5:140,153:200) !non-CHn subgroups
-                IF (ITAB_dimflip(k,i) > 0) THEN !subgroup is present
+            CASE(5:52,53:140,153:200)                                 !non-CHn subgroups
+                IF (ITAB_dimflip(k,i) > 0) THEN                 !subgroup is present
                     IF (ITAB_dimflip(k,i) > 1) THEN
-                        WRITE(cn,'(I4)') ITAB_dimflip(k,i) !string for number of subgroups k
-                        cn = ADJUSTL(cn) !adjust left and remove leading blanks
+                        WRITE(cn,'(I4)') ITAB_dimflip(k,i)      !string for number of subgroups k
+                        cn = ADJUSTL(cn)                        !adjust left and remove leading blanks
                         compsubgroups(i) = TRIM(compsubgroups(i))//TRIM(subgrname(k))//"_"//TRIM(cn) !add subgroup to string
                         compsubgroupsTeX(i) = TRIM(compsubgroupsTeX(i))//TRIM(subgrnameTeX(k))//"$_"//TRIM(cn)//"$"
                         compsubgroupsHTML(i) = TRIM(compsubgroupsHTML(i))//TRIM(subgrnameHTML(k))//"<sub>"//TRIM(cn)//"</sub>"
@@ -527,16 +539,16 @@ REAL(8),DIMENSION(201:topsubno),PARAMETER,PUBLIC :: IonO2Cequiv = [ &
     ENDDO
 
     !subgroup string for electrolye units / ions
-    DO el = 1,nelectrol !loop over electrolyte components
+    DO el = 1,nelectrol         !loop over electrolyte components
         i = el+nneutral
-        k = ElectComps(el,1) !cation
-        j = ElectComps(el,2) !anion
+        k = ElectComps(el,1)    !cation
+        j = ElectComps(el,2)    !anion
         !add cation
-        WRITE(cn,'(I4)') ElectNues(el,1) !string for number of subgroups k
+        WRITE(cn,'(I4)') ElectNues(el,1)    !string for number of subgroups k
         IF (ElectNues(el,1) > 1) THEN
-            cn = ADJUSTL(cn) !adjust left and remove leading blanks
-            compsubgroups(i) = TRIM(compsubgroups(i))//TRIM(subgrname(k))//"_"//TRIM(cn) !add subgroup to string
-            compsubgroupsTeX(i) = TRIM(compsubgroupsTeX(i))//TRIM(subgrnameTeX(k))//"$_"//TRIM(cn)//"$" !add subgroup to string
+            cn = ADJUSTL(cn)                !adjust left and remove leading blanks
+            compsubgroups(i) = TRIM(compsubgroups(i))//TRIM(subgrname(k))//"_"//TRIM(cn)
+            compsubgroupsTeX(i) = TRIM(compsubgroupsTeX(i))//TRIM(subgrnameTeX(k))//"$_"//TRIM(cn)//"$"
             compsubgroupsHTML(i) = TRIM(compsubgroupsHTML(i))//TRIM(subgrnameHTML(k))//"<sub>"//TRIM(cn)//"</sub>"
         ELSE
             compsubgroups(i) = TRIM(compsubgroups(i))//TRIM(subgrname(k))
@@ -544,12 +556,12 @@ REAL(8),DIMENSION(201:topsubno),PARAMETER,PUBLIC :: IonO2Cequiv = [ &
             compsubgroupsHTML(i) = TRIM(compsubgroupsHTML(i))//TRIM(subgrnameHTML(k))
         ENDIF
         !add anion
-        WRITE(cn,'(I4)') ElectNues(el,2) !string for number of subgroups j
+        WRITE(cn,'(I4)') ElectNues(el,2)    !string for number of subgroups j
         IF (ElectNues(el,2) > 1) THEN
             !add cation:
-            cn = ADJUSTL(cn) !adjust left and remove leading blanks
-            compsubgroups(i) = TRIM(compsubgroups(i))//TRIM(subgrname(j))//"_"//TRIM(cn) !add subgroup to string
-            compsubgroupsTeX(i) = TRIM(compsubgroupsTeX(i))//TRIM(subgrnameTeX(j))//"$_"//TRIM(cn)//"$" !add subgroup to string
+            cn = ADJUSTL(cn)                !adjust left and remove leading blanks
+            compsubgroups(i) = TRIM(compsubgroups(i))//TRIM(subgrname(j))//"_"//TRIM(cn)
+            compsubgroupsTeX(i) = TRIM(compsubgroupsTeX(i))//TRIM(subgrnameTeX(j))//"$_"//TRIM(cn)//"$"
             compsubgroupsHTML(i) = TRIM(compsubgroupsHTML(i))//TRIM(subgrnameHTML(j))//"<sub>"//TRIM(cn)//"</sub>"
         ELSE
             compsubgroups(i) = TRIM(compsubgroups(i))//TRIM(subgrname(j))
@@ -573,7 +585,7 @@ REAL(8),DIMENSION(201:topsubno),PARAMETER,PUBLIC :: IonO2Cequiv = [ &
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *   
     !*   -> created:        2012                                                            *
-    !*   -> latest changes: 2018/09/14                                                      * 
+    !*   -> latest changes: 2018-09-14                                                      * 
     !*                                                                                      *                                   
     !****************************************************************************************
     PURE SUBROUTINE O2C_H2C_component(ind, compC, compH, compO, O2C, H2C)
@@ -594,22 +606,22 @@ REAL(8),DIMENSION(201:topsubno),PARAMETER,PUBLIC :: IonO2Cequiv = [ &
     compH = 0.0D0
     compC = 0.0D0
     !loop over subgroups to count the O, H, and C atoms:
-    DO k = 1,NGN !loop over organic subgroups (SolvSubs excl. water)
-        isub = SolvSubs(k) !subgoup
-        IF (isub /= 16 .AND. isub /= 173) THEN !exclude water (= subgroup 16) from the calculations; also exclude CO2(aq) (subgroup 173);
+    DO k = 1,NGN    !loop over organic subgroups (SolvSubs excl. water)
+        isub = SolvSubs(k)  !subgoup
+        IF (isub /= 16 .AND. isub /= 173) THEN  !exclude water (= subgroup 16) from the calculations; also exclude CO2(aq) (subgroup 173);
             nsub = ITAB_dimflip(isub,ind)
             IF (nsub > 0) THEN !subgroup is present
-                compO = compO +REAL(nsub*subgO(isub), KIND=8)
-                compH = compH +REAL(nsub*subgH(isub), KIND=8)
-                compC = compC +REAL(nsub*subgC(isub), KIND=8)
+                compO = compO + nsub*subgO(isub)
+                compH = compH + nsub*subgH(isub)
+                compC = compC + nsub*subgC(isub)
             ENDIF
         ENDIF
     ENDDO
     
     !(2) compute O:C and H:C of this pure component:
     IF (compC > 0.0D0) THEN
-        O2C = compO/compC
-        H2C = compH/compC
+        O2C = compO / compC
+        H2C = compH / compC
     ELSE !O:C and H:C are undefined, labeled as negative numbers.
         O2C = -77.77777D0
         H2C = -77.77777D0
@@ -630,7 +642,7 @@ REAL(8),DIMENSION(201:topsubno),PARAMETER,PUBLIC :: IonO2Cequiv = [ &
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2012                                                            *
-    !*   -> latest changes: 2018/09/14                                                      *
+    !*   -> latest changes: 2018-09-14                                                      *
     !*                                                                                      *
     !****************************************************************************************
     PURE SUBROUTINE OtoCandHtoCmix(n, x, OtoCorgmix, HtoCorgmix)
@@ -639,8 +651,8 @@ REAL(8),DIMENSION(201:topsubno),PARAMETER,PUBLIC :: IonO2Cequiv = [ &
 
     IMPLICIT NONE
     !interface variables:
-    INTEGER(4),INTENT(IN) :: n           !number of species in mixture (potentially with electrolytes dissociated into ions)
-    REAL(8),DIMENSION(n),INTENT(IN) :: x !mole fractions of the species in the mixture
+    INTEGER(4),INTENT(IN) :: n              !number of species in mixture (potentially with electrolytes dissociated into ions)
+    REAL(8),DIMENSION(n),INTENT(IN) :: x    !mole fractions of the species in the mixture
     REAL(8),INTENT(OUT) :: OtoCorgmix, HtoCorgmix
     !local variables:
     INTEGER(4) :: ind, istart
@@ -650,7 +662,8 @@ REAL(8),DIMENSION(201:topsubno),PARAMETER,PUBLIC :: IonO2Cequiv = [ &
     sumC = 0.0D0
     sumH = 0.0D0
     sumO = 0.0D0
-    !loop over organic components and sum up the contributions to total oxygen, carbon and hydrogen atoms for given mole fractions in mixture:
+    !loop over organic components and sum up the contributions to total oxygen, carbon 
+    !and hydrogen atoms for given mole fractions in mixture:
     IF (waterpresent) THEN
         istart = 2
     ELSE
@@ -665,8 +678,8 @@ REAL(8),DIMENSION(201:topsubno),PARAMETER,PUBLIC :: IonO2Cequiv = [ &
 
     !calculate organic O:C and H:C ratios for the present mixture:
     IF (sumC > 0.0D0) THEN !the ratios are defined
-        OtoCorgmix = sumO/sumC 
-        HtoCorgmix = sumH/sumC
+        OtoCorgmix = sumO / sumC 
+        HtoCorgmix = sumH / sumC
     ELSE
         OtoCorgmix = -77.77777D0  !indicate O:C not defined 
         HtoCorgmix = -77.77777D0  !indicate H:C not defined

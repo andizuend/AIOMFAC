@@ -31,7 +31,7 @@ module Mod_MINPACK
 implicit none
 
 private  !default
-integer,parameter :: wp = KIND(1.0D0)
+integer,parameter :: wp = kind(1.0D0)
 
 !public module procedures (add others if needed):
 public :: hybrd1, lmdif1

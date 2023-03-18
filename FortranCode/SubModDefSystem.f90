@@ -11,7 +11,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2005                                                            *
-!*   -> latest changes: 2021-10-03                                                      *
+!*   -> latest changes: 2023-03-17                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -35,7 +35,12 @@
 SUBMODULE (ModSystemProp) SubModDefSystem
 
 IMPLICIT NONE
-    
+
+INTEGER(4),DIMENSION(:),ALLOCATABLE :: compID, compIDdat
+INTEGER(4),DIMENSION(:,:),ALLOCATABLE :: cpsubg, cpsubgdat
+
+!$OMP THREADPRIVATE (compID, compIDdat, cpsubg, cpsubgdat)
+
 !==========================================================================================================================
     CONTAINS
 !==========================================================================================================================
@@ -53,7 +58,7 @@ IMPLICIT NONE
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2018-05-24                                                      *
-    !*   -> latest changes: 2021-09-30                                                      *
+    !*   -> latest changes: 2023-03-17                                                      *
     !*                                                                                      *
     !****************************************************************************************
     MODULE SUBROUTINE SetSystem(ndi, datafromfile, ninp, cpnameinp, cpsubginp)
@@ -72,8 +77,6 @@ IMPLICIT NONE
     !...
     !local variables
     INTEGER(4) :: AnFree, CatFree, i, ninputcomp, nnp1
-    INTEGER(4),DIMENSION(:),ALLOCATABLE :: compID, compIDdat
-    INTEGER(4),DIMENSION(:,:),ALLOCATABLE :: cpsubg, cpsubgdat
     LOGICAL(4) :: Hexists, HSO4exists, SO4exists, updbisulf
     LOGICAL(4) :: HCO3exists, CO3exists, updbicarb
     !........................................................
@@ -249,7 +252,7 @@ IMPLICIT NONE
                 ENDIF
             ENDDO
         ENDIF
-        !check and guarantee a neutral ion pairing of a new elecrolyte component in cpsubg:
+        !check and guarantee a neutral ion pairing of a new electrolyte component in cpsubg:
         IF (AnFree == CatFree) THEN
             !check stoichimetric number of H+ cations in electrolyte
             IF (cpsubg(CatFree,205) == 1) THEN
@@ -329,7 +332,7 @@ IMPLICIT NONE
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2005                                                            *
-    !*   -> latest changes: 2018/05/30                                                      *
+    !*   -> latest changes: 2018-05-30                                                      *
     !*                                                                                      *
     !****************************************************************************************
     MODULE SUBROUTINE definemixtures(ndi, ninputcomp, compID, cpsubg)
@@ -354,7 +357,7 @@ IMPLICIT NONE
     !--------------------------------------
 
     !initialize arrays and parameters:
-    nd = 1          !for web-version (single data file / mixture only)
+    nd = 1                              !for web-version (single data file / mixture only)
     solvmixrefnd = .false.
     errorflagmix = 0
     IF (ALLOCATED(ITAB)) THEN
@@ -600,8 +603,8 @@ IMPLICIT NONE
             Imaingroup(J) = JJ  !list of main groups (here not yet filtered and sorted)
         ENDDO
         !check input correctness with respect to OH groups and special CHn groups bonded to OH groups:
-        IF (ITABMG(i,68) > 0) THEN
-            IF (ITABMG(i,68) > ITABMG(i,69)) THEN !this would indicate an input error
+        IF (ITABMG(i,68) > 0 .OR. ITABMG(i,52) > 0) THEN
+            IF (ITABMG(i,68) + ITABMG(i,52) > ITABMG(i,69)) THEN !this would indicate an input error
                 errorflagmix = 13
             ENDIF
         ENDIF
@@ -699,6 +702,13 @@ IMPLICIT NONE
     ALLOCATE(Mmass(nindcomp))
     !calculate the molar masses of the different mixture species:
     CALL SetMolarMass(Mmass)    !Mmass lists the molar mass in [kg/mol] of all mixture components
+    IF (ANY(Mmass(:) < 0.0D0)) THEN
+        !$OMP CRITICAL
+        WRITE(*,*) 'ERROR: A molar mass value is negative indicating a missing value set in ModSubgroupProp.'
+        READ(*,*)
+        STOP
+        !$OMP END CRITICAL
+    ENDIF
 
     !-- allocate several composition-dependent variables from module ModAIOMFACvar:
     CALL AllocModAIOMFACvar()
@@ -716,8 +726,8 @@ IMPLICIT NONE
     !*   Andi Zuend,                                                                        *
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
-    !*   -> created:        2014/07/21                                                      *
-    !*   -> latest changes: 2018/05/24                                                      *
+    !*   -> created:        2014-07-21                                                      *
+    !*   -> latest changes: 2018-05-24                                                      *
     !*                                                                                      *
     !**************************************************************************************** 
     MODULE SUBROUTINE defElectrolytes(nneutral, NGS, nelectrol)

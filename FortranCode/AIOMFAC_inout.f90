@@ -23,7 +23,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2011                                                            *
-!*   -> latest changes: 2022-01-17                                                      *
+!*   -> latest changes: 2023-03-18                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -31,222 +31,231 @@
 !*   Foundation, either version 3 of the License, or (at your option) any later         *
 !*   version.                                                                           *
 !*   The AIOMFAC model code is distributed in the hope that it will be useful, but      *
-!*   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or      *
+!*   WITHOUT any WARRANTY; without even the implied warranty of MERCHANTABILITY or      *
 !*   FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more      *
 !*   details.                                                                           *
 !*   You should have received a copy of the GNU General Public License along with this  *
 !*   program. If not, see <http://www.gnu.org/licenses/>.                               *
 !*                                                                                      *
 !****************************************************************************************
-SUBROUTINE AIOMFAC_inout(inputconc, xinputtype, TKelvin, nspecies, outputvars, outputviscvars, &
+subroutine AIOMFAC_inout(inputconc, xinputtype, TKelvin, nspecies, outputvars, outputviscvars, &
     & outnames, errorflag_list, warningflag)
 
-USE ModSystemProp
-USE ModAIOMFACvar
-USE ModCompScaleConversion
-USE ModCalcActCoeff, ONLY : AIOMFAC_calc
-USE ModFiniteDiffSens, ONLY : DeltaActivities
-USE ModSubgroupProp, ONLY : SMWA, SMWC
-USE, INTRINSIC :: IEEE_ARITHMETIC
+use Mod_NumPrec, only : wp
+use ModSystemProp
+use ModAIOMFACvar
+use ModCompScaleConversion
+use ModCalcActCoeff, only : AIOMFAC_calc
+use ModFiniteDiffSens, only : DeltaActivities
+use ModSubgroupProp, only : SMWA, SMWC
+use, intrinsic :: IEEE_ARITHMETIC
 
-IMPLICIT NONE
+implicit none
 !interface variables: 
-REAL(8),DIMENSION(nindcomp),INTENT(IN) :: inputconc      !inputconc = the concentration of a given input point (e.g., at an experimental data point)
-REAL(8),DIMENSION(6,NKNpNGS),INTENT(OUT) :: outputvars   !2-D output array with computed compositions and activities for each species; structure is:  | mass-frac., mole-frac., molality, act.coeff., activity, ion-indicator | species-no |
-REAL(8),DIMENSION(2),INTENT(OUT) :: outputviscvars       !output array for viscosity related values: | viscosity | model sensitivity |
-REAL(8),INTENT(IN) :: TKelvin                            !the input temperature [K]
-LOGICAL(4),INTENT(IN) :: xinputtype
-INTEGER(4),INTENT(OUT) :: nspecies
-CHARACTER(LEN=*),DIMENSION(NKNpNGS),INTENT(OUT) :: outnames
-LOGICAL(4),DIMENSION(SIZE(errorflag_clist)),INTENT(OUT) :: errorflag_list
-INTEGER(4),INTENT(OUT) :: warningflag
+real(wp),dimension(nindcomp),intent(in)     :: inputconc        !inputconc = the concentration of a given input point (e.g., at an experimental data point)
+real(wp),dimension(6,NKNpNGS),intent(out)   :: outputvars       !2-D output array with computed compositions and activities for each species; 
+                                                                !structure is:  | mass-frac., mole-frac., molality, act.coeff., activity, ion-indicator | species-no |
+real(wp),dimension(2),intent(out)           :: outputviscvars   !output array for viscosity related values: | viscosity | model sensitivity |
+real(wp),intent(in)                         :: TKelvin          !the input temperature [K]
+logical,intent(in)                          :: xinputtype
+integer,intent(out)                         :: nspecies
+character(len=*),dimension(NKNpNGS),intent(out) :: outnames
+logical,dimension(size(errorflag_clist)),intent(out) :: errorflag_list
+integer,intent(out)                         :: warningflag
 !--
 !local variables:
-CHARACTER(LEN=3) :: cn  !this assumes a maximum three-digit component number in the system (max. 999); to be adjusted otherwise.
-CHARACTER(LEN=3) :: cino
-INTEGER(4) :: i, ion_no, ion_indic, nc, NKSinput, NKSinputp1
-LOGICAL(4) :: onlyDeltaVisc
-REAL(8),PARAMETER :: DEPS = 1.1D1*(EPSILON(DEPS)), ln10 = LOG(10.0D0)
-REAL(8) :: wtf_cp, xi_cp, mi_cp, actcoeff_cp, a_cp, sum_ms, sum_miMi, xtolviscosity, w1perturb
-REAL(8),DIMENSION(nelectrol) :: mixingratio, wtfdry
-REAL(8),DIMENSION(nindcomp) :: inputconcZ, xinp, dact, dactcoeff, wfrac
+character(len=3) :: cn                      !this assumes a maximum three-digit component number in the system (max. 999); to be adjusted otherwise.
+character(len=3) :: cino
+integer :: i, ion_no, ion_indic, nc, NKSinput, NKSinputp1
+logical :: onlyDeltaVisc
+real(wp),parameter :: deps = 11.0_wp*(epsilon(deps)), ln10 = log(10.0_wp)
+real(wp) :: wtf_cp, xi_cp, mi_cp, actcoeff_cp, a_cp, sum_ms, sum_miMi, xtolviscosity, w1perturb
+real(wp),dimension(nelectrol) :: mixingratio, wtfdry
+real(wp),dimension(nneutral) :: m_neutral
+real(wp),dimension(nindcomp) :: inputconcZ, xinp, dact, dactcoeff, wfrac
 !------------------------------------------------------------------------------------------- 
       
 ! Set initial values of some array variables:
 errorflag_list = .false.  
 warningflag = 0
-outputvars = 0.0D0
-outputviscvars = 0.0D0
+outputvars = 0.0_wp
+outputviscvars = 0.0_wp
 NKSinput = ninput -nneutral
 NKSinputp1 = NKSinput+1
 inputconcZ = inputconc
-IF (noCO2input) THEN
-    IF (idCO2 > 0) THEN !CO2 present, but not as input component;
+if (noCO2input) then
+    if (idCO2 > 0) then     !CO2 present, but not as input component;
         !shift input components since CO2 had been automatically added as the 
         !last neutral (non-electrolyte) component in SetSystem
         inputconcZ(idCO2+1:nindcomp) = inputconc(idCO2:nindcomp-1)
-        inputconcZ(idCO2) = 0.0D0
+        inputconcZ(idCO2) = 0.0_wp
         NKSinput = NKSinput +1
         NKSinputp1 = NKSinputp1 +1
-    ENDIF
-ENDIF
-wtfdry(1:NKSinput) = 1.0D0
-wtfdry(NKSinputp1:) = 0.0D0
-mixingratio(1:NKSinput) = 1.0D0
-mixingratio(NKSinputp1:) = 0.0D0
+    endif
+endif
+wtfdry(1:NKSinput) = 1.0_wp
+wtfdry(NKSinputp1:) = 0.0_wp
+mixingratio(1:NKSinput) = 1.0_wp
+mixingratio(NKSinputp1:) = 0.0_wp
 nspecies = NKNpNGS
-xtolviscosity = 0.0D0
+xtolviscosity = 0.0_wp
 calcviscosity = .true.
 
-IF (nneutral < 1) THEN          !leave the subroutine and indicate a problem to the calling routine
-    errorflag_list(8) = .true.  !there must be at least one neutral component in the mixture!
-ELSE
+if (nneutral < 1) then                      !leave the subroutine and indicate a problem to the calling routine
+    errorflag_list(8) = .true.              !there must be at least one neutral component in the mixture!
+else
     !weight (mass) fractions of the data point:
-    CALL Inputconc_to_wtf(inputconcZ, mixingratio, wtfdry, xinputtype, wtf)
-    IF (nneutral > 0 .AND. SUM(wtf(1:nneutral)) < DEPS) THEN
+    call Inputconc_to_wtf(inputconcZ, mixingratio, wtfdry, xinputtype, wtf)
+    if (nneutral > 0 .and. sum(wtf(1:nneutral)) < deps) then
         errorflag_list(3) = .true.
-    ENDIF
-    IF (nindcomp > 0 .AND. ANY(wtf(1:nindcomp) < -DEPS)) THEN
+    endif
+    if (nindcomp > 0 .and. any(wtf(1:nindcomp) < -deps)) then
         errorflag_list(4) = .true.
-    ENDIF
-    IF (ANY(IEEE_IS_NAN(wtf(1:nindcomp)))) THEN
+    endif
+    if ( any( IEEE_IS_NAN(wtf(1:nindcomp)) ) ) then
         errorflag_list(5) = .true.
-    ENDIF
-ENDIF
-IF (ANY(errorflag_list)) THEN
+    endif
+endif
+if ( any(errorflag_list) ) then
     outnames = ""
-    IF (nspecies > nneutral) THEN
-        outputvars(6,nneutral+1:) = REAL(ElectSubs(1:), KIND=8)
-    ENDIF
-    RETURN  !leave the subroutine and indicate a problem to the calling routine
-ENDIF
+    if (nspecies > nneutral) then
+        outputvars(6,nneutral+1:) = real(ElectSubs(1:), kind=wp)
+    endif
+    return                                  !leave the subroutine and indicate a problem to the calling routine
+endif
 !.....
-CALL MassFrac2MoleFracMolality(wtf, XrespSalt, mrespSalt)
+call MassFrac2MoleFracMolality(wtf, XrespSalt, mrespSalt)
 
-IF (calcviscosity) THEN
+if (calcviscosity) then
     onlyDeltaVisc = .true.
     xinp(1:nindcomp) = XrespSalt(1:nindcomp)
-    CALL DeltaActivities(xinp, TKelvin, onlyDeltaVisc, dact, dactcoeff)     !will also call AIOMFAC_calc and compute activity coeff.
-    w1perturb = 0.02D0
+    call DeltaActivities(xinp, TKelvin, onlyDeltaVisc, dact, dactcoeff)     !will also call AIOMFAC_calc and compute activity coeff.
+    w1perturb = 0.02_wp
     wfrac = wtf
     wfrac(1) = wfrac(1) + w1perturb
-    wfrac = wfrac/(1.0D0 + w1perturb)
-    CALL MassFrac2MoleFracMolality(wfrac, XrespSalt, mrespSalt)
+    wfrac = wfrac/(1.0_wp + w1perturb)
+    call MassFrac2MoleFracMolality(wfrac, XrespSalt, mrespSalt)
     xtolviscosity = XrespSalt(1) - xinp(1)
-ELSE
-    CALL AIOMFAC_calc(wtf, TKelvin)                 !calculate at given mass fraction and temperature
-ENDIF
+else
+    call AIOMFAC_calc(wtf, TKelvin)                                         !calculate at given mass fraction and temperature
+endif
 !.....
 
 !Output of the AIOMFAC calculated values species-wise to array outputvars (ions separately):
-sum_ms = SUM(mrespSalt(1:nneutral))
-sum_miMi = 0.0D0
-DO i = 1,NGI !calculate sum of ion molalities, mi, times ion molar mass, Mi; [kg]
-    IF (Ication(i) > 0) THEN
-        sum_miMi = sum_miMi + smc(i)*SMWC(Ication(i)-200)*1.0D-3 
-    ENDIF
-    IF (Ianion(i) > 0) THEN
-        sum_miMi = sum_miMi + sma(i)*SMWA(Ianion(i)-240)*1.0D-3 
-    ENDIF
-ENDDO
-DO nc = 1,nspecies !loop over components
-    IF (nc <= nneutral) THEN                !distinguish between neutral components and inorg. ions
-        WRITE(cn,'(I0.2)') nc
-        outnames(nc) = "comp_no_"//TRIM(cn)
+call MassFrac2SolvMolalities(wtf, m_neutral)
+sum_ms = sum(m_neutral(1:nneutral))
+sum_miMi = 0.0_wp
+do i = 1,NGI                                !calculate sum of ion molalities, mi, times ion molar mass, Mi; [kg]
+    if (Ication(i) > 0) then
+        sum_miMi = sum_miMi + smc(i)*SMWC(Ication(i)-200)*1.0E-3_wp 
+    endif
+    if (Ianion(i) > 0) then
+        sum_miMi = sum_miMi + sma(i)*SMWA(Ianion(i)-240)*1.0E-3_wp 
+    endif
+enddo
+do nc = 1,nspecies                          !loop over components
+    if (nc <= nneutral) then                !distinguish between neutral components and inorg. ions
+        write(cn,'(I0.2)') nc
+        outnames(nc) = "comp_no_"//trim(cn)
         wtf_cp = wtf(nc)
         xi_cp = X(nc)
         mi_cp = mrespSalt(nc)               !molality in solvent mixture [mol/(kg solvent mix)]      
         actcoeff_cp = actcoeff_n(nc)
-        IF (wtf(nc) > 0.0D0) THEN
+        if (wtf(nc) > 0.0_wp) then
             actcoeff_cp = actcoeff_n(nc) 
-        ELSE
-            actcoeff_cp = 0.0D0
-        ENDIF
+        else
+            actcoeff_cp = 0.0_wp
+        endif
         a_cp = activity(nc)
         ion_indic = 0
-    ELSE
+    else
         ion_no = ElectSubs(nc-nneutral)     !the current ion subgroup number to identify the ion as output component nc
-        WRITE(cino,'(I3.3)') ion_no
+        write(cino,'(I3.3)') ion_no
         outnames(nc) = "ion_no_"//cino
         ion_indic = ion_no
         !detect whether it is a cation or an anion:
-        IF (ion_no > 239) THEN              !anion
+        if (ion_no > 239) then              !anion
             i = AnNr(ion_no)                !the number i anion (storage location in sma(i) etc.)
             xi_cp = sma(i)/(sum_ms + SumIonMolalities)
             mi_cp = sma(i)
-            wtf_cp = sma(i)*SMWA(Ianion(i)-240)*1.0D-3/(1.0D0+sum_miMi)
-            IF (sma(i) > 0.0D0) THEN
+            wtf_cp = sma(i)*SMWA(Ianion(i)-240)*1.0E-3_wp/(1.0_wp + sum_miMi)
+            if (sma(i) > 0.0_wp) then
                 actcoeff_cp = actcoeff_a(i) !molal activity coeff.
-            ELSE
-                actcoeff_cp = 0.0D0
-            ENDIF
-            IF (actcoeff_a(i) >= 0.0D0) THEN
+            else
+                actcoeff_cp = 0.0_wp
+            endif
+            if (actcoeff_a(i) >= 0.0_wp) then
                a_cp = actcoeff_a(i)*sma(i)  !molal activity
-            ELSE
-               a_cp = -9999.999999D0        !indicate a numerical problem
+            else
+               a_cp = -9999.999999_wp        !indicate a numerical problem
                errorflag_list(7) = .true. 
-            ENDIF
-        ELSE !cation
+            endif
+        else !cation
             i = CatNr(ion_no) 
             xi_cp = smc(i)/(sum_ms + SumIonMolalities)
             mi_cp = smc(i)
-            wtf_cp = smc(i)*SMWC(Ication(i)-200)*1.0D-3/(1.0D0+sum_miMi)    
-            IF (smc(i) > 0.0D0) THEN
+            wtf_cp = smc(i)*SMWC(Ication(i)-200)*1.0E-3_wp/(1.0_wp + sum_miMi)    
+            if (smc(i) > 0.0_wp) then
                 actcoeff_cp = actcoeff_c(i) !molal activity coeff.
-            ELSE
-                actcoeff_cp = 0.0D0
-            ENDIF
-            IF (actcoeff_c(i) >= 0.0D0) THEN
+            else
+                actcoeff_cp = 0.0_wp
+            endif
+            if (actcoeff_c(i) >= 0.0_wp) then
                a_cp = actcoeff_c(i)*smc(i)  !molal activity
-            ELSE
-               a_cp = -9999.999999D0        !indicate a numerical problem 
+            else
+               a_cp = -9999.999999_wp        !indicate a numerical problem 
                errorflag_list(7) = .true.
-            ENDIF
-        ENDIF 
-    ENDIF
-    outputvars(1,nc) = wtf_cp                   !mass fraction of component nc
-    outputvars(2,nc) = xi_cp                    !mole fraction with respect to electrolytes (salts) dissociated into individual ions
-    outputvars(3,nc) = mi_cp                    !molality of nc (with respect to dissociated ions)
-    outputvars(4,nc) = actcoeff_cp              !activity coefficient of the component / species
-    outputvars(5,nc) = a_cp                     !activity of the component
-    outputvars(6,nc) = REAL(ion_indic, KIND=8)  !the indicator if this species is an inorg. ion or not: 0 = not ion, a number > 200 indicates the ion ID from the list
-ENDDO
+            endif
+        endif 
+    endif
+    outputvars(1,nc) = wtf_cp                       ![-]   mass fraction of component nc
+    outputvars(2,nc) = xi_cp                        ![-]   mole fraction with respect to electrolytes (salts) partially (e.g. HSO4-) or completely dissociated 
+                                                    !      into individual ions (this is potentially different from the input mole fractions, 
+                                                    !      which are usually with respect to undissociated electrolyte components!)
+    outputvars(3,nc) = mi_cp                        ![mol/kg] molality of nc (with respect to dissociated ions); molality is defined as 
+                                                    !         moles of species per kg of solvent mixture, where the mass of the solvent mixture means 
+                                                    !         the cumulative mass of neutral compounds (water + organics) present in solution phase;
+    outputvars(4,nc) = actcoeff_cp                  ![-]   activity coefficient of the component / species (see remarks below about mole fraction or molality basis)
+    outputvars(5,nc) = a_cp                         ![-]   activity of the component (mole fraction basis for neutral compounds, 
+                                                    !      molality basis for ions (with infinite dilution in water as reference state)
+    outputvars(6,nc) = real(ion_indic, kind=wp)     !the indicator if this species is an inorg. ion or not: 0 = not ion, a number > 200 indicates the ion ID from the AIOMFAC list
+enddo
 
 ! viscosity output
-IF (calcviscosity) THEN
-    outputviscvars(1) = ln_etamix/ln10          !conversion by 1.0/ln(10)for output as log10(eta/[Pa s])
+if (calcviscosity) then
+    outputviscvars(1) = ln_etamix/ln10              !conversion by 1.0/ln(10) for output as log10(eta/[Pa s])
     outputviscvars(2) = xtolviscosity*partial_log10_etamix  !this is the log10-scale +/- error value to be added to the log10 viscosity value.
-ELSE
-    outputviscvars(1) = -9999.9999999999D0      !negative/unphysical values to signal "property not calculated"
-    outputviscvars(2) = -9999.9999999999D0
-ENDIF
+else
+    outputviscvars(1) = -9999.9999999999_wp         !unrealistic values to signal "property not calculated"
+    outputviscvars(2) = -9999.9999999999_wp
+endif
 
 !transfer certain error flags raised during calc.:
-WHERE(.NOT. errorflag_list)
+where(.not. errorflag_list)
     errorflag_list = errorflag_clist
-ENDWHERE
+endwhere
 
 !check applicable temperature range and state a warning "errorflag" if violated:
 !applicable range for electrolyte-containing mixtures (approx.): 288.0 to 309.0 K (298.15 +- 10 K); (strictly valid range would be 298.15 K only)
 !applicable range for electrlyte-free mixtures (approx.): 280.0 to 400.0 K
-IF (NGS > 0) THEN !electrolyte-containing
-    IF (TKelvin > 309.0D0 .OR. TKelvin < 288.0D0) THEN  !set warning flag
-        IF (warningflag == 0) THEN                      !do not overwrite an existing warning when non-zero
+if (NGS > 0) then !electrolyte-containing
+    if (TKelvin > 309.0_wp .or. TKelvin < 288.0_wp) then    !set warning flag
+        if (warningflag == 0) then                          !do not overwrite an existing warning when non-zero
             warningflag = 10
-        ENDIF
-    ENDIF
-ELSE
-    IF (TKelvin > 400.0D0 .OR. TKelvin < 280.0D0) THEN  !set warning flag
-        IF (warningflag == 0) THEN
+        endif
+    endif
+else
+    if (TKelvin > 400.0_wp .or. TKelvin < 280.0_wp) then    !set warning flag
+        if (warningflag == 0) then
             warningflag = 11
-        ENDIF
-    ENDIF
-ENDIF
-IF (.NOT. calcviscosity) THEN
-    IF (warningflag == 0) THEN
+        endif
+    endif
+endif
+if (.not. calcviscosity) then
+    if (warningflag == 0) then
         warningflag = 16
-    ENDIF
-ENDIF
+    endif
+endif
 
-END SUBROUTINE AIOMFAC_inout
-! ======================= END =======================================================
+end subroutine AIOMFAC_inout
+! ======================= end =======================================================
