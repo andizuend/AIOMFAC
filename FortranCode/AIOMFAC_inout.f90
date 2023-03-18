@@ -159,7 +159,7 @@ do nc = 1,nspecies                          !loop over components
         outnames(nc) = "comp_no_"//trim(cn)
         wtf_cp = wtf(nc)
         xi_cp = X(nc)
-        mi_cp = mrespSalt(nc)               !molality in solvent mixture [mol/(kg solvent mix)]      
+        mi_cp = m_neutral(nc)               !molality in solvent mixture [mol/(kg solvent mix)]       
         actcoeff_cp = actcoeff_n(nc)
         if (wtf(nc) > 0.0_wp) then
             actcoeff_cp = actcoeff_n(nc) 
@@ -229,6 +229,19 @@ else
     outputviscvars(1) = -9999.9999999999_wp         !unrealistic values to signal "property not calculated"
     outputviscvars(2) = -9999.9999999999_wp
 endif
+
+!!only for debugging checks:
+!block
+!    real(wp),dimension(:),allocatable :: xfrac_from_m
+!    real(wp) :: sum1, sum2, sum3, rel_dev
+!    
+!    xfrac_from_m = outputvars(3,:)/sum(outputvars(3,:))
+!    sum1 = sum(xfrac_from_m)
+!    rel_dev = sum( xfrac_from_m(:)/outputvars(2,:) -1.0_wp )
+!    sum2 = sum(outputvars(2,:))
+!    sum3 = sum(outputvars(1,:))
+!    i = 555 !set breakpoint to check on above values
+!end block
 
 !transfer certain error flags raised during calc.:
 where(.not. errorflag_list)
