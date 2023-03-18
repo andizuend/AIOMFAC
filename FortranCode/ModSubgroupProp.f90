@@ -347,7 +347,7 @@ REAL(8),DIMENSION(201:topsubno),PARAMETER,PUBLIC :: IonO2Cequiv = [ &
     subgrname(244) = "(I-)"      ;  subgrnameTeX(244) = "(I$^-$)"            ;  subgrnameHTML(244) = "(I<sup>-</sup>)"
     subgrname(245) = "(NO3-)"    ;  subgrnameTeX(245) = "(NO$_3$$^-$)"       ;  subgrnameHTML(245) = "(NO<sub>3</sub><sup>-</sup>)"
     subgrname(246) = "(IO3-)"    ;  subgrnameTeX(246) = "(IO$_3$$^-$)"       ;  subgrnameHTML(246) = "(IO<sub>3</sub><sup>-</sup>)"
-    subgrname(247) = "(OH-)"     ;  subgrnameTeX(247) = "(OH$^-$)"           ;  subgrnameHTML(247) = "(OH<sub>-</sub>)"
+    subgrname(247) = "(OH-)"     ;  subgrnameTeX(247) = "(OH$^-$)"           ;  subgrnameHTML(247) = "(OH<sup>-</sup>)"
     subgrname(248) = "(HSO4-)"   ;  subgrnameTeX(248) = "(HSO$_4$$^-$)"      ;  subgrnameHTML(248) = "(HSO<sub>4</sub><sup>-</sup>)"
     subgrname(249) = "(CH3SO3-)" ;  subgrnameTeX(249) = "(CH$_3$SO$_3$$^-$)" ;  subgrnameHTML(249) = "(CH<sub>3</sub>SO<sub>3</sub><sup>-</sup>)"
     subgrname(250) = "(HCO3-)"   ;  subgrnameTeX(250) = "(HCO$_3$$^-$)"      ;  subgrnameHTML(250) = "(HCO<sub>3</sub><sup>-</sup>)"
