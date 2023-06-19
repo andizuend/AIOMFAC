@@ -28,7 +28,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
 !*                                                                                      *
 !*   -> created:        2011  (this file)                                               *
-!*   -> latest changes: 2023-03-18                                                      *
+!*   -> latest changes: 2023-06-19                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -80,7 +80,7 @@ logical,dimension(size(errorflag_clist)) :: errflag_list
 !
 !==== INITIALIZATION section =======================================================
 !
-VersionNo = "3.04"      !AIOMFAC-web version number (change here if minor or major changes require a version number change)
+VersionNo = "3.05"      !AIOMFAC-web version number (change here if minor or major changes require a version number change)
 verbose = .true.        !if true, some debugging information will be printed to the unit "unito" (errorlog file)
 nspecmax = 0
 errorind = 0            !0 means no error found
@@ -91,7 +91,7 @@ warningind = 0          !0 means no warnings found
 !read command line for text-file name (which contains the input parameters to run the AIOMFAC progam):
 call get_command_argument(1, txtfilein)
 if (len_trim(txtfilein) < 4) then               !no command line argument; use specific input file for tests;
-    txtfilein = './Inputfiles/input_0986.txt'   !just use this for debugging with a specific input file, otherwise comment out;
+    txtfilein = './Inputfiles/input_0782.txt'   !just use this for debugging with a specific input file, otherwise comment out;
 endif
 filepath = adjustl(trim(txtfilein))
 write(*,*) ""
