@@ -11,7 +11,7 @@ function glomin ( a, b, c, m, machep, e, t, f, x )
 !
 !  Licensing:
 !
-!    This code is distributed under the GNU LGPL license. 
+!    This code is distributed under the GNU LGPL license.
 !
 !  Modified:
 !
@@ -32,106 +32,107 @@ function glomin ( a, b, c, m, machep, e, t, f, x )
 !
 !  Parameters:
 !
-!    Input, real ( kind = 8 ) A, B, the endpoints of the interval.
+!    Input, real(wp) A, B, the endpoints of the interval.
 !    It must be the case that A < B.
 !
-!    Input, real ( kind = 8 ) C, an initial guess for the global
+!    Input, real(wp) C, an initial guess for the global
 !    minimizer.  If no good guess is known, C = A or B is acceptable.
 !
-!    Input, real ( kind = 8 ) M, the bound on the second derivative.
+!    Input, real(wp) M, the bound on the second derivative.
 !
-!    Input, real ( kind = 8 ) MACHEP, an estimate for the relative machine
+!    Input, real(wp) MACHEP, an estimate for the relative machine
 !    precision.
 !
-!    Input, real ( kind = 8 ) E, a positive tolerance, a bound for the
+!    Input, real(wp) E, a positive tolerance, a bound for the
 !    absolute error in the evaluation of F(X) for any X in [A,B].
 !
-!    Input, real ( kind = 8 ) T, a positive error tolerance.
+!    Input, real(wp) T, a positive error tolerance.
 !
-!    Input, external real ( kind = 8 ) F, the name of a user-supplied
-!    function, of the form "FUNCTION F ( X )", which evaluates the
+!    Input, external real(wp) F, the name of a user-supplied
+!    function, of the form "function F ( X )", which evaluates the
 !    function whose global minimum is being sought.
 !
-!    Output, real ( kind = 8 ) X, the estimated value of the abscissa
+!    Output, real(wp) X, the estimated value of the abscissa
 !    for which F attains its global minimum value in [A,B].
 !
-!    Output, real ( kind = 8 ) GLOMIN, the value F(X).
+!    Output, real(wp) GLOMIN, the value F(X).
 !
-  implicit none
+use Mod_kind_param, only : wp
+implicit none
 
-  real    ( kind = 8 ) a
-  real    ( kind = 8 ) a0
-  real    ( kind = 8 ) a2
-  real    ( kind = 8 ) a3
-  real    ( kind = 8 ) b
-  real    ( kind = 8 ) c
-  real    ( kind = 8 ) d0
-  real    ( kind = 8 ) d1
-  real    ( kind = 8 ) d2
-  real    ( kind = 8 ) e
-  real    ( kind = 8 ) f
-  real    ( kind = 8 ) glomin
-  real    ( kind = 8 ) h
-  integer ( kind = 4 ) k
-  real    ( kind = 8 ) m
-  real    ( kind = 8 ) m2
-  real    ( kind = 8 ) machep
-  real    ( kind = 8 ) p
-  real    ( kind = 8 ) q
-  real    ( kind = 8 ) qs
-  real    ( kind = 8 ) r
-  real    ( kind = 8 ) s
-  real    ( kind = 8 ) sc
-  real    ( kind = 8 ) t
-  real    ( kind = 8 ) x
-  real    ( kind = 8 ) y
-  real    ( kind = 8 ) y0
-  real    ( kind = 8 ) y1
-  real    ( kind = 8 ) y2
-  real    ( kind = 8 ) y3
-  real    ( kind = 8 ) yb
-  real    ( kind = 8 ) z0
-  real    ( kind = 8 ) z1
-  real    ( kind = 8 ) z2
+real(wp) a
+real(wp) a0
+real(wp) a2
+real(wp) a3
+real(wp) b
+real(wp) c
+real(wp) d0
+real(wp) d1
+real(wp) d2
+real(wp) e
+real(wp) f
+real(wp) glomin
+real(wp) h
+integer k
+real(wp) m
+real(wp) m2
+real(wp) machep
+real(wp) p
+real(wp) q
+real(wp) qs
+real(wp) r
+real(wp) s
+real(wp) sc
+real(wp) t
+real(wp) x
+real(wp) y
+real(wp) y0
+real(wp) y1
+real(wp) y2
+real(wp) y3
+real(wp) yb
+real(wp) z0
+real(wp) z1
+real(wp) z2
 
-  a0 = b
-  x = a0
-  a2 = a
-  y0 = f ( b )
-  yb = y0
-  y2 = f ( a )
-  y = y2
+a0 = b
+x = a0
+a2 = a
+y0 = f ( b )
+yb = y0
+y2 = f ( a )
+y = y2
 
-  if ( y0 < y ) then
+if ( y0 < y ) then
     y = y0
-  else
+else
     x = a
-  end if
+end if
 
-  if ( m <= 0.0D+00 .or. b <= a ) then
+if ( m <= 0.0E0_wp .or. b <= a ) then
     glomin = y
     return
-  end if
+end if
 
-  m2 = 0.5D+00 * ( 1.0D+00 + 16.0D+00 * machep ) * m
+m2 = 0.5E0_wp * ( 1.0E0_wp + 16.0E0_wp * machep ) * m
 
-  if ( c <= a .or. b <= c ) then
-    sc = 0.5D+00 * ( a + b )
-  else
+if ( c <= a .or. b <= c ) then
+    sc = 0.5E0_wp * ( a + b )
+else
     sc = c
-  end if
+end if
 
-  y1 = f ( sc )
-  k = 3
-  d0 = a2 - sc
-  h = 9.0D+00 / 11.0D+00
+y1 = f ( sc )
+k = 3
+d0 = a2 - sc
+h = 9.0E0_wp / 11.0E0_wp
 
-  if ( y1 < y ) then
+if ( y1 < y ) then
     x = sc
     y = y1
-  end if
+end if
 
-  do
+do
 
     d1 = a2 - a0
     d2 = sc - a0
@@ -140,120 +141,120 @@ function glomin ( a, b, c, m, machep, e, t, f, x )
     z1 = y2 - y0
     r = d1 * d1 * z0 - d0 * d0 * z1
     p = r
-    qs = 2.0D+00 * ( d0 * z1 - d1 * z0 )
+    qs = 2.0E0_wp * ( d0 * z1 - d1 * z0 )
     q = qs
 
     if ( k < 1000000 .or. y2 <= y ) then
 
-      do
+        do
 
-        if ( q * ( r * ( yb - y2 ) + z2 * q * ( ( y2 - y ) + t ) ) < &
-          z2 * m2 * r * ( z2 * q - r ) ) then
-          a3 = a2 + r / q
-          y3 = f ( a3 )
+            if ( q * ( r * ( yb - y2 ) + z2 * q * ( ( y2 - y ) + t ) ) < &
+                z2 * m2 * r * ( z2 * q - r ) ) then
+                a3 = a2 + r / q
+                y3 = f ( a3 )
 
-          if ( y3 < y ) then
-            x = a3
-            y = y3
-          end if
-        end if
+                if ( y3 < y ) then
+                    x = a3
+                    y = y3
+                end if
+            end if
 
-        k = mod ( 1611 * k, 1048576 )
-        q = 1.0D+00
-        r = ( b - a ) * 0.00001D+00 * real ( k, kind = 8 )
+            k = mod ( 1611 * k, 1048576 )
+            q = 1.0E0_wp
+            r = ( b - a ) * 0.00001E0_wp * real ( k, kind=wp )
 
-        if ( z2 <= r ) then
-          exit
-        end if
+            if ( z2 <= r ) then
+                exit
+            end if
 
-      end do
+        end do
 
     else
 
-      k = mod ( 1611 * k, 1048576 )
-      q = 1.0D+00
-      r = ( b - a ) * 0.00001D+00 * real ( k, kind = 8 )
-
-      do while ( r < z2 )
-
-        if ( q * ( r * ( yb - y2 ) + z2 * q * ( ( y2 - y ) + t ) ) < &
-          z2 * m2 * r * ( z2 * q - r ) ) then
-          a3 = a2 + r / q
-          y3 = f ( a3 )
-
-          if ( y3 < y ) then
-            x = a3
-            y = y3
-          end if
-        end if
-
         k = mod ( 1611 * k, 1048576 )
-        q = 1.0D+00
-        r = ( b - a ) * 0.00001D+00 * real ( k, kind = 8 )
+        q = 1.0E0_wp
+        r = ( b - a ) * 0.00001E0_wp * k
 
-      end do
+        do while ( r < z2 )
+
+            if ( q * ( r * ( yb - y2 ) + z2 * q * ( ( y2 - y ) + t ) ) < &
+                z2 * m2 * r * ( z2 * q - r ) ) then
+                a3 = a2 + r / q
+                y3 = f ( a3 )
+
+                if ( y3 < y ) then
+                    x = a3
+                    y = y3
+                end if
+            end if
+
+            k = mod ( 1611 * k, 1048576 )
+            q = 1.0E0_wp
+            r = ( b - a ) * 0.00001E0_wp *k
+
+        end do
 
     end if
 
     r = m2 * d0 * d1 * d2
     s = sqrt ( ( ( y2 - y ) + t ) / m2 )
-    h = 0.5D+00 * ( 1.0D+00 + h )
-    p = h * ( p + 2.0D+00 * r * s )
-    q = q + 0.5D+00 * qs
-    r = - 0.5D+00 * ( d0 + ( z0 + 2.01D+00 * e ) / ( d0 * m2 ) )
+    h = 0.5E0_wp * ( 1.0E0_wp + h )
+    p = h * ( p + 2.0E0_wp * r * s )
+    q = q + 0.5E0_wp * qs
+    r = - 0.5E0_wp * ( d0 + ( z0 + 2.01E0_wp * e ) / ( d0 * m2 ) )
 
-    if ( r < s .or. d0 < 0.0D+00 ) then
-      r = a2 + s
+    if ( r < s .or. d0 < 0.0E0_wp ) then
+        r = a2 + s
     else
-      r = a2 + r
+        r = a2 + r
     end if
 
-    if ( 0.0D+00 < p * q ) then
-      a3 = a2 + p / q
+    if ( 0.0E0_wp < p * q ) then
+        a3 = a2 + p / q
     else
-      a3 = r
+        a3 = r
     end if
 
     do
 
-      a3 = max ( a3, r )
+        a3 = max ( a3, r )
 
-      if ( b <= a3 ) then
-        a3 = b
-        y3 = yb
-      else
-        y3 = f ( a3 )
-      end if
+        if ( b <= a3 ) then
+            a3 = b
+            y3 = yb
+        else
+            y3 = f ( a3 )
+        end if
 
-      if ( y3 < y ) then
-        x = a3
-        y = y3
-      end if
+        if ( y3 < y ) then
+            x = a3
+            y = y3
+        end if
 
-      d0 = a3 - a2
+        d0 = a3 - a2
 
-      if ( a3 <= r ) then
-        exit
-      end if
+        if ( a3 <= r ) then
+            exit
+        end if
 
-      p = 2.0D+00 * ( y2 - y3 ) / ( m * d0 )
+        p = 2.0E0_wp * ( y2 - y3 ) / ( m * d0 )
 
-      if ( ( 1.0D+00 + 9.0D+00 * machep ) * d0 <= ABS ( p ) ) then
-        exit
-      end if
+        if ( ( 1.0E0_wp + 9.0E0_wp * machep ) * d0 <= abs ( p ) ) then
+            exit
+        end if
 
-      if ( 0.5D+00 * m2 * ( d0 * d0 + p * p ) <= &
-        ( y2 - y ) + ( y3 - y ) + 2.0D+00 * t ) then
-        exit
-      end if
+        if ( 0.5E0_wp * m2 * ( d0 * d0 + p * p ) <= &
+            ( y2 - y ) + ( y3 - y ) + 2.0E0_wp * t ) then
+            exit
+        end if
 
-      a3 = 0.5D+00 * ( a2 + a3 )
-      h = 0.9D+00 * h
+        a3 = 0.5E0_wp * ( a2 + a3 )
+        h = 0.9E0_wp * h
 
     end do
 
     if ( b <= a3 ) then
-      exit
+        exit
     end if
 
     a0 = sc
@@ -263,12 +264,14 @@ function glomin ( a, b, c, m, machep, e, t, f, x )
     y1 = y2
     y2 = y3
 
-  end do
+end do
 
-  glomin = y
+glomin = y
 
-  return
+return
 end
+    
+    
 function local_min ( a, b, eps, t, f, x )
 
 !*****************************************************************************80
@@ -284,20 +287,20 @@ function local_min ( a, b, eps, t, f, x )
 !    B), then convergence is superlinear, and usually of the order of
 !    about 1.324....
 !
-!    The values EPS and T define a tolerance TOL = EPS * ABS ( X ) + T.
-!    F is never evaluated at two points closer than TOL.  
+!    The values EPS and T define a tolerance TOL = EPS * abs ( X ) + T.
+!    F is never evaluated at two points closer than TOL.
 !
 !    If F is a unimodal function and the computed values of F are always
-!    unimodal when separated by at least SQEPS * ABS ( X ) + (T/3), then
-!    LOCAL_MIN approximates the abscissa of the global minimum of F on the 
-!    interval [A,B] with an error less than 3*SQEPS*ABS(LOCAL_MIN)+T.  
+!    unimodal when separated by at least SQEPS * abs ( X ) + (T/3), then
+!    LOCAL_MIN approximates the abscissa of the global minimum of F on the
+!    interval [A,B] with an error less than 3*SQEPS*abs(LOCAL_MIN)+T.
 !
-!    If F is not unimodal, then LOCAL_MIN may approximate a local, but 
+!    If F is not unimodal, then LOCAL_MIN may approximate a local, but
 !    perhaps non-global, minimum to the same accuracy.
 !
 !  Licensing:
 !
-!    This code is distributed under the GNU LGPL license. 
+!    This code is distributed under the GNU LGPL license.
 !
 !  Modified:
 !
@@ -318,192 +321,196 @@ function local_min ( a, b, eps, t, f, x )
 !
 !  Parameters:
 !
-!    Input, real ( kind = 8 ) A, B, the endpoints of the interval.
+!    Input, real(wp) A, B, the endpoints of the interval.
 !
-!    Input, real ( kind = 8 ) EPS, a positive relative error tolerance.
+!    Input, real(wp) EPS, a positive relative error tolerance.
 !    EPS should be no smaller than twice the relative machine precision,
 !    and preferably not much less than the square root of the relative
 !    machine precision.
 !
-!    Input, real ( kind = 8 ) T, a positive absolute error tolerance.
+!    Input, real(wp) T, a positive absolute error tolerance.
 !
-!    Input, external real ( kind = 8 ) F, the name of a user-supplied
-!    function, of the form "FUNCTION F ( X )", which evaluates the
+!    Input, external real(wp) F, the name of a user-supplied
+!    function, of the form "function F ( X )", which evaluates the
 !    function whose local minimum is being sought.
 !
-!    Output, real ( kind = 8 ) X, the estimated value of an abscissa
+!    Output, real(wp) X, the estimated value of an abscissa
 !    for which F attains a local minimum value in [A,B].
 !
-!    Output, real ( kind = 8 ) LOCAL_MIN, the value F(X).
+!    Output, real(wp) LOCAL_MIN, the value F(X).
 !
-  implicit none
+use Mod_kind_param, only : wp
 
-  real ( kind = 8 ) a
-  real ( kind = 8 ) b
-  real ( kind = 8 ) c
-  real ( kind = 8 ) d
-  real ( kind = 8 ) e
-  real ( kind = 8 ) eps
-  real ( kind = 8 ) f
-  real ( kind = 8 ) fu
-  real ( kind = 8 ) fv
-  real ( kind = 8 ) fw
-  real ( kind = 8 ) fx
-  real ( kind = 8 ) local_min
-  real ( kind = 8 ) m
-  real ( kind = 8 ) p
-  real ( kind = 8 ) q
-  real ( kind = 8 ) r
-  real ( kind = 8 ) sa
-  real ( kind = 8 ) sb
-  real ( kind = 8 ) t
-  real ( kind = 8 ) t2
-  real ( kind = 8 ) tol
-  real ( kind = 8 ) u
-  real ( kind = 8 ) v
-  real ( kind = 8 ) w
-  real ( kind = 8 ) x
+implicit none
+
+real(wp) a
+real(wp) b
+real(wp) c
+real(wp) d
+real(wp) e
+real(wp) eps
+real(wp) f
+real(wp) fu
+real(wp) fv
+real(wp) fw
+real(wp) fx
+real(wp) local_min
+real(wp) m
+real(wp) p
+real(wp) q
+real(wp) r
+real(wp) sa
+real(wp) sb
+real(wp) t
+real(wp) t2
+real(wp) tol
+real(wp) u
+real(wp) v
+real(wp) w
+real(wp) x
 !
 !  C is the square of the inverse of the golden ratio.
 !
-  c = 0.5D+00 * ( 3.0D+00 - sqrt ( 5.0D+00 ) )
+c = 0.5E0_wp * ( 3.0E0_wp - sqrt ( 5.0E0_wp ) )
 
-  sa = a
-  sb = b
-  x = sa + c * ( b - a )
-  w = x
-  v = w
-  e = 0.0D+00
-  fx = f ( x )
-  fw = fx
-  fv = fw
+sa = a
+sb = b
+x = sa + c * ( b - a )
+w = x
+v = w
+e = 0.0E0_wp
+fx = f ( x )
+fw = fx
+fv = fw
 
-  do
+do
 
-    m = 0.5D+00 * ( sa + sb ) 
-    tol = eps * ABS ( x ) + t
-    t2 = 2.0D+00 * tol
-!
-!  Check the stopping criterion.
-!
-    if ( ABS ( x - m ) <= t2 - 0.5D+00 * ( sb - sa ) ) then
-      exit
+    m = 0.5E0_wp * ( sa + sb )
+    tol = eps * abs ( x ) + t
+    t2 = 2.0E0_wp * tol
+    !
+    !  Check the stopping criterion.
+    !
+    if ( abs ( x - m ) <= t2 - 0.5E0_wp * ( sb - sa ) ) then
+        exit
     end if
-!
-!  Fit a parabola.
-!
-    r = 0.0D+00
+    !
+    !  Fit a parabola.
+    !
+    r = 0.0E0_wp
     q = r
     p = q
 
-    if ( tol < ABS ( e ) ) then
+    if ( tol < abs ( e ) ) then
 
-      r = ( x - w ) * ( fx - fv )
-      q = ( x - v ) * ( fx - fw )
-      p = ( x - v ) * q - ( x - w ) * r
-      q = 2.0D+00 * ( q - r )
+        r = ( x - w ) * ( fx - fv )
+        q = ( x - v ) * ( fx - fw )
+        p = ( x - v ) * q - ( x - w ) * r
+        q = 2.0E0_wp * ( q - r )
 
-      if ( 0.0D+00 < q ) then
-        p = - p
-      end if
-
-      q = ABS ( q )
-
-      r = e
-      e = d
-
-    end if
-
-    if ( ABS ( p ) < ABS ( 0.5D+00 * q * r ) .and. &
-         q * ( sa - x ) < p .and. &
-         p < q * ( sb - x ) ) then
-!
-!  Take the parabolic interpolation step.
-!
-      d = p / q
-      u = x + d
-!
-!  F must not be evaluated too close to A or B.
-!
-      if ( ( u - sa ) < t2 .or. ( sb - u ) < t2 ) then
-
-        if ( x < m ) then
-          d = tol
-        else
-          d = - tol
+        if ( 0.0E0_wp < q ) then
+            p = - p
         end if
 
-      end if
-!
-!  A golden-section step.
-!
-    else
+        q = abs ( q )
 
-      if ( x < m ) then
-        e = sb - x
-      else
-        e = a - x
-      end if
-
-      d = c * e
+        r = e
+        e = d
 
     end if
-!
-!  F must not be evaluated too close to X.
-!
-    if ( tol <= ABS ( d ) ) then
-      u = x + d
-    else if ( 0.0D+00 < d ) then
-      u = x + tol
+
+    if ( abs ( p ) < abs ( 0.5E0_wp * q * r ) .and. &
+        q * ( sa - x ) < p .and. &
+        p < q * ( sb - x ) ) then
+        !
+        !  Take the parabolic interpolation step.
+        !
+        d = p / q
+        u = x + d
+        !
+        !  F must not be evaluated too close to A or B.
+        !
+        if ( ( u - sa ) < t2 .or. ( sb - u ) < t2 ) then
+
+            if ( x < m ) then
+                d = tol
+            else
+                d = - tol
+            end if
+
+        end if
+        !
+        !  A golden-section step.
+        !
     else
-      u = x - tol
+
+        if ( x < m ) then
+            e = sb - x
+        else
+            e = a - x
+        end if
+
+        d = c * e
+
+    end if
+    !
+    !  F must not be evaluated too close to X.
+    !
+    if ( tol <= abs ( d ) ) then
+        u = x + d
+    else if ( 0.0E0_wp < d ) then
+        u = x + tol
+    else
+        u = x - tol
     end if
 
     fu = f ( u )
-!
-!  Update A, B, V, W, and X.
-!
+    !
+    !  Update A, B, V, W, and X.
+    !
     if ( fu <= fx ) then
 
-      if ( u < x ) then
-        sb = x
-      else
-        sa = x
-      end if
+        if ( u < x ) then
+            sb = x
+        else
+            sa = x
+        end if
 
-      v = w
-      fv = fw
-      w = x
-      fw = fx
-      x = u
-      fx = fu
+        v = w
+        fv = fw
+        w = x
+        fw = fx
+        x = u
+        fx = fu
 
     else
 
-      if ( u < x ) then
-        sa = u
-      else
-        sb = u
-      end if
+        if ( u < x ) then
+            sa = u
+        else
+            sb = u
+        end if
 
-      if ( fu <= fw .or. w == x ) then
-        v = w
-        fv = fw
-        w = u
-        fw = fu
-      else if ( fu <= fv .or. v == x .or. v== w ) then
-        v = u
-        fv = fu
-      end if
+        if ( fu <= fw .or. w == x ) then
+            v = w
+            fv = fw
+            w = u
+            fw = fu
+        else if ( fu <= fv .or. v == x .or. v== w ) then
+            v = u
+            fv = fu
+        end if
 
     end if
 
-  end do
+end do
 
-  local_min = fx
+local_min = fx
 
-  return
+return
 end
+    
+
 subroutine local_min_rc ( a, b, arg, status, value )
 
 !*****************************************************************************80
@@ -522,7 +529,7 @@ subroutine local_min_rc ( a, b, arg, status, value )
 !    at A or B), then convergence is superlinear, and usually of the
 !    order of about 1.324...
 !
-!    The routine is a revised version of the Brent local minimization 
+!    The routine is a revised version of the Brent local minimization
 !    algorithm, using reverse communication.
 !
 !    It is worth stating explicitly that this routine will NOT be
@@ -534,7 +541,7 @@ subroutine local_min_rc ( a, b, arg, status, value )
 !
 !  Licensing:
 !
-!    This code is distributed under the GNU LGPL license. 
+!    This code is distributed under the GNU LGPL license.
 !
 !  Modified:
 !
@@ -560,25 +567,25 @@ subroutine local_min_rc ( a, b, arg, status, value )
 !
 !  Parameters
 !
-!    Input/output, real ( kind = 8 ) A, B.  On input, the left and right
+!    Input/output, real(wp) A, B.  On input, the left and right
 !    endpoints of the initial interval.  On output, the lower and upper
 !    bounds for an interval containing the minimizer.  It is required
 !    that A < B.
 !
-!    Output, real ( kind = 8 ) ARG, the currently considered point.  The user
+!    Output, real(wp) ARG, the currently considered point.  The user
 !    does not need to initialize this value.  On return with STATUS positive,
 !    the user is requested to evaluate the function at ARG, and return
 !    the value in VALUE.  On return with STATUS zero, ARG is the routine's
 !    estimate for the function minimizer.
 !
-!    Input/output, integer ( kind = 4 ) STATUS, used to communicate between 
-!    the user and the routine.  The user only sets STATUS to zero on the first 
+!    Input/output, integer STATUS, used to communicate between
+!    the user and the routine.  The user only sets STATUS to zero on the first
 !    call, to indicate that this is a startup call.  The routine returns STATUS
 !    positive to request that the function be evaluated at ARG, or returns
 !    STATUS as 0, to indicate that the iteration is complete and that
 !    ARG is the estimated minimizer.
 !
-!    Input, real ( kind = 8 ) VALUE, the function value at ARG, as requested
+!    Input, real(wp) VALUE, the function value at ARG, as requested
 !    by the routine on the previous call.
 !
 !  Local parameters:
@@ -587,48 +594,50 @@ subroutine local_min_rc ( a, b, arg, status, value )
 !
 !    EPS is the square root of the relative machine precision.
 !
-  implicit none
+use Mod_kind_param, only : wp
 
-  real    ( kind = 8 ) a
-  real    ( kind = 8 ) arg
-  real    ( kind = 8 ) b
-  real    ( kind = 8 ), save :: c
-  real    ( kind = 8 ), save :: d
-  real    ( kind = 8 ), save :: e
-  real    ( kind = 8 ), save :: eps
-  real    ( kind = 8 ), save :: fu
-  real    ( kind = 8 ), save :: fv
-  real    ( kind = 8 ), save :: fw
-  real    ( kind = 8 ), save :: fx
-  real    ( kind = 8 ), save :: midpoint
-  real    ( kind = 8 ), save :: p
-  real    ( kind = 8 ), save :: q
-  real    ( kind = 8 ), save :: r
-  integer ( kind = 4 ) status
-  real    ( kind = 8 ), save :: tol
-  real    ( kind = 8 ), save :: tol1
-  real    ( kind = 8 ), save :: tol2
-  real    ( kind = 8 ), save :: u
-  real    ( kind = 8 ), save :: v
-  real    ( kind = 8 ) value
-  real    ( kind = 8 ), save :: w
-  real    ( kind = 8 ), save :: x
+implicit none
+
+real(wp) a
+real(wp) arg
+real(wp) b
+real(wp), save :: c
+real(wp), save :: d
+real(wp), save :: e
+real(wp), save :: eps
+real(wp), save :: fu
+real(wp), save :: fv
+real(wp), save :: fw
+real(wp), save :: fx
+real(wp), save :: midpoint
+real(wp), save :: p
+real(wp), save :: q
+real(wp), save :: r
+integer status
+real(wp), save :: tol
+real(wp), save :: tol1
+real(wp), save :: tol2
+real(wp), save :: u
+real(wp), save :: v
+real(wp) value
+real(wp), save :: w
+real(wp), save :: x
 !
 !  STATUS (INPUT) = 0, startup.
 !
-  if ( status == 0 ) then
+if ( status == 0 ) then
 
     if ( b <= a ) then
-      write ( *, '(a)' ) ' '
-      write ( *, '(a)' ) 'LOCAL_MIN_RC - Fatal error!'
-      write ( *, '(a)' ) '  A < B is required, but'
-      write ( *, '(a,g14.6)' ) '  A = ', a
-      write ( *, '(a,g14.6)' ) '  B = ', b
-      status = -1
-      stop
+        write ( *, '(a)' ) ' '
+        write ( *, '(a)' ) 'LOCAL_MIN_RC - Fatal error!'
+        write ( *, '(a)' ) '  A < B is required, but'
+        write ( *, '(a,g14.6)' ) '  A = ', a
+        write ( *, '(a,g14.6)' ) '  B = ', b
+        status = -1
+        stop
     end if
 
-    c = 0.5D+00 * ( 3.0D+00 - sqrt ( 5.0D+00 ) )
+    c = 0.5E0_wp * ( 3.0E0_wp - sqrt ( 5.0E0_wp ) )
 
     eps = sqrt ( epsilon ( eps ) )
     tol = epsilon ( tol )
@@ -636,154 +645,156 @@ subroutine local_min_rc ( a, b, arg, status, value )
     v = a + c * ( b - a )
     w = v
     x = v
-    e = 0.0D+00
+    e = 0.0E0_wp
 
     status = 1
     arg = x
 
     return
-!
-!  STATUS (INPUT) = 1, return with initial function value of FX.
-!
-  else if ( status == 1 ) then
+    !
+    !  STATUS (INPUT) = 1, return with initial function value of FX.
+    !
+else if ( status == 1 ) then
 
     fx = value
     fv = fx
     fw = fx
-!
-!  STATUS (INPUT) = 2 or more, update the data.
-!
-  else if ( 2 <= status ) then
+    !
+    !  STATUS (INPUT) = 2 or more, update the data.
+    !
+else if ( 2 <= status ) then
 
     fu = value
 
     if ( fu <= fx ) then
 
-      if ( x <= u ) then
-        a = x
-      else
-        b = x
-      end if
+        if ( x <= u ) then
+            a = x
+        else
+            b = x
+        end if
 
-      v = w
-      fv = fw
-      w = x
-      fw = fx
-      x = u
-      fx = fu
+        v = w
+        fv = fw
+        w = x
+        fw = fx
+        x = u
+        fx = fu
 
     else
 
-      if ( u < x ) then
-        a = u
-      else
-        b = u
-      end if
+        if ( u < x ) then
+            a = u
+        else
+            b = u
+        end if
 
-      if ( fu <= fw .or. w == x ) then
-        v = w
-        fv = fw
-        w = u
-        fw = fu
-      else if ( fu <= fv .or. v == x .or. v == w ) then
-        v = u
-        fv = fu
-      end if
+        if ( fu <= fw .or. w == x ) then
+            v = w
+            fv = fw
+            w = u
+            fw = fu
+        else if ( fu <= fv .or. v == x .or. v == w ) then
+            v = u
+            fv = fu
+        end if
 
     end if
 
-  end if
+end if
 !
 !  Take the next step.
 !
-  midpoint = 0.5D+00 * ( a + b )
-  tol1 = eps * ABS ( x ) + tol / 3.0D+00
-  tol2 = 2.0D+00 * tol1
+midpoint = 0.5E0_wp * ( a + b )
+tol1 = eps * abs ( x ) + tol / 3.0E0_wp
+tol2 = 2.0E0_wp * tol1
 !
 !  If the stopping criterion is satisfied, we can exit.
 !
-  if ( ABS ( x - midpoint ) <= ( tol2 - 0.5D+00 * ( b - a ) ) ) then
+if ( abs ( x - midpoint ) <= ( tol2 - 0.5E0_wp * ( b - a ) ) ) then
     status = 0
     return
-  end if
+end if
 !
 !  Is golden-section necessary?
 !
-  if ( ABS ( e ) <= tol1 ) then
+if ( abs ( e ) <= tol1 ) then
     if ( midpoint <= x ) then
-      e = a - x
+        e = a - x
     else
-      e = b - x
+        e = b - x
     end if
 
     d = c * e
-!
-!  Consider fitting a parabola.
-!
-  else
+    !
+    !  Consider fitting a parabola.
+    !
+else
 
     r = ( x - w ) * ( fx - fv )
     q = ( x - v ) * ( fx - fw )
     p = ( x - v ) * q - ( x - w ) * r
-    q = 2.0D+00 * ( q - r )
-    if ( 0.0D+00 < q ) then
-      p = - p
+    q = 2.0E0_wp * ( q - r )
+    if ( 0.0E0_wp < q ) then
+        p = - p
     end if
-    q = ABS ( q )
+    q = abs ( q )
     r = e
     e = d
-!
-!  Choose a golden-section step if the parabola is not advised.
-!
+    !
+    !  Choose a golden-section step if the parabola is not advised.
+    !
     if ( &
-      ( ABS ( 0.5D+00 * q * r ) <= ABS ( p ) ) .or. &
-      ( p <= q * ( a - x ) ) .or. &
-      ( q * ( b - x ) <= p ) ) then
+        ( abs ( 0.5E0_wp * q * r ) <= abs ( p ) ) .or. &
+        ( p <= q * ( a - x ) ) .or. &
+        ( q * ( b - x ) <= p ) ) then
 
-      if ( midpoint <= x ) then
-        e = a - x
-      else
-        e = b - x
-      end if
+        if ( midpoint <= x ) then
+            e = a - x
+        else
+            e = b - x
+        end if
 
-      d = c * e
-!
-!  Choose a parabolic interpolation step.
-!
+        d = c * e
+        !
+        !  Choose a parabolic interpolation step.
+        !
     else
 
-      d = p / q
-      u = x + d
+        d = p / q
+        u = x + d
 
-      if ( ( u - a ) < tol2 ) then
-        d = sign ( tol1, midpoint - x )
-      end if
+        if ( ( u - a ) < tol2 ) then
+            d = sign ( tol1, midpoint - x )
+        end if
 
-      if ( ( b - u ) < tol2 ) then
-        d = sign ( tol1, midpoint - x )
-      end if
+        if ( ( b - u ) < tol2 ) then
+            d = sign ( tol1, midpoint - x )
+        end if
 
     end if
 
-  end if
+end if
 !
 !  F must not be evaluated too close to X.
 !
-  if ( tol1 <= ABS ( d ) ) then
+if ( tol1 <= abs ( d ) ) then
     u = x + d
-  end if
+end if
 
-  if ( ABS ( d ) < tol1 ) then
+if ( abs ( d ) < tol1 ) then
     u = x + sign ( tol1, d )
-  end if
+end if
 !
 !  Request value of F(U).
 !
-  arg = u
-  status = status + 1
+arg = u
+status = status + 1
 
-  return
+return
 end
+    
+    
 subroutine timestampbrent ( )
 
 !*****************************************************************************80
@@ -796,7 +807,7 @@ subroutine timestampbrent ( )
 !
 !  Licensing:
 !
-!    This code is distributed under the GNU LGPL license. 
+!    This code is distributed under the GNU LGPL license.
 !
 !  Modified:
 !
@@ -810,57 +821,57 @@ subroutine timestampbrent ( )
 !
 !    None
 !
-  implicit none
+implicit none
 
-  character ( len = 8  ) ampm
-  integer   ( kind = 4 ) d
-  integer   ( kind = 4 ) h
-  integer   ( kind = 4 ) m
-  integer   ( kind = 4 ) mm
-  character ( len = 9  ), parameter, dimension(12) :: month = (/ &
+character (len=8) :: ampm
+integer d
+integer h
+integer m
+integer mm
+character (len=9), parameter, dimension(12) :: month = [ &
     'January  ', 'February ', 'March    ', 'April    ', &
     'May      ', 'June     ', 'July     ', 'August   ', &
-    'September', 'October  ', 'November ', 'December ' /)
-  integer   ( kind = 4 ) n
-  integer   ( kind = 4 ) s
-  integer   ( kind = 4 ) values(8)
-  integer   ( kind = 4 ) y
+    'September', 'October  ', 'November ', 'December ' ]
+integer n
+integer s
+integer values(8)
+integer y
 
-  call date_and_time ( values = values )
+call date_and_time ( values = values )
 
-  y = values(1)
-  m = values(2)
-  d = values(3)
-  h = values(5)
-  n = values(6)
-  s = values(7)
-  mm = values(8)
+y = values(1)
+m = values(2)
+d = values(3)
+h = values(5)
+n = values(6)
+s = values(7)
+mm = values(8)
 
-  if ( h < 12 ) then
+if ( h < 12 ) then
     ampm = 'AM'
-  else if ( h == 12 ) then
+else if ( h == 12 ) then
     if ( n == 0 .and. s == 0 ) then
-      ampm = 'Noon'
+        ampm = 'Noon'
     else
-      ampm = 'PM'
+        ampm = 'PM'
     end if
-  else
+else
     h = h - 12
     if ( h < 12 ) then
-      ampm = 'PM'
+        ampm = 'PM'
     else if ( h == 12 ) then
-      if ( n == 0 .and. s == 0 ) then
-        ampm = 'Midnight'
-      else
-        ampm = 'AM'
-      end if
+        if ( n == 0 .and. s == 0 ) then
+            ampm = 'Midnight'
+        else
+            ampm = 'AM'
+        end if
     end if
-  end if
+end if
 
-  write ( *, '(i2,1x,a,1x,i4,2x,i2,a1,i2.2,a1,i2.2,a1,i3.3,1x,a)' ) &
+write ( *, '(i2,1x,a,1x,i4,2x,i2,a1,i2.2,a1,i2.2,a1,i3.3,1x,a)' ) &
     d, trim ( month(m) ), y, h, ':', n, ':', s, '.', mm, trim ( ampm )
 
-  return
+return
 end
 
 
@@ -878,11 +889,11 @@ function brentzero ( a, b, machep, t, f )
 !    one value C between A and B for which F(C) = 0.
 !
 !    The location of the zero is determined to within an accuracy
-!    of 6 * MACHEPS * ABS ( C ) + 2 * T.
+!    of 6 * MACHEPS * abs ( C ) + 2 * T.
 !
 !  Licensing:
 !
-!    This code is distributed under the GNU LGPL license. 
+!    This code is distributed under the GNU LGPL license.
 !
 !  Modified:
 !
@@ -903,143 +914,133 @@ function brentzero ( a, b, machep, t, f )
 !
 !  Parameters:
 !
-!    Input, real ( kind = 8 ) A, B, the endpoints of the change of sign interval.
+!    Input, real(wp) A, B, the endpoints of the change of sign interval.
 !
-!    Input, real ( kind = 8 ) MACHEP, an estimate for the relative machine
+!    Input, real(wp) MACHEP, an estimate for the relative machine
 !    precision.
 !
-!    Input, real ( kind = 8 ) T, a positive error tolerance.
+!    Input, real(wp) T, a positive error tolerance.
 !
-!    Input, external real ( kind = 8 ) F, the name of a user-supplied
-!    function, of the form "FUNCTION F ( X )", which evaluates the
+!    Input, external real(wp) F, the name of a user-supplied
+!    function, of the form "function F ( X )", which evaluates the
 !    function whose zero is being sought.
 !
-!    Output, real ( kind = 8 ) zero, the estimated value of a zero of
+!    Output, real(wp) zero, the estimated value of a zero of
 !    the function F.
 !
-  implicit none
+use Mod_kind_param, only : wp
 
-  real ( kind = 8 ) a
-  real ( kind = 8 ) b
-  real ( kind = 8 ) c
-  real ( kind = 8 ) d
-  real ( kind = 8 ) e
-  real ( kind = 8 ) f
-  real ( kind = 8 ) fa
-  real ( kind = 8 ) fb
-  real ( kind = 8 ) fc
-  real ( kind = 8 ) m
-  real ( kind = 8 ) machep
-  real ( kind = 8 ) p
-  real ( kind = 8 ) q
-  real ( kind = 8 ) r
-  real ( kind = 8 ) s
-  real ( kind = 8 ) sa
-  real ( kind = 8 ) sb
-  real ( kind = 8 ) t
-  real ( kind = 8 ) tol
-  real ( kind = 8 ) brentzero
+implicit none
+
+real(wp) a
+real(wp) b
+real(wp) c
+real(wp) d
+real(wp) e
+real(wp) f
+real(wp) fa
+real(wp) fb
+real(wp) fc
+real(wp) m
+real(wp) machep
+real(wp) p
+real(wp) q
+real(wp) r
+real(wp) s
+real(wp) sa
+real(wp) sb
+real(wp) t
+real(wp) tol
+real(wp) brentzero
 !
 !  Make local copies of A and B.
 !
-  sa = a
-  sb = b
-  fa = f ( sa )
-  fb = f ( sb )
+sa = a
+sb = b
+fa = f ( sa )
+fb = f ( sb )
 
-  c = sa
-  fc = fa
-  e = sb - sa
-  d = e
+c = sa
+fc = fa
+e = sb - sa
+d = e
 
-  do
-
-    if ( ABS ( fc ) < ABS ( fb ) ) then
-
-      sa = sb
-      sb = c
-      c = sa
-      fa = fb
-      fb = fc
-      fc = fa
-
+do
+    if ( abs ( fc ) < abs ( fb ) ) then
+        sa = sb
+        sb = c
+        c = sa
+        fa = fb
+        fb = fc
+        fc = fa
     end if
 
-    tol = 2.0D+00 * machep * ABS ( sb ) + t
-    m = 0.5D+00 * ( c - sb )
+    tol = 2.0E0_wp * machep * abs ( sb ) + t
+    m = 0.5E0_wp * ( c - sb )
 
-    if ( ABS ( m ) <= tol .or. fb == 0.0D+00 ) then
-      exit
+    if ( abs ( m ) <= tol .or. fb == 0.0E0_wp ) then
+        exit
     end if
 
-    if ( ABS ( e ) < tol .or. ABS ( fa ) <= ABS ( fb ) ) then
-
-      e = m
-      d = e
-
-    else
-
-      s = fb / fa
-
-      if ( sa == c ) then
-
-        p = 2.0D+00 * m * s
-        q = 1.0D+00 - s
-
-      else
-
-        q = fa / fc
-        r = fb / fc
-        p = s * ( 2.0D+00 * m * a * ( q - r ) - ( sb - sa ) * ( r - 1.0D+00 ) )
-        q = ( q - 1.0D+00 ) * ( r - 1.0D+00 ) * ( s - 1.0D+00 )
-
-      end if
-
-      if ( 0.0D+00 < p ) then
-        q = - q
-      else
-        p = - p
-      end if
-
-      s = e
-      e = d
-
-      if ( 2.0D+00 * p < 3.0D+00 * m * q - ABS ( tol * q ) .and. &
-        p < ABS ( 0.5D+00 * s * q ) ) then
-        d = p / q
-      else
+    if ( abs ( e ) < tol .or. abs ( fa ) <= abs ( fb ) ) then
         e = m
         d = e
-      end if
+    else
+        s = fb / fa
+        if ( sa == c ) then
+            p = 2.0E0_wp * m * s
+            q = 1.0E0_wp - s
+        else
+            q = fa / fc
+            r = fb / fc
+            p = s * ( 2.0E0_wp * m * a * ( q - r ) - ( sb - sa ) * ( r - 1.0E0_wp ) )
+            q = ( q - 1.0E0_wp ) * ( r - 1.0E0_wp ) * ( s - 1.0E0_wp )
+        end if
+
+        if ( 0.0E0_wp < p ) then
+            q = - q
+        else
+            p = - p
+        end if
+
+        s = e
+        e = d
+
+        if ( 2.0E0_wp * p < 3.0E0_wp * m * q - abs ( tol * q ) .and. &
+            p < abs ( 0.5E0_wp * s * q ) ) then
+            d = p / q
+        else
+            e = m
+            d = e
+        end if
 
     end if
 
     sa = sb
     fa = fb
 
-    if ( tol < ABS ( d ) ) then
-      sb = sb + d
-    else if ( 0.0D+00 < m ) then
-      sb = sb + tol
+    if ( tol < abs ( d ) ) then
+        sb = sb + d
+    else if ( 0.0E0_wp < m ) then
+        sb = sb + tol
     else
-      sb = sb - tol
+        sb = sb - tol
     end if
 
     fb = f ( sb )
 
-    if ( ( 0.0D+00 < fb .and. 0.0D+00 < fc ) .or. &
-         ( fb <= 0.0D+00 .and. fc <= 0.0D+00 ) ) then
-      c = sa
-      fc = fa
-      e = sb - sa
-      d = e
+    if ( ( 0.0E0_wp < fb .and. 0.0E0_wp < fc ) .or. &
+        ( fb <= 0.0E0_wp .and. fc <= 0.0E0_wp ) ) then
+        c = sa
+        fc = fa
+        e = sb - sa
+        d = e
     end if
+enddo
 
-  enddo
+brentzero = sb
 
-  brentzero = sb
-
-  return
+return
 end
 
 
@@ -1057,14 +1058,14 @@ subroutine zero_rc ( a, b, t, arg, status, value )
 !    one value C between A and B for which F(C) = 0.
 !
 !    The location of the zero is determined to within an accuracy
-!    of 6 * MACHEPS * ABS ( C ) + 2 * T.
+!    of 6 * MACHEPS * abs ( C ) + 2 * T.
 !
-!    The routine is a revised version of the Brent zero finder 
+!    The routine is a revised version of the Brent zero finder
 !    algorithm, using reverse communication.
 !
 !  Licensing:
 !
-!    This code is distributed under the GNU LGPL license. 
+!    This code is distributed under the GNU LGPL license.
 !
 !  Modified:
 !
@@ -1084,54 +1085,56 @@ subroutine zero_rc ( a, b, t, arg, status, value )
 !
 !  Parameters:
 !
-!    Input, real ( kind = 8 ) A, B, the endpoints of the change of sign interval.
+!    Input, real(wp) A, B, the endpoints of the change of sign interval.
 !
-!    Input, real ( kind = 8 ) T, a positive error tolerance.
+!    Input, real(wp) T, a positive error tolerance.
 !
-!    Output, real ( kind = 8 ) ARG, the currently considered point.  The user
+!    Output, real(wp) ARG, the currently considered point.  The user
 !    does not need to initialize this value.  On return with STATUS positive,
 !    the user is requested to evaluate the function at ARG, and return
 !    the value in VALUE.  On return with STATUS zero, ARG is the routine's
 !    estimate for the function's zero.
 !
-!    Input/output, integer ( kind = 4 ) STATUS, used to communicate between 
-!    the user and the routine.  The user only sets STATUS to zero on the first 
+!    Input/output, integer STATUS, used to communicate between
+!    the user and the routine.  The user only sets STATUS to zero on the first
 !    call, to indicate that this is a startup call.  The routine returns STATUS
 !    positive to request that the function be evaluated at ARG, or returns
 !    STATUS as 0, to indicate that the iteration is complete and that
 !    ARG is the estimated zero
 !
-!    Input, real ( kind = 8 ) VALUE, the function value at ARG, as requested
+!    Input, real(wp) VALUE, the function value at ARG, as requested
 !    by the routine on the previous call.
 !
-  implicit none
+use Mod_kind_param, only : wp
 
-  real    ( kind = 8 ) a
-  real    ( kind = 8 ) arg
-  real    ( kind = 8 ) b
-  real    ( kind = 8 ), save :: c
-  real    ( kind = 8 ), save :: d
-  real    ( kind = 8 ), save :: e
-  real    ( kind = 8 ), save :: fa
-  real    ( kind = 8 ), save :: fb
-  real    ( kind = 8 ), save :: fc
-  real    ( kind = 8 ) m
-  real    ( kind = 8 ), save :: machep
-  real    ( kind = 8 ) p
-  real    ( kind = 8 ) q
-  real    ( kind = 8 ) r
-  real    ( kind = 8 ) s
-  real    ( kind = 8 ), save :: sa
-  real    ( kind = 8 ), save :: sb
-  integer ( kind = 4 ) status
-  real    ( kind = 8 ) t
-  real    ( kind = 8 ) tol
-  real    ( kind = 8 ) value
+implicit none
+
+real(wp) a
+real(wp) arg
+real(wp) b
+real(wp), save :: c
+real(wp), save :: d
+real(wp), save :: e
+real(wp), save :: fa
+real(wp), save :: fb
+real(wp), save :: fc
+real(wp) m
+real(wp), save :: machep
+real(wp) p
+real(wp) q
+real(wp) r
+real(wp) s
+real(wp), save :: sa
+real(wp), save :: sb
+integer status
+real(wp) t
+real(wp) tol
+real(wp) value
 !
 !  Input STATUS = 0.
 !  Initialize, request F(A).
 !
-  if ( status == 0 ) then
+if ( status == 0 ) then
 
     machep = epsilon ( a )
 
@@ -1143,50 +1146,50 @@ subroutine zero_rc ( a, b, t, arg, status, value )
     status = 1
     arg = a
     return
-!
-!  Input STATUS = 1.
-!  Receive F(A), request F(B).
-!
-  else if ( status == 1 ) then
+    !
+    !  Input STATUS = 1.
+    !  Receive F(A), request F(B).
+    !
+else if ( status == 1 ) then
 
     fa = value
 
     status = 2
     arg = sb
     return
-!
-!  Input STATUS = 2
-!  Receive F(B).
-!
-  else if ( status == 2 ) then
+    !
+    !  Input STATUS = 2
+    !  Receive F(B).
+    !
+else if ( status == 2 ) then
 
     fb = value
 
-    if ( 0.0D+00 < fa * fb ) then
-      status = -1
-      return
+    if ( 0.0E0_wp < fa * fb ) then
+        status = -1
+        return
     end if
 
     c = sa
     fc = fa
 
-  else
+else
 
     fb = value
 
-    if ( ( 0.0D+00 < fb .and. 0.0D+00 < fc ) .or. &
-         ( fb <= 0.0D+00 .and. fc <= 0.0D+00 ) ) then
-      c = sa
-      fc = fa
-      e = sb - sa
-      d = e
+    if ( ( 0.0E0_wp < fb .and. 0.0E0_wp < fc ) .or. &
+        ( fb <= 0.0E0_wp .and. fc <= 0.0E0_wp ) ) then
+        c = sa
+        fc = fa
+        e = sb - sa
+        d = e
     end if
 
-  end if
+end if
 !
 !  Compute the next point at which a function value is requested.
 !
-  if ( ABS ( fc ) < ABS ( fb ) ) then
+if ( abs ( fc ) < abs ( fb ) ) then
 
     sa = sb
     sb = c
@@ -1195,72 +1198,73 @@ subroutine zero_rc ( a, b, t, arg, status, value )
     fb = fc
     fc = fa
 
-  end if
+end if
 
-  tol = 2.0D+00 * machep * ABS ( sb ) + t
-  m = 0.5D+00 * ( c - sb )
+tol = 2.0E0_wp * machep * abs ( sb ) + t
+m = 0.5E0_wp * ( c - sb )
 
-  if ( ABS ( m ) <= tol .or. fb == 0.0D+00 ) then
+if ( abs ( m ) <= tol .or. fb == 0.0E0_wp ) then
     status = 0
     arg = sb
     return
-  end if
+end if
 
-  if ( ABS ( e ) < tol .or. ABS ( fa ) <= ABS ( fb ) ) then
+if ( abs ( e ) < tol .or. abs ( fa ) <= abs ( fb ) ) then
 
     e = m
     d = e
 
-  else
+else
 
     s = fb / fa
 
     if ( sa == c ) then
 
-      p = 2.0D+00 * m * s
-      q = 1.0D+00 - s
+        p = 2.0E0_wp * m * s
+        q = 1.0E0_wp - s
 
     else
 
-      q = fa / fc
-      r = fb / fc
-      p = s * ( 2.0D+00 * m * a * ( q - r ) - ( sb - sa ) * ( r - 1.0D+00 ) )
-      q = ( q - 1.0D+00 ) * ( r - 1.0D+00 ) * ( s - 1.0D+00 )
+        q = fa / fc
+        r = fb / fc
+        p = s * ( 2.0E0_wp * m * a * ( q - r ) - ( sb - sa ) * ( r - 1.0E0_wp ) )
+        q = ( q - 1.0E0_wp ) * ( r - 1.0E0_wp ) * ( s - 1.0E0_wp )
 
     end if
 
-    if ( 0.0D+00 < p ) then
-      q = - q
+    if ( 0.0E0_wp < p ) then
+        q = - q
     else
-      p = - p
+        p = - p
     end if
 
     s = e
     e = d
 
-    if ( 2.0D+00 * p < 3.0D+00 * m * q - ABS ( tol * q ) .and. &
-      p < ABS ( 0.5D+00 * s * q ) ) then
-      d = p / q
+    if ( 2.0E0_wp * p < 3.0E0_wp * m * q - abs ( tol * q ) .and. &
+        p < abs ( 0.5E0_wp * s * q ) ) then
+        d = p / q
     else
-      e = m
-      d = e
+        e = m
+        d = e
     end if
 
-  end if
+end if
 
-  sa = sb
-  fa = fb
+sa = sb
+fa = fb
 
-  if ( tol < ABS ( d ) ) then
+if ( tol < abs ( d ) ) then
     sb = sb + d
-  else if ( 0.0D+00 < m ) then
+else if ( 0.0E0_wp < m ) then
     sb = sb + tol
-  else
+else
     sb = sb - tol
-  end if
+end if
 
-  arg = sb
-  status = status + 1
+arg = sb
+status = status + 1
 
-  return
+return
 end
+    

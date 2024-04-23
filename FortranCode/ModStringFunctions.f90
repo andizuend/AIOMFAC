@@ -1,14 +1,14 @@
 ! -----------------------------------------------
-MODULE ModStringFunctions   ! by David Frank  dave_frank@hotmail.com
+module ModStringFunctions   ! by David Frank  dave_frank@hotmail.com
                             ! http://home.earthlink.net/~dave_gemini/strings.f90
-                            ! with a few minor modifications (PURE functions, INTENT(IN),...) by Andi Zuend (McGill U.)
-IMPLICIT NONE   
+                            ! with a few minor modifications (pure functions, intent(in),...) by Andi Zuend (McGill U.)
+implicit none   
 
-PUBLIC
+public
 ! Copy (generic) char array to string or string to char array
-! Clen           returns same as LEN      unless last non-blank char = null
-! Clen_trim      returns same as LEN_TRIM    "              "
-! Ctrim          returns same as TRIM        "              "
+! Clen           returns same as len      unless last non-blank char = null
+! Clen_trim      returns same as len_trim    "              "
+! Ctrim          returns same as trim        "              "
 ! Count_Items    in string that are blank or comma separated
 ! Reduce_Blanks  in string to 1 blank between items, last char not blank
 ! Replace_Text   in all occurances in string with replacement string
@@ -19,193 +19,193 @@ PUBLIC
 ! Replace_Text_Advance ::   replace a string with replacement text, then advance, such that the 
 !                           replacement text itself is not recursively processed. (added by A. Zuend)
 
-INTERFACE Copy    ! generic
-    MODULE PROCEDURE copy_a2s, copy_s2a
-END INTERFACE Copy
+interface Copy    ! generic
+    module procedure copy_a2s, copy_s2a
+end interface Copy
 
-    CONTAINS
+    contains
     
     ! ------------------------
-    PURE FUNCTION Copy_a2s(a)  RESULT (s)    ! copy char array to string
-    CHARACTER,INTENT(IN) :: a(:)
-    CHARACTER(SIZE(a)) :: s
-    INTEGER(4) :: i
-    DO i = 1,SIZE(a)
+    pure function Copy_a2s(a)  result (s)    ! copy char array to string
+    character,intent(in) :: a(:)
+    character(size(a)) :: s
+    integer :: i
+    do i = 1,size(a)
         s(i:i) = a(i)
-    END DO
-    END FUNCTION Copy_a2s
+    end do
+    end function Copy_a2s
 
     ! ------------------------
-    PURE FUNCTION Copy_s2a(s)  RESULT (a)   ! copy s(1:Clen(s)) to char array
-    CHARACTER(*),INTENT(IN) :: s
-    CHARACTER :: a(LEN(s))
-    INTEGER(4) :: i
-    DO i = 1,LEN(s)
+    pure function Copy_s2a(s)  result (a)   ! copy s(1:Clen(s)) to char array
+    character(*),intent(in) :: s
+    character :: a(len(s))
+    integer :: i
+    do i = 1,len(s)
         a(i) = s(i:i)
-    END DO
-    END FUNCTION Copy_s2a
+    end do
+    end function Copy_s2a
 
     ! ------------------------
-    PURE INTEGER(4) FUNCTION Clen(s)    ! returns same result as LEN unless:
-    CHARACTER(*),INTENT(IN) :: s        ! last non-blank char is null
-    INTEGER(4) :: i
-    Clen = LEN(s)
-    i = LEN_TRIM(s)
-    IF (s(i:i) == CHAR(0)) Clen = i-1  ! len of C string
-    END FUNCTION Clen
+    pure integer function Clen(s)    ! returns same result as len unless:
+    character(*),intent(in) :: s        ! last non-blank char is null
+    integer :: i
+    Clen = len(s)
+    i = len_trim(s)
+    if (s(i:i) == CHAR(0)) Clen = i-1  ! len of C string
+    end function Clen
 
     ! ------------------------
-    PURE INTEGER(4) FUNCTION Clen_trim(s)   ! returns same result as LEN_TRIM unless:
-    CHARACTER(*),INTENT(IN) :: s            ! last char non-blank is null, if true:
-    INTEGER(4) :: i                         ! then len of C string is returned, note:
+    pure integer function Clen_trim(s)   ! returns same result as len_trim unless:
+    character(*),intent(in) :: s            ! last char non-blank is null, if true:
+    integer :: i                         ! then len of C string is returned, note:
     ! Ctrim is only user of this function
-    i = LEN_TRIM(s) ; Clen_trim = i
-    IF (s(i:i) == CHAR(0)) Clen_trim = Clen(s)   ! len of C string
-    END FUNCTION Clen_trim
+    i = len_trim(s) ; Clen_trim = i
+    if (s(i:i) == CHAR(0)) Clen_trim = Clen(s)   ! len of C string
+    end function Clen_trim
 
     ! ----------------
-    PURE FUNCTION Ctrim(s1)  RESULT(s2)     ! returns same result as TRIM unless:
-    CHARACTER(*),INTENT(IN)  :: s1     ! last non-blank char is null in which
-    CHARACTER(Clen_trim(s1)) :: s2     ! case trailing blanks prior to null
+    pure function Ctrim(s1)  result(s2)     ! returns same result as trim unless:
+    character(*),intent(in)  :: s1     ! last non-blank char is null in which
+    character(Clen_trim(s1)) :: s2     ! case trailing blanks prior to null
     s2 = s1                            ! are output
-    END FUNCTION Ctrim
+    end function Ctrim
 
     ! --------------------
-    PURE INTEGER(4) FUNCTION Count_Items(s1)  ! in string or C string that are blank or comma separated
-    CHARACTER(*),INTENT(IN) :: s1
-    CHARACTER(Clen(s1)) :: s
-    INTEGER(4) :: i, k
+    pure integer function Count_Items(s1)  ! in string or C string that are blank or comma separated
+    character(*),intent(in) :: s1
+    character(Clen(s1)) :: s
+    integer :: i, k
 
     s = s1                            ! remove possible last char null
-    k = 0  ; IF (s /= ' ') k = 1      ! string has at least 1 item
-    DO i = 1,LEN_TRIM(s)-1
-        IF (s(i:i) /= ' '.AND.s(i:i) /= ',' &
+    k = 0  ; if (s /= ' ') k = 1      ! string has at least 1 item
+    do i = 1,len_trim(s)-1
+        if (s(i:i) /= ' '.AND.s(i:i) /= ',' &
             .AND. s(i+1:i+1) == ' '.OR. s(i+1:i+1) == ',') k = k+1
-    END DO
+    end do
     Count_Items = k
-    END FUNCTION Count_Items
+    end function Count_Items
 
     ! --------------------
-    PURE FUNCTION Reduce_Blanks(s)  RESULT (outs)
-    CHARACTER(*),INTENT(IN)      :: s
-    CHARACTER(LEN_TRIM(s)) :: outs
-    INTEGER(4)           :: i, k, n
+    pure function Reduce_Blanks(s)  result (outs)
+    character(*),intent(in)      :: s
+    character(len_trim(s)) :: outs
+    integer           :: i, k, n
 
-    n = 0  ; k = LEN_TRIM(s)          ! k=index last non-blank (may be null)
-    DO i = 1,k-1                      ! dont process last char yet
+    n = 0  ; k = len_trim(s)          ! k=index last non-blank (may be null)
+    do i = 1,k-1                      ! dont process last char yet
         n = n+1 ; outs(n:n) = s(i:i)
-        IF (s(i:i+1) == '  ') n = n-1  ! backup/discard consecutive output blank
-    END DO
+        if (s(i:i+1) == '  ') n = n-1  ! backup/discard consecutive output blank
+    end do
     n = n+1  ; outs(n:n)  = s(k:k)    ! last non-blank char output (may be null)
-    IF (n < k) outs(n+1:) = ' '       ! pad trailing blanks
-    END FUNCTION Reduce_Blanks
+    if (n < k) outs(n+1:) = ' '       ! pad trailing blanks
+    end function Reduce_Blanks
 
     ! ------------------
-    PURE FUNCTION Replace_Text (s, text, rep)  RESULT(outs)
-    CHARACTER(*),INTENT(IN) :: s, text, rep
-    CHARACTER(LEN(s)+100)   :: outs     ! provide outs with extra 100 char len
-    INTEGER(4)              :: i, nt, nr
+    pure function Replace_Text (s, text, rep)  result(outs)
+    character(*),intent(in) :: s, text, rep
+    character(len(s)+100)   :: outs     ! provide outs with extra 100 char len
+    integer              :: i, nt, nr
     !..........................
-    outs = s ; nt = LEN_TRIM(text) ; nr = LEN_TRIM(rep)
-    DO
-        i = INDEX(outs, text(:nt)) 
-        IF (i == 0) EXIT
+    outs = s ; nt = len_trim(text) ; nr = len_trim(rep)
+    do
+        i = index(outs, text(:nt)) 
+        if (i == 0) exit
         outs = outs(:i-1) // rep(:nr) // outs(i+nt:)
-    END DO
-    END FUNCTION Replace_Text
+    end do
+    end function Replace_Text
     
     
     ! ------------------
-    PURE FUNCTION Replace_Text_Advance(s, text, rep)  RESULT(outs)
-    CHARACTER(*),INTENT(IN) :: s, text, rep
-    CHARACTER(LEN(s)+100)   :: outs     ! provide outs with extra 100 char len
-    INTEGER(4)              :: i, nt, nr, k
+    pure function Replace_Text_Advance(s, text, rep)  result(outs)
+    character(*),intent(in) :: s, text, rep
+    character(len(s)+100)   :: outs     ! provide outs with extra 100 char len
+    integer              :: i, nt, nr, k
     !..........................
     outs = s
-    nt = LEN_TRIM(text) 
-    nr = LEN_TRIM(rep)
+    nt = len_trim(text) 
+    nr = len_trim(rep)
     k = 1
-    DO
-        i = k -1 + INDEX( outs(k:), text(:nt) ) 
-        IF (i == k -1) THEN
-            EXIT
-        ELSE
+    do
+        i = k -1 + index( outs(k:), text(:nt) ) 
+        if (i == k -1) then
+            exit
+        else
             outs = outs(:i-1)//rep(:nr)//outs(i+nt:)
             k = i + nr
-        ENDIF
-    END DO
+        endif
+    end do
     
-    END FUNCTION Replace_Text_Advance
+    end function Replace_Text_Advance
 
     
     ! ---------------------------------
-    PURE FUNCTION Spack (s,ex)  RESULT (outs)
-    CHARACTER(*),INTENT(IN) :: s,ex
-    CHARACTER(LEN(s)) :: outs
-    CHARACTER :: aex(LEN(ex))   ! array of ex chars to extract
-    INTEGER(4)   :: i, n
+    pure function Spack (s,ex)  result (outs)
+    character(*),intent(in) :: s,ex
+    character(len(s)) :: outs
+    character :: aex(len(ex))   ! array of ex chars to extract
+    integer   :: i, n
 
     n = 0  ;  aex = Copy(ex)
-    DO i = 1,LEN(s)
-        IF (.NOT.ANY(s(i:i) == aex)) CYCLE   ! dont pack char
+    do i = 1,len(s)
+        if (.NOT.any(s(i:i) == aex)) cycle   ! dont pack char
         n = n+1 ; outs(n:n) = s(i:i)
-    END DO
+    end do
     outs(n+1:) = ' '     ! pad with trailing blanks
-    END FUNCTION Spack
+    end function Spack
 
     ! --------------------
-    PURE INTEGER(4) FUNCTION Tally (s,text)
-    CHARACTER(*),INTENT(IN) :: s, text
-    INTEGER(4) :: i, nt
+    pure integer function Tally (s,text)
+    character(*),intent(in) :: s, text
+    integer :: i, nt
 
-    Tally = 0 ; nt = LEN_TRIM(text)
-    DO i = 1,LEN(s)-nt+1
-        IF (s(i:i+nt-1) == text(:nt)) Tally = Tally+1
-    END DO
-    END FUNCTION Tally
-
-    ! ---------------------------------
-    PURE FUNCTION Translate(s1,codes)  RESULT (s2)
-    CHARACTER(*),INTENT(IN) :: s1, codes(2)
-    CHARACTER(LEN(s1)) :: s2
-    CHARACTER          :: ch
-    INTEGER(4)            :: i, j
-
-    DO i = 1,LEN(s1)
-        ch = s1(i:i)
-        j = INDEX(codes(1),ch) ; IF (j > 0) ch = codes(2)(j:j)
-        s2(i:i) = ch
-    END DO
-    END FUNCTION Translate
+    Tally = 0 ; nt = len_trim(text)
+    do i = 1,len(s)-nt+1
+        if (s(i:i+nt-1) == text(:nt)) Tally = Tally+1
+    end do
+    end function Tally
 
     ! ---------------------------------
-    PURE FUNCTION Upper(s1)  RESULT (s2)
-    CHARACTER(*),INTENT(IN) :: s1
-    CHARACTER(LEN(s1)) :: s2
-    CHARACTER          :: ch
-    INTEGER(4),PARAMETER  :: DUC = ICHAR('A') - ICHAR('a')
-    INTEGER(4)            :: i
+    pure function Translate(s1,codes)  result (s2)
+    character(*),intent(in) :: s1, codes(2)
+    character(len(s1)) :: s2
+    character          :: ch
+    integer            :: i, j
 
-    DO i = 1,LEN(s1)
+    do i = 1,len(s1)
         ch = s1(i:i)
-        IF (ch >= 'a'.AND.ch <= 'z') ch = CHAR(ICHAR(ch)+DUC)
+        j = index(codes(1),ch) ; if (j > 0) ch = codes(2)(j:j)
         s2(i:i) = ch
-    END DO
-    END FUNCTION Upper
+    end do
+    end function Translate
 
     ! ---------------------------------
-    PURE FUNCTION Lower(s1)  RESULT (s2)
-    CHARACTER(*),INTENT(IN) :: s1
-    CHARACTER(LEN(s1)) :: s2
-    CHARACTER          :: ch
-    INTEGER(4),PARAMETER  :: DUC = ICHAR('A') - ICHAR('a')
-    INTEGER(4)            :: i
+    pure function Upper(s1)  result (s2)
+    character(*),intent(in) :: s1
+    character(len(s1)) :: s2
+    character          :: ch
+    integer,parameter  :: DUC = ICHAR('A') - ICHAR('a')
+    integer            :: i
 
-    DO i = 1,LEN(s1)
+    do i = 1,len(s1)
         ch = s1(i:i)
-        IF (ch >= 'A'.AND.ch <= 'Z') ch = CHAR(ICHAR(ch)-DUC)
+        if (ch >= 'a'.AND.ch <= 'z') ch = CHAR(ICHAR(ch)+DUC)
         s2(i:i) = ch
-    END DO
-    END FUNCTION Lower
+    end do
+    end function Upper
 
-END MODULE ModStringFunctions
+    ! ---------------------------------
+    pure function Lower(s1)  result (s2)
+    character(*),intent(in) :: s1
+    character(len(s1)) :: s2
+    character          :: ch
+    integer,parameter  :: DUC = ICHAR('A') - ICHAR('a')
+    integer            :: i
+
+    do i = 1,len(s1)
+        ch = s1(i:i)
+        if (ch >= 'A'.AND.ch <= 'Z') ch = CHAR(ICHAR(ch)-DUC)
+        s2(i:i) = ch
+    end do
+    end function Lower
+
+end module ModStringFunctions

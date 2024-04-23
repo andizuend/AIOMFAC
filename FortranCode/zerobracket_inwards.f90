@@ -11,83 +11,85 @@
 
 ! "fx" is here a user-provided external object (an external function fx(x) with input arguments x and return function value fx)
 
-SUBROUTINE zerobracket_inwards(fx, xlower, xupper, ntry, geomscal, nb, xblow, xbup, success) 
+subroutine zerobracket_inwards(fx, xlower, xupper, ntry, geomscal, nb, xblow, xbup, success) 
 
-IMPLICIT NONE
+use Mod_kind_param, only : wp
+
+implicit none
 !..
 !interface variables:
-REAL(8),EXTERNAL :: fx !user-provided univariate external function fx(x)
-REAL(8),INTENT(INOUT) :: xlower, xupper !user supplied lower and upper bounds for the bracketing search (adjust to huge (neg. / pos.) values if no limits are needed)
-INTEGER(4),INTENT(IN) :: ntry  !number of interval subdivisions (an input value) (= max. number of roots found this way)
-LOGICAL(4),INTENT(IN) :: geomscal !set to true to use a geometric mean for scaling for chopping the interval between xlower and xupper.
-INTEGER(4),INTENT(OUT) :: nb !number of root brackets found
-REAL(8),DIMENSION(1:ntry+1),INTENT(OUT) :: xblow, xbup !arrays storing the bounds for the nb roots
-LOGICAL(4),INTENT(OUT) :: success
+real(wp),external :: fx                                     !user-provided univariate external function fx(x)
+real(wp),intent(inout) :: xlower, xupper                    !user supplied lower and upper bounds for the bracketing search (adjust to huge (neg. / pos.) values if no limits are needed)
+integer,intent(in) :: ntry                                  !number of interval subdivisions (an input value) (= max. number of roots found this way)
+logical,intent(in) :: geomscal                              !set to true to use a geometric mean for scaling for chopping the interval between xlower and xupper.
+integer,intent(out) :: nb                                   !number of root brackets found
+real(wp),dimension(1:ntry+1),intent(out) :: xblow, xbup     !arrays storing the bounds for the nb roots
+logical,intent(out) :: success
 !..
 !local variables:
-INTEGER(4) :: i
-REAL(8),DIMENSION(1:ntry+1) :: fval, x
-REAL(8),PARAMETER :: DEPS = 2.0D0*EPSILON(1.0D0)
-REAL(8) :: dx, xtemp
+integer :: i
+real(wp),dimension(1:ntry+1) :: fval, x
+real(wp),parameter :: deps = 2.0_wp*epsilon(1.0_wp), sqrt_huge = sqrt(huge(1.0_wp))
+real(wp) :: dx, xtemp
 !...............................
 
-IF (ntry > 0) THEN
+if (ntry > 0) then
     !check the overall intervall limits:
-    IF (ABS(xlower-xupper) < DEPS*MIN(ABS(xupper),1.0D0)) THEN
+    if (abs(xlower-xupper) < deps*min(abs(xupper), 1.0_wp)) then
         !!$OMP CRITICAL
-        !WRITE(*,*) "Interval in zerobracket_inwards is chosen too small (xlower == xupper)."
-        !!$OMP END CRITICAL
+        !write(*,*) "Interval in zerobracket_inwards is chosen too small (xlower == xupper)."
+        !!$OMP end CRITICAL
         success = .false.
-        RETURN
-    ELSE IF (xlower > xupper) THEN !switch bounds
+        return
+    else if (xlower > xupper) then !switch bounds
         xtemp = xlower
         xlower = xupper
         xupper = xtemp
-    ENDIF
+    endif
     !initialize:
-    xblow = xlower-ABS(xlower)-99999.9D0
-    xbup =  xlower-ABS(xlower)-99999.9D0
-    fval = 0.0D0
-    IF (geomscal) THEN !use logarithmic (base-10) interval chopping
-        IF (xlower < 0.0D0 .AND. xupper > 0.0D0) THEN !cannot use geometric scaling
-            dx = (xupper-xlower)/REAL(ntry, KIND=8) !step in interval search
-        ENDIF
-    ELSE
-        dx = (xupper-xlower)/REAL(ntry, KIND=8) !step in interval search
-    ENDIF
+    xblow = xlower-abs(xlower)-99999.9_wp
+    xbup =  xlower-abs(xlower)-99999.9_wp
+    fval = 0.0_wp
+    if (geomscal) then !use logarithmic (base-10) interval chopping
+        if (xlower < 0.0_wp .AND. xupper > 0.0_wp) then !cannot use geometric scaling
+            dx = (xupper-xlower)/real(ntry, kind=wp) !step in interval search
+        endif
+    else
+        dx = (xupper-xlower)/real(ntry, kind=wp) !step in interval search
+    endif
     x(1) = xlower
-    DO i = 2,ntry
-        IF (geomscal) THEN !use geometric mean for scaling
-            x(i) = SQRT(x(i-1)*xupper)
-        ELSE !use linear step
+    do i = 2,ntry
+        if (geomscal) then !use geometric mean for scaling
+            x(i) = sqrt(x(i-1)*xupper)
+        else !use linear step
             x(i) = x(i-1)+dx
-        ENDIF
-    ENDDO
+        endif
+    enddo
     x(ntry+1) = xupper
     fval(1) = fx(x(1))
     nb = 0
-    DO i = 2,ntry+1
-        IF (x(i) > xupper+DEPS) THEN
-            EXIT
-        ENDIF
+    do i = 2,ntry+1
+        if (x(i) > xupper+deps) then
+            exit
+        endif
         fval(i) = fx(x(i)) !evaluate external function fx at point x(i)
         !check for numerical issues (overflow potential):
-        IF (ABS(fval(i)) > 1.0D100) THEN
-            fval(i) = SIGN(1.0D100, fval(i))
-        ENDIF
-        IF (fval(i)*fval(i-1) < 0.0D0) THEN  ! => zero or pole is bracketed
+        if (abs(fval(i)) > sqrt_huge ) then
+            fval(i) = sign(sqrt_huge , fval(i))
+        endif
+        if (fval(i)*fval(i-1) < 0.0_wp) then  ! => zero or pole is bracketed
             nb = nb+1 !count zeros
             xblow(nb) = x(i-1)
             xbup(nb) = x(i)
-        ENDIF
-    ENDDO !i
-    IF (nb > 0) THEN
+        endif
+    enddo !i
+    if (nb > 0) then
         success = .true.
-    ELSE
+    else
         success = .false.
-    ENDIF
-ELSE
+    endif
+else
     success = .false.
-ENDIF
+endif
 
-END SUBROUTINE zerobracket_inwards
+end subroutine zerobracket_inwards

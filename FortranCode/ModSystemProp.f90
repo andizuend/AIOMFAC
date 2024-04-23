@@ -27,7 +27,7 @@
 !*                                                                                      *
 !*   :: List of subroutines and functions contained in this module:                     *
 !*   --------------------------------------------------------------                     *
-!*   -  SUBMODULE SubModDefSystem : SetSystem, definemixtures, defElectrolytes,         *
+!*   -  submodule SubModDefSystem : SetSystem, definemixtures, defElectrolytes,         *
 !*                                  SetMolarMass;                                       *
 !*                                                                                      *
 !****************************************************************************************
@@ -44,68 +44,72 @@
 !In ITAB, electrolytes are taken as components (but with differen ions as subgroups).
 !ITABsr: similar to ITAB, yet electrolytes (salts) are divided into ions: each ion is listed as a separate species.
     
-MODULE ModSystemProp
+module ModSystemProp
 
-IMPLICIT NONE
+use Mod_kind_param, only : wp
 
-INTEGER(4),PUBLIC,PARAMETER :: Nmaingroups = 76     !total number of SR (UNIFAC) main groups
-INTEGER(4),PUBLIC,PARAMETER :: topsubno = 264       !index no. of the last subgroup considered (top boundary of ITAB subgroups)
+implicit none
+
+integer,public,parameter :: Nmaingroups = 76     !total number of SR (UNIFAC) main groups
+integer,public,parameter :: topsubno = 265       !index no. of the last subgroup considered (top boundary of ITAB subgroups)
 !--
-INTEGER(4),PUBLIC :: nd, NGS, NGN, NGI, NG, NKNpNGS, nindcomp, nneutral, nelectrol, ninput, errorflagmix
-INTEGER(4),PUBLIC :: Nanion, Ncation                !Nanion = number of anions, Ncation = number of cations
-INTEGER(4),PUBLIC :: idH, idHSO4, idSO4, idHCO3, idCO3, idOH, idCO2, idCa   !the index locations of these ions in the cation and anion arrays (e.g., in SMC, and SMA); idH = CatNr(205), idHSO4 = AnNr(248), idSO4 = AnNr(261)
-INTEGER(4),DIMENSION(:),ALLOCATABLE,PUBLIC :: CompN
-INTEGER(4),DIMENSION(:,:),ALLOCATABLE,PUBLIC :: ElectComps, ElectNues
-INTEGER(4),DIMENSION(:),ALLOCATABLE,PUBLIC :: Ication, Ianion, ElectSubs, SolvSubs, AllSubs
-INTEGER(4),DIMENSION(:),ALLOCATABLE,PUBLIC :: Imaingroup, maingrindexofsubgr
-INTEGER(4),DIMENSION(201:topsubno),PUBLIC :: CatNr, AnNr    !CatNr, AnNr: saves present mixture index entry of a certain ion related to Ication or Ianion list (whether it is cation 1, 2, 3,...).
-INTEGER(4),DIMENSION(:,:),ALLOCATABLE,PUBLIC :: ITAB, ITABsr, ITABMG, ITAB_dimflip
+integer,public :: nd, NGS, NGN, NGI, NG, NKNpNGS, nindcomp, nneutral, nelectrol, ninput, errorflagmix
+integer,public :: Nanion, Ncation                !Nanion = number of anions, Ncation = number of cations
+integer,public :: idH, idHSO4, idSO4, idHCO3, idCO3, idOH, idCO2, idCa !the index locations of these ions in the cation and anion arrays (e.g., in SMC, and SMA); idH = CatNr(205), idHSO4 = AnNr(248), idSO4 = AnNr(261)
+integer,dimension(:),allocatable,public :: CompN
+integer,dimension(:,:),allocatable,public :: ElectComps, ElectNues
+integer,dimension(:),allocatable,public :: Ication, Ianion, ElectSubs, SolvSubs, AllSubs
+integer,dimension(:),allocatable,public :: Imaingroup, maingrindexofsubgr
+integer,dimension(201:topsubno),public :: CatNr, AnNr    !CatNr, AnNr: saves present mixture index entry of a certain ion related to Ication or Ianion list (whether it is cation 1, 2, 3,...).
+integer,dimension(:,:),allocatable,public :: ITAB, ITABsr, ITABMG, ITAB_dimflip
 !--
-REAL(8),PARAMETER,PUBLIC :: Rgas = 8.3144598D0              !the universal gas constant in J/(K*mol); 8.314 4598  according to NIST (2015)
-REAL(8),DIMENSION(:),ALLOCATABLE,PUBLIC :: cationZ, anionZ  !cationZ and anionZ are the integer charges of the cations and anions in current mixture ion order (as in Ication, Ianion);
-REAL(8),DIMENSION(:),ALLOCATABLE,PUBLIC :: OtoCratio, HtoCratio, ElectO2Cequiv 
-REAL(8),DIMENSION(201:240, 241:topsubno, 1:3),PUBLIC :: IAPcoeffs
-REAL(8),DIMENSION(201:240, 241:topsubno),PUBLIC :: KVLE_298K
-REAL(8),DIMENSION(:),ALLOCATABLE :: K_el, nuestoich, SubGroupMW
-REAL(8),DIMENSION(:),ALLOCATABLE :: Mmass                   !component molar mass in order of neutrals then electrolytes
+real(wp),parameter,public :: Rgas = 8.3144598_wp              !the universal gas constant in J/(K*mol); 8.314 4598  according to NIST (2015)
+real(wp),dimension(:),allocatable,public :: cationZ, anionZ  !cationZ and anionZ are the integer charges of the cations and anions in current mixture ion order (as in Ication, Ianion);
+real(wp),dimension(:),allocatable,public :: OtoCratio, HtoCratio, ElectO2Cequiv 
+real(wp),dimension(201:240, 241:topsubno, 1:3),public :: IAPcoeffs
+real(wp),dimension(201:240, 241:topsubno),public :: KVLE_298K
+real(wp),dimension(:),allocatable :: K_el, nuestoich, SubGroupMW
+real(wp),dimension(:),allocatable :: Mmass                    !component molar mass in order of neutrals then electrolytes
+real(wp) :: wtf_saved
 !--
-CHARACTER(LEN=200),DIMENSION(:),ALLOCATABLE,PUBLIC :: cpname, compname, compnameTeX  !component names in order of mixture components
-CHARACTER(LEN=16),DIMENSION(:),ALLOCATABLE,PUBLIC :: ionname, ionnameTeX
-CHARACTER(LEN=3000),DIMENSION(:),ALLOCATABLE,PUBLIC :: compsubgroups, compsubgroupsTeX, compsubgroupsHTML
+character(len=200),dimension(:),allocatable,public :: cpname, compname, compnameTeX  !component names in order of mixture components
+character(len=16),dimension(:),allocatable,public :: ionname, ionnameTeX
+character(len=3000),dimension(:),allocatable,public :: compsubgroups, compsubgroupsTeX, compsubgroupsHTML
 !--
-LOGICAL(4),PUBLIC :: bisulfsyst, calcviscosity, elpresent, frominpfile, waterpresent, solvmixrefnd
-LOGICAL(4),PUBLIC :: bicarbsyst, noCO2input
-LOGICAL(4),PUBLIC :: isPEGsystem                            !to mark a special case: systems containing a PEG polymer
-LOGICAL(4),DIMENSION(:),ALLOCATABLE,PUBLIC :: ElectVolatile
-LOGICAL(4),DIMENSION(50),PUBLIC :: errorflag_clist
+logical,public :: bisulfsyst, calcviscosity, elpresent, frominpfile, waterpresent, solvmixrefnd
+logical,public :: bicarbsyst, noCO2input
+logical,public :: incl_bisulfate = .false.
+logical,public :: isPEGsystem                            !to mark a special case: systems containing a PEG polymer
+logical,dimension(:),allocatable,public :: ElectVolatile
+logical,dimension(50),public :: errorflag_clist
 !----
 !interfaces to subroutines in submodule SubModDefSystem:
-INTERFACE
-    MODULE SUBROUTINE SetSystem(ndi, datafromfile, ninp, cpnameinp, cpsubginp)
-        INTEGER(4),INTENT(IN) :: ndi 
-        LOGICAL(4),INTENT(IN) :: datafromfile
-        INTEGER(4),INTENT(IN) :: ninp
+interface
+    module subroutine SetSystem(ndi, datafromfile, ninp, cpnameinp, cpsubginp)
+        integer,intent(in) :: ndi 
+        logical,intent(in) :: datafromfile
+        integer,intent(in) :: ninp
         !optional arguments at call:
-        CHARACTER(LEN=200),DIMENSION(ninp),INTENT(IN),  OPTIONAL :: cpnameinp
-        INTEGER(4),DIMENSION(ninp,topsubno),INTENT(IN), OPTIONAL :: cpsubginp
-    END SUBROUTINE SetSystem
+        character(len=200),dimension(ninp),intent(in),  OPTIONAL :: cpnameinp
+        integer,dimension(ninp,topsubno),intent(in), OPTIONAL :: cpsubginp
+    end subroutine SetSystem
     !--
-    MODULE SUBROUTINE definemixtures(ndi, ninputcomp, compID, cpsubg)
-        INTEGER(4),INTENT(IN) :: ndi, ninputcomp
-        INTEGER(4),DIMENSION(:),INTENT(IN) :: compID
-        INTEGER(4),DIMENSION(:,:),INTENT(IN) :: cpsubg 
-    END SUBROUTINE definemixtures
+    module subroutine definemixtures(ndi, ninputcomp, compID, cpsubg)
+        integer,intent(in) :: ndi, ninputcomp
+        integer,dimension(:),intent(in) :: compID
+        integer,dimension(:,:),intent(in) :: cpsubg 
+    end subroutine definemixtures
     !--
-    MODULE SUBROUTINE defElectrolytes(nneutral, NGS, nelectrol)
-        INTEGER(4),INTENT(IN) :: nneutral, NGS
-        INTEGER(4),INTENT(INOUT) :: nelectrol
-    END SUBROUTINE defElectrolytes
+    module subroutine defElectrolytes(nneutral, NGS, nelectrol)
+        integer,intent(in) :: nneutral, NGS
+        integer,intent(inout) :: nelectrol
+    end subroutine defElectrolytes
     !--
-    PURE MODULE SUBROUTINE SetMolarMass(MolarM)
-        real(8),DIMENSION(:),INTENT(OUT) :: MolarM
-    END SUBROUTINE SetMolarMass
+    pure module subroutine SetMolarMass(MolarM)
+        real(wp),dimension(:),intent(out) :: MolarM
+    end subroutine SetMolarMass
     !--
-END INTERFACE
+    end interface
 !....................................................................................
 
 !$OMP THREADPRIVATE(nd, nindcomp, nelectrol, nneutral, ninput, NGS, NGN, NGI, NG, NKNpNGS, Nanion,  &
@@ -114,6 +118,7 @@ END INTERFACE
     !$OMP & compnameTeX, compsubgroups, compsubgroupsTeX, compsubgroupsHTML, ionname, ionnameTeX, solvmixrefnd,  &
     !$OMP & frominpfile, bisulfsyst, waterpresent, calcviscosity, elpresent, isPEGsystem, maingrindexofsubgr,   &
     !$OMP & ElectComps, ElectNues, ElectVolatile, IAPcoeffs, KVLE_298K, K_el, SubGroupMW, ElectO2Cequiv, cationZ,  &
-    !$OMP & anionZ, errorflagmix, errorflag_clist, nuestoich, idHCO3, idCO3, idOH, idCO2, idCa, bicarbsyst, noCO2input)
-
-END MODULE ModSystemProp
+    !$OMP & anionZ, errorflagmix, errorflag_clist, nuestoich, idHCO3, idCO3, idOH, idCO2, idCa, bicarbsyst, &
+    !$OMP & noCO2input, incl_bisulfate)
+    
+end module ModSystemProp

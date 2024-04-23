@@ -20,7 +20,7 @@
 !*                                                                                      *
 !*   Some modifications of Fortran 90 code version by Andi Zuend,                       *
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
-!*   Those modifications include use of set real(kind=wp) kind instead of real(8) and   *
+!*   Those modifications include use of set real(kind=wp) kind instead of real(wp) and   *
 !*   passing of subroutine/function optional parameters to hybrd1/hybrd via a derived   *
 !*   type.                                                                              *
 !*                                                                                      *
@@ -28,16 +28,16 @@
 !**************************************************************************************** 
 module Mod_MINPACK
 
+use Mod_kind_param, only : wp
+
 implicit none
 
 private  !default
-integer,parameter :: wp = kind(1.0D0)
 
 !public module procedures (add others if needed):
 public :: hybrd1, lmdif1
 
     contains
-    
     
     !-----------------------------------------------------------
 
@@ -78,28 +78,28 @@ public :: hybrd1, lmdif1
     !normally appear.
     !
     !4. WARRANTY DISCLAIMER. THE SOFTWARE IS SUPPLIED "AS IS"
-    !WITHOUT WARRANTY OF ANY KIND. THE COPYRIGHT HOLDER, THE
+    !WITHOUT WARRANTY OF any kind. THE COPYRIGHT HOLDER, THE
     !UNITED STATES, THE UNITED STATES DEPARTMENT OF ENERGY, AND
-    !THEIR EMPLOYEES: (1) DISCLAIM ANY WARRANTIES, EXPRESS OR
-    !IMPLIED, INCLUDING BUT NOT LIMITED TO ANY IMPLIED WARRANTIES
+    !THEIR EMPLOYEES: (1) DISCLAIM any WARRANTIES, EXPRESS OR
+    !IMPLIED, INCLUDING BUT NOT LIMITED TO any IMPLIED WARRANTIES
     !OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE
-    !OR NON-INFRINGEMENT, (2) DO NOT ASSUME ANY LEGAL LIABILITY
+    !OR NON-INFRINGEMENT, (2) do NOT ASSUME any LEGAL LIABILITY
     !OR RESPONSIBILITY FOR THE ACCURACY, COMPLETENESS, OR
-    !USEFULNESS OF THE SOFTWARE, (3) DO NOT REPRESENT THAT USE OF
+    !USEFULNESS OF THE SOFTWARE, (3) do NOT REPRESENT THAT use OF
     !THE SOFTWARE WOULD NOT INFRINGE PRIVATELY OWNED RIGHTS, (4)
-    !DO NOT WARRANT THAT THE SOFTWARE WILL FUNCTION
-    !UNINTERRUPTED, THAT IT IS ERROR-FREE OR THAT ANY ERRORS WILL
+    !do NOT WARRANT THAT THE SOFTWARE WILL function
+    !UNINTERRUPTED, THAT IT IS ERROR-FREE OR THAT any ERRORS WILL
     !BE CORRECTED.
     !
     !5. LIMITATION OF LIABILITY. IN NO EVENT WILL THE COPYRIGHT
     !HOLDER, THE UNITED STATES, THE UNITED STATES DEPARTMENT OF
-    !ENERGY, OR THEIR EMPLOYEES: BE LIABLE FOR ANY INDIRECT,
+    !ENERGY, OR THEIR EMPLOYEES: BE LIABLE FOR any INDIRECT,
     !INCIDENTAL, CONSEQUENTIAL, SPECIAL OR PUNITIVE DAMAGES OF
-    !ANY KIND OR NATURE, INCLUDING BUT NOT LIMITED TO LOSS OF
-    !PROFITS OR LOSS OF DATA, FOR ANY REASON WHATSOEVER, WHETHER
+    !any kind OR NATURE, INCLUDING BUT NOT LIMITED TO LOSS OF
+    !PROFITS OR LOSS OF DATA, FOR any REASON WHATSOEVER, WHETHER
     !SUCH LIABILITY IS ASSERTED ON THE BASIS OF CONTRACT, TORT
     !(INCLUDING NEGLIGENCE OR STRICT LIABILITY), OR OTHERWISE,
-    !EVEN IF ANY OF SAID PARTIES HAS BEEN WARNED OF THE
+    !EVEN if any OF SAID PARTIES HAS BEEN WARNED OF THE
     !POSSIBILITY OF SUCH LOSS OR DAMAGES.
     
     !==========================================================================
@@ -177,10 +177,10 @@ public :: hybrd1, lmdif1
     !    Output, real(wp) :: ERR(M).  On output when MODE = 2, ERR contains
     !    measures of correctness of the respective gradients.  If there is no
     !    severe loss of significance, then if ERR(I):
-    !      = 1.0E0_wp, the I-th gradient is correct,
-    !      = 0.0E0_wp, the I-th gradient is incorrect.
-    !      > 0.5E0_wp, the I-th gradient is probably correct.
-    !      < 0.5E0_wp, the I-th gradient is probably incorrect.
+    !      = 1.0_wp, the I-th gradient is correct,
+    !      = 0.0_wp, the I-th gradient is incorrect.
+    !      > 0.5_wp, the I-th gradient is probably correct.
+    !      < 0.5_wp, the I-th gradient is probably incorrect.
     !
     implicit none
 
@@ -527,7 +527,7 @@ public :: hybrd1, lmdif1
     real(wp),intent(in) :: x(n)
     real(wp) :: enorm
 
-    if (ANY(abs(x) > 1.0E100_wp)) then  !overflow exception
+    if (any(abs(x) > 1.0E100_wp)) then  !overflow exception
         enorm = sum(abs(x))
     else
         enorm = sqrt(sum(x**2))
@@ -741,11 +741,11 @@ public :: hybrd1, lmdif1
             temp = x(j)
             h = eps * abs( temp )
             if ( abs(h) < epsmch) then
-                IF (abs(temp) > epsmch) THEN
+                if (abs(temp) > epsmch) then
                     h = sqrt(abs(temp) * epsmch)    !changed by AZ
-                ELSE
+                else
                     h = sqrt(eps * epsmch) !h = eps !changed by AZ
-                ENDIF
+                endif
             end if
 
             x(j) = temp + h
@@ -756,16 +756,16 @@ public :: hybrd1, lmdif1
             end if
 
             x(j) = temp
-            IF (ANY(fvec(1:n) < -1.0E100_wp)) THEN  !floating point exception handling (by AZ)
-                WHERE (fvec(1:n) < -1.0E100_wp)
+            if (any(fvec(1:n) < -1.0E100_wp)) then  !floating point exception handling (by AZ)
+                where (fvec(1:n) < -1.0E100_wp)
                     fvec(1:n) = -1.0E100_wp
-                ENDWHERE
-            ENDIF
-            IF (ANY(wa1(1:n) < -1.0E100_wp)) THEN   !floating point exception handling (by AZ)
-                WHERE (wa1(1:n) < -1.0E100_wp)
+                end where
+            endif
+            if (any(wa1(1:n) < -1.0E100_wp)) then   !floating point exception handling (by AZ)
+                where (wa1(1:n) < -1.0E100_wp)
                     wa1(1:n) = -1.0E100_wp
-                ENDWHERE
-            ENDIF
+                end where
+            endif
             fjac(1:n,j) = ( wa1(1:n) - fvec(1:n) ) / h
         end do
     else
@@ -778,11 +778,11 @@ public :: hybrd1, lmdif1
                 temp = x(j)
                 h = eps * abs( wa2(j) )
                 if ( abs(h) < epsmch ) then
-                    IF (abs(temp) > epsmch) THEN
+                    if (abs(temp) > epsmch) then
                         h = sqrt(abs(temp) * epsmch) !changed by AZ
-                    ELSE
+                    else
                         h = sqrt(eps * epsmch) !h = eps !changed by AZ
-                    ENDIF
+                    endif
                 end if
                 x(j) = wa2(j) + h
             end do
@@ -798,11 +798,11 @@ public :: hybrd1, lmdif1
                 temp = x(j)
                 h = eps * abs( wa2(j) )
                 if ( abs(h) < epsmch ) then
-                    IF (abs(temp) > epsmch) THEN
+                    if (abs(temp) > epsmch) then
                         h = sqrt(abs(temp) * epsmch) !changed by AZ
-                    ELSE
+                    else
                         h = sqrt(eps * epsmch) !h = eps !changed by AZ
-                    ENDIF
+                    endif
                 end if
                 fjac(1:n,j) = 0.0E0_wp
                 do i = 1, n
@@ -1401,13 +1401,13 @@ public :: hybrd1, lmdif1
     call r1mpyq ( n, n, fjac, ldfjac, wa2, wa3 )
     call r1mpyq ( 1, n, qtf, 1, wa2, wa3 )
     !
-    !  End of the inner loop.
+    !  end of the inner loop.
     !
     jeval = .false.
     go to 180
     290 continue
     !
-    !  End of the outer loop.
+    !  end of the outer loop.
     !
     go to 30
     300 continue
@@ -2009,14 +2009,14 @@ public :: hybrd1, lmdif1
     call r1mpyq ( n, n, fjac, ldfjac, wa2, wa3 )
     call r1mpyq ( 1, n, qtf, 1, wa2, wa3 )
     !
-    !  End of the inner loop.
+    !  end of the inner loop.
     !
     jeval = .false.
     go to 180
 
     290 continue
     !
-    !  End of the outer loop.
+    !  end of the outer loop.
     !
     go to 30
 
@@ -2645,13 +2645,13 @@ public :: hybrd1, lmdif1
     if ( gnorm <= epsmch ) info = 8
     if ( info /= 0 ) go to 300
     !
-    !  End of the inner loop. repeat if iteration unsuccessful.
+    !  end of the inner loop. repeat if iteration unsuccessful.
     !
     if ( ratio < 0.0001E0_wp ) then
         go to 200
     end if
     !
-    !  End of the outer loop.
+    !  end of the outer loop.
     !
     go to 30
     300 continue
@@ -3281,13 +3281,13 @@ public :: hybrd1, lmdif1
         go to 300
     end if
     !
-    !  End of the inner loop.  Repeat if iteration unsuccessful.
+    !  end of the inner loop.  Repeat if iteration unsuccessful.
     !
     if ( ratio < 0.0001E0_wp ) then
         go to 200
     end if
     !
-    !  End of the outer loop.
+    !  end of the outer loop.
     !
     go to 30
 
@@ -3532,7 +3532,7 @@ public :: hybrd1, lmdif1
     integer :: k
     integer :: l
     integer :: nsing
-    real(wp), PARAMETER :: epsmch = 5.0E0_wp*epsilon(epsmch)
+    real(wp), parameter :: epsmch = 5.0E0_wp*epsilon(epsmch)
     real(wp) :: par
     real(wp) :: parc
     real(wp) :: parl
@@ -3679,12 +3679,12 @@ public :: hybrd1, lmdif1
     end do
 
     do j = 1, n
-        IF (sdiag(j) /= 0.0E0_wp) THEN
+        if (sdiag(j) /= 0.0E0_wp) then
             wa1(j) = wa1(j) / sdiag(j)
-        ELSE
+        else
             sdiag(j) = 1.0E-15_wp   !correction added by A. Zuend to prevent divison by zero here
             wa1(j) = wa1(j) / sdiag(j)
-        ENDIF
+        endif
         temp = wa1(j)
         wa1(j+1:n) = wa1(j+1:n) - r(j+1:n,j) * temp
     end do
@@ -3704,7 +3704,7 @@ public :: hybrd1, lmdif1
     !
     par = max ( parl, par + parc )
     !
-    !  End of an iteration.
+    !  end of an iteration.
     !
     go to 150
 
@@ -4184,13 +4184,13 @@ public :: hybrd1, lmdif1
         go to 340
     end if
     !
-    !  End of the inner loop.  Repeat if iteration unsuccessful.
+    !  end of the inner loop.  Repeat if iteration unsuccessful.
     !
     if ( ratio < 0.0001E0_wp ) then
         go to 240
     end if
     !
-    !  End of the outer loop.
+    !  end of the outer loop.
     !
     go to 30
 
@@ -4524,17 +4524,17 @@ public :: hybrd1, lmdif1
     !
     !  Compute the initial column norms and initialize several arrays.
     !
-    IF (m < 1) THEN
-        WRITE(*,*) "WARNING: m is < 1 in minpack2.f90, line 4486!! m: ",m
-        READ(*,*)
+    if (m < 1) then
+        write(*,*) "WARNING: m is < 1 in minpack2.f90, line 4486!! m: ",m
+        read(*,*)
         STOP
-    ENDIF
+    endif
     do j = 1, n
-        WHERE (a(1:m,j) > 1.0E100_wp) !exception handling (by AZ)
+        where (a(1:m,j) > 1.0E100_wp) !exception handling (by AZ)
             a(1:m,j) = 1.0E100_wp
-        ELSEWHERE (a(1:m,j) < -1.0E100_wp)
+        elsewhere (a(1:m,j) < -1.0E100_wp)
             a(1:m,j) = -1.0E100_wp
-        ENDWHERE
+        end where
         acnorm(j) = enorm2(m, a(1:m,j)) !enorm2(m, a(1:m,j)) !enorm ( m, a(1:m,j) )
     end do
 
@@ -4605,7 +4605,7 @@ public :: hybrd1, lmdif1
                 if ( pivot .and. rdiag(k) /= 0.0E0_wp ) then
 
                     temp = a(j,k) / rdiag(k)
-                    rdiag(k) = rdiag(k) * sqrt ( max ( 0.0E0_wp, 1.0E0_wp-temp**2 ) )
+                    rdiag(k) = rdiag(k) * sqrt ( max ( 0.0_wp, 1.0E0_wp-temp**2 ) )
 
                     if ( 0.05E0_wp * ( rdiag(k) / wa(k) )**2 <= epsmch ) then
                         rdiag(k) = enorm2(m-j, a(j+1,k))

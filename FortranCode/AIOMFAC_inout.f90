@@ -23,7 +23,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2011                                                            *
-!*   -> latest changes: 2023-03-18                                                      *
+!*   -> latest changes: 2024-04-21                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -41,7 +41,7 @@
 subroutine AIOMFAC_inout(inputconc, xinputtype, TKelvin, nspecies, outputvars, outputviscvars, &
     & outnames, errorflag_list, warningflag)
 
-use Mod_NumPrec, only : wp
+use Mod_kind_param, only : wp
 use ModSystemProp
 use ModAIOMFACvar
 use ModCompScaleConversion
@@ -64,7 +64,7 @@ logical,dimension(size(errorflag_clist)),intent(out) :: errorflag_list
 integer,intent(out)                         :: warningflag
 !--
 !local variables:
-character(len=3) :: cn                      !this assumes a maximum three-digit component number in the system (max. 999); to be adjusted otherwise.
+character(len=3) :: cn                                          !this assumes a maximum three-digit component number in the system (max. 999); to be adjusted otherwise.
 character(len=3) :: cino
 integer :: i, ion_no, ion_indic, nc, NKSinput, NKSinputp1
 logical :: onlyDeltaVisc
@@ -145,7 +145,7 @@ endif
 call MassFrac2SolvMolalities(wtf, m_neutral)
 sum_ms = sum(m_neutral(1:nneutral))
 sum_miMi = 0.0_wp
-do i = 1,NGI                                !calculate sum of ion molalities, mi, times ion molar mass, Mi; [kg]
+do i = 1,NGI                                    !calculate sum of ion molalities, mi, times ion molar mass, Mi; [kg]
     if (Ication(i) > 0) then
         sum_miMi = sum_miMi + smc(i)*SMWC(Ication(i)-200)*1.0E-3_wp 
     endif
@@ -153,13 +153,13 @@ do i = 1,NGI                                !calculate sum of ion molalities, mi
         sum_miMi = sum_miMi + sma(i)*SMWA(Ianion(i)-240)*1.0E-3_wp 
     endif
 enddo
-do nc = 1,nspecies                          !loop over components
-    if (nc <= nneutral) then                !distinguish between neutral components and inorg. ions
+do nc = 1,nspecies                              !loop over components/species
+    if (nc <= nneutral) then                    !distinguish between neutral components and inorg. ions
         write(cn,'(I0.2)') nc
         outnames(nc) = "comp_no_"//trim(cn)
         wtf_cp = wtf(nc)
         xi_cp = X(nc)
-        mi_cp = m_neutral(nc)               !molality in solvent mixture [mol/(kg solvent mix)]       
+        mi_cp = m_neutral(nc)                   !molality in solvent mixture [mol/(kg solvent mix)]       
         actcoeff_cp = actcoeff_n(nc)
         if (wtf(nc) > 0.0_wp) then
             actcoeff_cp = actcoeff_n(nc) 
@@ -169,25 +169,25 @@ do nc = 1,nspecies                          !loop over components
         a_cp = activity(nc)
         ion_indic = 0
     else
-        ion_no = ElectSubs(nc-nneutral)     !the current ion subgroup number to identify the ion as output component nc
+        ion_no = ElectSubs(nc-nneutral)         !the current ion subgroup number to identify the ion as output component nc
         write(cino,'(I3.3)') ion_no
         outnames(nc) = "ion_no_"//cino
         ion_indic = ion_no
         !detect whether it is a cation or an anion:
-        if (ion_no > 239) then              !anion
-            i = AnNr(ion_no)                !the number i anion (storage location in sma(i) etc.)
+        if (ion_no > 239) then                  !anion
+            i = AnNr(ion_no)                    !the number i anion (storage location in sma(i) etc.)
             xi_cp = sma(i)/(sum_ms + SumIonMolalities)
             mi_cp = sma(i)
             wtf_cp = sma(i)*SMWA(Ianion(i)-240)*1.0E-3_wp/(1.0_wp + sum_miMi)
             if (sma(i) > 0.0_wp) then
-                actcoeff_cp = actcoeff_a(i) !molal activity coeff.
+                actcoeff_cp = actcoeff_a(i)     !molal activity coeff.
             else
                 actcoeff_cp = 0.0_wp
             endif
             if (actcoeff_a(i) >= 0.0_wp) then
-               a_cp = actcoeff_a(i)*sma(i)  !molal activity
+               a_cp = actcoeff_a(i)*sma(i)      !molal activity
             else
-               a_cp = -9999.999999_wp        !indicate a numerical problem
+               a_cp = -9999.999999_wp           !indicate a numerical problem
                errorflag_list(7) = .true. 
             endif
         else !cation
@@ -196,14 +196,14 @@ do nc = 1,nspecies                          !loop over components
             mi_cp = smc(i)
             wtf_cp = smc(i)*SMWC(Ication(i)-200)*1.0E-3_wp/(1.0_wp + sum_miMi)    
             if (smc(i) > 0.0_wp) then
-                actcoeff_cp = actcoeff_c(i) !molal activity coeff.
+                actcoeff_cp = actcoeff_c(i)     !molal activity coeff.
             else
                 actcoeff_cp = 0.0_wp
             endif
             if (actcoeff_c(i) >= 0.0_wp) then
-               a_cp = actcoeff_c(i)*smc(i)  !molal activity
+               a_cp = actcoeff_c(i)*smc(i)      !molal activity
             else
-               a_cp = -9999.999999_wp        !indicate a numerical problem 
+               a_cp = -9999.999999_wp           !indicate a numerical problem 
                errorflag_list(7) = .true.
             endif
         endif 
@@ -218,7 +218,7 @@ do nc = 1,nspecies                          !loop over components
     outputvars(4,nc) = actcoeff_cp                  ![-]   activity coefficient of the component / species (see remarks below about mole fraction or molality basis)
     outputvars(5,nc) = a_cp                         ![-]   activity of the component (mole fraction basis for neutral compounds, 
                                                     !      molality basis for ions (with infinite dilution in water as reference state)
-    outputvars(6,nc) = real(ion_indic, kind=wp)     !the indicator if this species is an inorg. ion or not: 0 = not ion, a number > 200 indicates the ion ID from the AIOMFAC list
+    outputvars(6,nc) = real(ion_indic, kind=wp)     !indicator whether this species is an inorg. ion or not: 0 = not ion, a number > 200 indicates the ion ID from the AIOMFAC list
 enddo
 
 ! viscosity output
@@ -230,18 +230,18 @@ else
     outputviscvars(2) = -9999.9999999999_wp
 endif
 
-!!only for debugging checks:
-!block
-!    real(wp),dimension(:),allocatable :: xfrac_from_m
-!    real(wp) :: sum1, sum2, sum3, rel_dev
-!    
-!    xfrac_from_m = outputvars(3,:)/sum(outputvars(3,:))
-!    sum1 = sum(xfrac_from_m)
-!    rel_dev = sum( xfrac_from_m(:)/outputvars(2,:) -1.0_wp )
-!    sum2 = sum(outputvars(2,:))
-!    sum3 = sum(outputvars(1,:))
-!    i = 555 !set breakpoint to check on above values
-!end block
+!!!only for debugging checks:
+!!block
+!!    real(wp),dimension(:),allocatable :: xfrac_from_m
+!!    real(wp) :: sum1, sum2, sum3, rel_dev
+!!    
+!!    xfrac_from_m = outputvars(3,:)/sum(outputvars(3,:))
+!!    sum1 = sum(xfrac_from_m)
+!!    rel_dev = sum( xfrac_from_m(:)/outputvars(2,:) -1.0_wp )
+!!    sum2 = sum(outputvars(2,:))
+!!    sum3 = sum(outputvars(1,:))
+!!    i = 555 !set breakpoint to check on above values
+!!end block
 
 !transfer certain error flags raised during calc.:
 where(.not. errorflag_list)

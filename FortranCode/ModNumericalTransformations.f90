@@ -8,7 +8,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2022-11-02                                                      *
-!*   -> latest changes: 2023-03-17                                                      *
+!*   -> latest changes: 2024-01-29                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -16,7 +16,7 @@
 !*   Foundation, either version 3 of the License, or (at your option) any later         *
 !*   version.                                                                           *
 !*   The AIOMFAC model code is distributed in the hope that it will be useful, but      *
-!*   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or      *
+!*   WITHOUT any WARRANTY; without even the implied warranty of MERCHANTABILITY or      *
 !*   FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more      *
 !*   details.                                                                           *
 !*   You should have received a copy of the GNU General Public License along with this  *
@@ -29,15 +29,16 @@
 !*   -  pure elemental function sigmoidal_map                                           *
 !*   -  pure elemental function inverse_sigmoidal_map                                   *  
 !*   -  pure elemental function extended_sigmoidal_map                                  *
+!*   -  pure subroutine comp_weighting                                                  *
 !*                                                                                      *
 !****************************************************************************************
 module ModNumericalTransformations
 
+use Mod_kind_param, only : wp
 use ModSystemProp, only : Mmass
 
 implicit none
-private                     !set default as private for subroutines and module variables
-integer,parameter :: wp = kind(Mmass(1))                              !set real kind
+private                 !set default as private for subroutines and module variables
 
 !public procedures from this module:
 public  ::  safe_exp
@@ -45,6 +46,7 @@ public  ::  soft_bounds
 public  ::  sigmoidal_map
 public  ::  inverse_sigmoidal_map
 public  ::  extended_sigmoidal_map
+public  ::  comp_weighting
 
 contains
 
@@ -204,13 +206,77 @@ contains
     real(wp)            :: y            !output; mapped value to [l, u] interval
     !local variables:
     integer,parameter   :: i_long = selected_int_kind(18)
-    real(wp)            :: xmod
+    real(wp),parameter  :: x_ulim = 2.0_wp**63
+    real(wp)            :: xc, xmod
     !.............................
-
-    xmod = abs( x - 2.0_wp*floor(0.5_wp*(x + 1.0_wp), kind = i_long) )
+    
+    if (abs(x) > x_ulim) then                !check for number limits due to use of integer floor function with 64-bit (long) integer
+        xc = soft_bounds(x, 0.0_wp, x_ulim)
+    else
+        xc = x
+    endif
+    
+    xmod = abs( xc - 2.0_wp*floor(0.5_wp*(xc + 1.0_wp), kind=i_long) )
     y = sigmoidal_map(xmod, r, l, u)
     
     end function extended_sigmoidal_map
+    !------------------------------------------------------------------------------------------------------------
+    
+    
+    !********************************************************************************************
+    !*   :: Purpose ::                                                                          *
+    !*  Compute component-specific weighting parameters "comp_weight" and related normalized    *
+    !*  fractions "comp_weight_frac", which follow a rounded step function that is nearly 1.0   *
+    !*  for most of the range between 0 and 1, but attains, in a smooth manner, smaller values  *
+    !*  close to the two limits.                                                                *
+    !*  "frac_in" must be real values strictly within interval [0, 1].                          *
+    !*  Application of those weighting values: scaling of relative deviations to account for    *
+    !*  much more limited numerical precision control near fit domain bounds.                   *
+    !*                                                                                          *
+    !*   :: Author & Copyright ::                                                               *
+    !*   Andi Zuend,                                                                            *
+    !*   Dept. Atmospheric and Oceanic Sciences, McGill University                              *
+    !*                                                                                          *
+    !*   -> created:        2022-11-02                                                          *
+    !*   -> latest changes: 2024-04-19                                                          *
+    !*                                                                                          *
+    !********************************************************************************************
+    pure subroutine comp_weighting(frac_in, comp_weight, comp_weight_frac, kstar)
+    
+    implicit none
+    !interface arguments:
+    real(wp),dimension(:),intent(in)    :: frac_in              ![-]  input fraction values within [0, 1] interval
+    real(wp),dimension(:),intent(out)   :: comp_weight          ![-]  computed weighting parameter as function of frac_in
+    real(wp),dimension(:),intent(out)   :: comp_weight_frac     ![-]  normalized fractional weight, such that sum(comp_weight) = 1.0
+    integer,intent(inout)               :: kstar                ![-]  selected component index for use in calculating the volume deviation
+    !local variables:
+    real(wp),parameter                  :: escaler = 1.0E3_wp*sqrt(epsilon(1.0_wp)) ![-]  this value is somewhat arbitrary, but chosen such as to obtain reasonable 
+                                                                !weights; e.g. for frac_in = 1.0E-6, comp_weight = 4.0E-03; for frac_in = 1.0E-10, comp_weight = 4.5E-11
+    real(wp)                            :: sum_comp_weight
+    real(wp),dimension(size(frac_in))   :: frac_prod
+    integer                             :: kstar_old
+    !......................................................
+    
+    frac_prod = abs( frac_in * (1.0_wp - frac_in) )
+    comp_weight = ( frac_prod / (frac_prod + escaler*exp(-sqrt(frac_prod))) )**2
+    if (comp_weight(kstar) < escaler) then                      !check whether kstar should be replaced by a different component
+        kstar_old = kstar
+        if (any(comp_weight > escaler)) then                 
+            kstar = maxloc(comp_weight, dim=1)
+        else
+            kstar = kstar_old
+        endif
+    endif
+    comp_weight(kstar) = max(comp_weight(kstar), escaler)       !set this component's weight such that it always matters at least little bit
+    
+    sum_comp_weight = sum(comp_weight)
+    if (sum_comp_weight > 0.0_wp) then
+        comp_weight_frac = comp_weight / sum_comp_weight
+    else
+        comp_weight_frac = 1.0_wp/size(frac_in)                 !in that case, make sure the weight fraction is not zero
+    endif
+    
+    end subroutine comp_weighting
     !------------------------------------------------------------------------------------------------------------
     
     

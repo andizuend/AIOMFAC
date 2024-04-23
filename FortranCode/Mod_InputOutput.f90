@@ -8,7 +8,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2021-07-26                                                      *
-!*   -> latest changes: 2023-03-18                                                      *
+!*   -> latest changes: 2024-04-21                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -32,7 +32,7 @@
 !****************************************************************************************
 module Mod_InputOutput
 
-use Mod_NumPrec, only : wp
+use Mod_kind_param, only : wp
 
 implicit none
 private
@@ -164,20 +164,20 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     !create an error-logfile associated with the input file name:
     errlogfile = "Errorlog_"//filename(i-4:)
     fname = trim(folderpathout)//trim(errlogfile)
-    OPEN (NEWUNIT = unito, FILE = fname, STATUS ='UNKNOWN') !unito is the error / logfile unit
+    open (NEWUNIT = unito, FILE = fname, STATUS ='UNKNOWN') !unito is the error / logfile unit
     !-----
     !check if file exists and read its content if true:
     fname = trim(filepath)
-    INQUIRE(FILE = fname, EXIST = fileexists, size = inpfilesize) !inpfilesize is the file size in [bytes]
+    inquire(FILE = fname, EXIST = fileexists, size = inpfilesize) !inpfilesize is the file size in [bytes]
     !Delete very large files that can only mean uploaded spam content and not actual input:
     if (fileexists) then
         if (real(inpfilesize, kind=wp) > 50.0_wp*(ninpmax +ninpmax*maxpoints) ) then !likely not a valid input file
             fname = trim(filepath)
-            OPEN (NEWUNIT = unitx, FILE = fname, IOSTAT=istat, ACTION='read', STATUS='OLD')
+            open (NEWUNIT = unitx, FILE = fname, IOSTAT=istat, ACTION='read', STATUS='OLD')
             read(unitx,*) dummy, dummy, dummy, txtcheck
             close(unitx)
             if (.not. (txtcheck(1:11) == "AIOMFAC-web")) then !invalid file (likely spam)
-                OPEN (NEWUNIT = unitx, FILE = fname, STATUS='OLD')
+                open (NEWUNIT = unitx, FILE = fname, STATUS='OLD')
                 close(unitx, STATUS='DELETE')  !close and delete the file
                 fileexists = .false.
             endif
@@ -191,7 +191,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
             write(unito,*) "MESSAGE from AIOMFAC: input file exists."
         endif
         fname = trim(filepath)
-        OPEN (NEWUNIT = unitx, FILE = fname, IOSTAT=istat, ACTION='read', STATUS='OLD')
+        open (NEWUNIT = unitx, FILE = fname, IOSTAT=istat, ACTION='read', STATUS='OLD')
         if (istat /= 0) then ! an error occurred
             write(unito,*) ""
             write(unito,*) "MESSAGE from AIOMFAC: an error occurred while trying to open the file! IOSTAT: ", istat
@@ -205,7 +205,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                 write(unito,*) "MESSAGE from AIOMFAC: input file has passed the first line text validation and will be read."
             endif
             !read input data from file:
-            BACKSPACE unitx !jump back to beginning of record (to the beginning of the line)
+            backspace unitx !jump back to beginning of record (to the beginning of the line)
             read(unitx,*) dummy, dummy, dummy, dummy, dummy !read first line
             read(unitx,*)               !read empty line 2
             read(unitx,*) dummy, dummy  !read line 3
@@ -223,7 +223,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                 write(unito,*) ""
                 write(unito,*) "MESSAGE from AIOMFAC: reading component data from input file."
             endif
-            k = max(2, CEILING(LOG10(real(ninpmax))) ) !determine order of magnitude digits
+            k = max(2, ceiling(log10(real(ninpmax))) ) !determine order of magnitude digits
             write(dummy,'(I0)') k
             cnformat = "(I"//trim(dummy)//"."//trim(dummy)//")" !variable format specifier
             allocate(character(len=k) :: cn)
@@ -234,9 +234,9 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                 endif
                 read(unitx,*,IOSTAT=istat) txtcheck !read only first argument on this line for subsequent check
                 if (txtcheck(1:4) == pluses .or. istat /= 0) then !"++++" indicates end of this components definition part
-                    EXIT !exit ncp do-loop
+                    exit !exit ncp do-loop
                 else !in this case, argument 3 of txtcheck is the component no.:
-                    BACKSPACE unitx !jump back to beginning of record (to the beginning of the line)
+                    backspace unitx !jump back to beginning of record (to the beginning of the line)
                     read(unitx,*) dummy, dummy, cpno !read line with component's number
                 endif
                 read(unitx,*) dummy, dummy, cpnameinp(cpno) !read line with component's name
@@ -252,9 +252,9 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                     read(unitx,*,IOSTAT=istat) txtcheck !read only first argument on this line
                     !check whether another subgroup is present or not
                     if (txtcheck(1:4) == dashes .or. istat /= 0) then !"----" indicates no more subgroups of this component
-                        EXIT !leave the inner do-loop
+                        exit !leave the inner do-loop
                     else !else continue reading the next subgroup
-                        BACKSPACE unitx
+                        backspace unitx
                         read(unitx,*) dummy, dummy, dummy, subg, qty  !continue reading line with subgroup no. and corresp. quantity
                         cpsubg(cpno,subg) = cpsubg(cpno,subg)+qty
                     endif
@@ -292,29 +292,29 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                 do npoints = 1,maxpoints !or until exit
                     read(unitx,*,IOSTAT=istat) txtcheck !read only the first argument on this line
                     if (txtcheck(1:4) == equalsigns .or. istat /= 0) then !"====" indicates no more composition points (and last line of input file)
-                        EXIT !leave the do-loop (normal exit point)
+                        exit !leave the do-loop (normal exit point)
                     else if (IACHAR(txtcheck(1:1)) > 47 .and. IACHAR(txtcheck(1:1)) < 58) then !validate that the data is actual intended input and not some sort of text field spam).
-                        BACKSPACE unitx
+                        backspace unitx
                         read(unitx,*) txtcheck, dummy !read only the first two arguments on this line
                         if (IACHAR(dummy(1:1)) > 47 .and. IACHAR(dummy(1:1)) < 58) then !it is a number
-                            BACKSPACE unitx
+                            backspace unitx
                             read(unitx,*) i, T_K(npoints), composition(npoints,2:ncp) !read the temperature in [K] and composition values of the components [2:ncp] into the array
                         else
                             if (npoints == 1) then
                                 filevalid = .false. !file is not valid due to incorrect input in text field
-                                EXIT
+                                exit
                             else
                                 warningind = 31
-                                EXIT !abnormal exit point of loop due to non-number entries at a certain line in the text field
+                                exit !abnormal exit point of loop due to non-number entries at a certain line in the text field
                             endif
                         endif
                     else
                         if (npoints == 1) then
                             filevalid = .false. !file is not valid due to incorrect input in text field
-                            EXIT
+                            exit
                         else
                             warningind = 31
-                            EXIT !abnormal exit point of loop due to non-number entries at a certain line in the text field
+                            exit !abnormal exit point of loop due to non-number entries at a certain line in the text field
                         endif
                     endif
                 enddo
@@ -350,7 +350,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                 write(unito,*) "MESSAGE from AIOMFAC: the input file will be deleted to prevent spam files and malicious code from occupying the server."
                 write(unito,*) ""
             endif
-            INQUIRE(FILE = fname, OPENED = fileopened)
+            inquire(FILE = fname, OPENED = fileopened)
             if (errorind == 0) then
                 errorind = 32
                 !close and delete file from server:
@@ -434,7 +434,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     real(wp) :: RH
     !...................................................................................
 
-    k = max(2, CEILING(LOG10(real(nspecmax))) )  
+    k = max(2, ceiling(log10(real(nspecmax))) )  
     write(tlen,'(I0)') k
     Iformat = "I"//trim(tlen)//"."//trim(tlen)  !variable integer specifier
     cnformat = "("//Iformat//")"                !constructed format specifier
@@ -462,12 +462,12 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
             qty = nspecmax -i
             write(subntxt,'(I0)') qty
             mixturestring = trim(mixturestring)//' + '//trim(subntxt)//' additional components ...'
-            EXIT
+            exit
         endif
     enddo
     mixturestring = adjustl(mixturestring)
 
-    OPEN (NEWUNIT = unitx, FILE = fname, STATUS = "UNKNOWN")
+    open (NEWUNIT = unitx, FILE = fname, STATUS = "UNKNOWN")
     write(unitx,'(A)') "==========================================================================================================="
     write(unitx,'(A)') "AIOMFAC-web, version "//VersionNo
     write(unitx,'(A)') "==========================================================================================================="
@@ -514,7 +514,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     write(unitx,'(A)') "Properties of this phase: mixture viscosity"
     !write table column headers:
     write(unitx,'(A)') adjustl(horizline)
-    write(unitx,'(2X, A)') "no.   T_[K]     RH_[%]    log10(eta/[Pa.s])   +/-log10(eta sens./[Pa.s])     flag "
+    write(unitx,'(2X, A)') "no.   T_[K]     RH_[%]   log10(eta/[Pa.s])   +/-log10(eta sens./[Pa.s])     flag "
     write(unitx,'(A)') adjustl(horizline)
     !write data to viscosity table
     do pointi = 1,npoints  !loop over composition points
@@ -526,7 +526,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
         else
             RH = 0.0_wp
         endif
-        write(unitx,'(I5.3,2X,F7.2,2X,F7.2,3X,2(ES12.5,10X),3X,I2)') pointi, T_K(pointi), RH, out_viscdata(1,pointi), out_viscdata(2,pointi), INT(out_viscdata(3,pointi))
+        write(unitx,'(I5.3,2X,F7.2,2X,F7.2,3X,2(ES12.5,10X),9X,I2)') pointi, T_K(pointi), RH, out_viscdata(1,pointi), out_viscdata(2,pointi), INT(out_viscdata(3,pointi))
     enddo !pointi
     write(unitx,'(A)') adjustl(horizline)
     write(unitx,*) ""
@@ -672,13 +672,13 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     real(wp) :: RH
     !...................................................................................
 
-    k = max(2, CEILING(LOG10(real(nspecmax))) )
+    k = max(2, ceiling(log10(real(nspecmax))) )
     write(tlen,'(I0)') k
     Iformat = "I"//trim(tlen)//"."//trim(tlen)      !variable integer specifier
     cnformat = "("//Iformat//")"                    !constructed format specifier
     allocate(character(len=k) :: cn)
     !--
-    OPEN (NEWUNIT = unitx, FILE = fname, STATUS = "UNKNOWN")
+    open (NEWUNIT = unitx, FILE = fname, STATUS = "UNKNOWN")
     outtxtleft = adjustl("<h3>AIOMFAC-web, version "//VersionNo//"</h3>")
     write(unitx,'(A)') outtxtleft
     !create a character string of the mixture as a series of its components and add links to the components:
@@ -698,7 +698,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
             qty = nspecmax -i
             write(subntxt,'(I0)') qty
             mixturestring = trim(mixturestring)//' + '//trim(subntxt)//' additional components ...'
-            EXIT
+            exit
         endif
     enddo
     mixturestring = trim(mixturestring)

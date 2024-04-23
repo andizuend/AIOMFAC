@@ -28,7 +28,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
 !*                                                                                      *
 !*   -> created:        2011  (this file)                                               *
-!*   -> latest changes: 2023-06-19                                                      *
+!*   -> latest changes: 2024-04-21                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -47,7 +47,7 @@
 program Main_IO_driver
 
 !module variables:
-use Mod_NumPrec, only : wp
+use Mod_kind_param, only : wp
 use ModSystemProp, only : errorflag_clist, errorflagmix, idCO2, nindcomp, NKNpNGS, SetSystem, topsubno, waterpresent
 use ModSubgroupProp, only : SubgroupAtoms, SubgroupNames
 use ModMRpart, only : MRdata
@@ -80,7 +80,7 @@ logical,dimension(size(errorflag_clist)) :: errflag_list
 !
 !==== INITIALIZATION section =======================================================
 !
-VersionNo = "3.05"      !AIOMFAC-web version number (change here if minor or major changes require a version number change)
+VersionNo = "3.10"      !AIOMFAC-web version number (change here if minor or major changes require a version number change)
 verbose = .true.        !if true, some debugging information will be printed to the unit "unito" (errorlog file)
 nspecmax = 0
 errorind = 0            !0 means no error found
@@ -91,7 +91,7 @@ warningind = 0          !0 means no warnings found
 !read command line for text-file name (which contains the input parameters to run the AIOMFAC progam):
 call get_command_argument(1, txtfilein)
 if (len_trim(txtfilein) < 4) then               !no command line argument; use specific input file for tests;
-    txtfilein = './Inputfiles/input_0782.txt'   !just use this for debugging with a specific input file, otherwise comment out;
+    txtfilein = './Inputfiles/input_0011.txt'   !just use this for debugging with a specific input file, otherwise comment out;
 endif
 filepath = adjustl(trim(txtfilein))
 write(*,*) ""
@@ -174,7 +174,7 @@ if (filevalid) then
                 out_data(1:6,pointi,nc) = outputvars(1:6,nc)                !out_data general structure: | data columns 1:7 | data point | component no.|
                 out_data(7,pointi,nc) = real(findloc(errflag_list(:), value = .true., dim=1), kind=wp)
                 out_viscdata(3,pointi) = real(findloc(errflag_list(:), value = .true., dim=1), kind=wp)
-                if (abs(out_viscdata(3,pointi) -18.0_wp) < 0.1_wp) then       !error 18 is only an error/warning for viscosity prediction, not activity coeff.
+                if (abs(out_viscdata(3,pointi) -18.0_wp) < 0.1_wp) then     !error 18 is only an error/warning for viscosity prediction, not activity coeff.
                     out_data(7,pointi,nc) = 0.0_wp
                 endif
                 if ((.not. any(errflag_list)) .and. warningflag > 0) then   !do not overwrite an errorflag if present!
@@ -186,10 +186,10 @@ if (filevalid) then
                     endif
                 endif
                 if (px(nc) == 0 .and. out_data(6,pointi,nc) >= 0.0_wp) then
-                    px(nc) = pointi     !use a point for which this component's abundance is given, i.e. mole fraction(nc) > 0.0!
+                    px(nc) = pointi                                         !use a point for which this component's abundance is given, i.e. mole fraction(nc) > 0.0!
                 endif
             enddo !nc
-            out_viscdata(1:2,pointi) = outputviscvars(1:2)              !out_viscdata general structure: | data columns 1:2 | data point |
+            out_viscdata(1:2,pointi) = outputviscvars(1:2)                  !out_viscdata general structure: | data columns 1:2 | data point |
         enddo !pointi
         
         !
@@ -201,7 +201,7 @@ if (filevalid) then
         !-- for debugging
         write(unito,'(A)') "................................................................................"
         write(unito,'(A)') "MESSAGE from AIOMFAC: computations successfully performed."
-        write(unito,'(4(A))') "Output file, ", trim(filename), " created at path: ", trim(folderpathout)
+        write(unito,'(*(A))') "Output file, ", trim(filename), " created at path: ", trim(folderpathout)
         write(unito,'(A)') "................................................................................"
         !create an output ASCII text file with an overall mixture header and individual tables for all components / species (in case of ions)
         fname = trim(folderpathout)//trim(filename)
@@ -236,8 +236,7 @@ write(unito,*) "########"
 close(unito)    !close the error log-file
 
 write(*,*) ""
-write(*,'(A,I0)') "MESSAGE from AIOMFAC: end of program; final error indicator: ", errorind
-write(*,*) ""
+write(*,'(A,I0,/)') "MESSAGE from AIOMFAC: end of program; final error indicator: ", errorind
 !read(*,*)      !pause and wait for user action; just for debugging and testing.
 !
 !==== the end ======================================================================

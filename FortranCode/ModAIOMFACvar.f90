@@ -10,7 +10,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2009 (based on non-module version from 2005)                    *
-!*   -> latest changes: 2021-11-29                                                      *
+!*   -> latest changes: 2023-09-05                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -18,7 +18,7 @@
 !*   Foundation, either version 3 of the License, or (at your option) any later         *
 !*   version.                                                                           *
 !*   The AIOMFAC model code is distributed in the hope that it will be useful, but      *
-!*   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or      *
+!*   WITHOUT any WARRANTY; without even the implied warranty of MERCHANTABILITY or      *
 !*   FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more      *
 !*   details.                                                                           *
 !*   You should have received a copy of the GNU General Public License along with this  *
@@ -26,63 +26,65 @@
 !*                                                                                      *
 !*   :: List of subroutines and functions contained in this module:                     *
 !*   --------------------------------------------------------------                     *
-!*   -  SUBROUTINE AllocModAIOMFACcore                                                  *
+!*   -  subroutine AllocModAIOMFACcore                                                  *
 !*                                                                                      *
 !****************************************************************************************
-MODULE ModAIOMFACvar
+module ModAIOMFACvar
 
-USE ModSystemProp, ONLY : topsubno
+use Mod_kind_param, only : wp
+use ModSystemProp, only : topsubno
 
-IMPLICIT NONE
+implicit none
 !Public module variables:
-REAL(8),PUBLIC :: alphaHSO4, diffKHSO4, ionicstrength, lastTK, meanSolventMW, &
-    & partial_log10_etamix, SumIonMolalities, T_K, Tmolal, TmolalSolvMix, Xwdissoc
-REAL(8),PUBLIC :: alphaHCO3, pCO2, VCO2 
-REAL(8),PUBLIC :: ln_etamix, ln_eta_aquelec
-REAL(8),DIMENSION(4),PUBLIC :: aquelecVar_save, delGstar_save 
-REAL(8),DIMENSION(:),ALLOCATABLE,PUBLIC :: actcoeff_a, actcoeff_c, actcoeff_n, activity, ln_eta0, lneta_cpn, &
+real(wp),public :: alphaHSO4, diffKHSO4, ionicstrength, lastTK, meanSolventMW, &
+    & partial_log10_etamix, pH_calc, SumIonMolalities, T_K, Tmolal, TmolalSolvMix, Xwdissoc
+real(wp),public :: alphaHCO3, alphaHmalo, alphaHglut, alphaHsucc, pCO2, VCO2 
+real(wp),public :: ln_etamix, ln_etamixZSR, ln_eta_aquelec, ln_etaZSR_org, ln_etaZSR_inorg
+real(wp),dimension(4),public :: aquelecVar_save 
+real(wp),dimension(:),allocatable,public :: actcoeff_a, actcoeff_c, actcoeff_n, activity, ln_eta0, lneta_cpn, &
     & fragil, galrln, gamrln, gasrln, gclrln, gcmrln, gcsrln, gnlrln, gnmrln, gnsrln, ionactivityprod, lnactcoeff_a, &
     & lnactcoeff_c, lnactcoeff_n, lnmeanmactcoeff, meanmolalactcoeff, mrespSalt, SMA, SMC, solvmixcorrMRa, &
     & solvmixcorrMRc, Tglass0, wtf, X, XN, XrespSalt
-REAL(8),DIMENSION(201:topsubno),PUBLIC :: actcoeff_ion, molality_ion
-LOGICAL(4),PUBLIC :: DebyeHrefresh
+real(wp),dimension(201:topsubno),public :: actcoeff_ion, molality_ion
+logical,public :: DebyeHrefresh
 !..................................................
 
 !make all variables of this module threadprivate for use in parallel execution with openMP:
-!$OMP THREADPRIVATE( alphaHSO4, diffKHSO4, lastTK, meanSolventMW, partial_log10_etamix, SumIonMolalities, &
+!$OMP THREADPRIVATE( alphaHSO4, diffKHSO4, lastTK, meanSolventMW, partial_log10_etamix, SumIonMolalities, pH_calc, &
     !$OMP & T_K, Xwdissoc, actcoeff_a, actcoeff_c, actcoeff_n, activity, ln_eta0, lneta_cpn, fragil, galrln, gamrln, gasrln, &
     !$OMP & gclrln, gcmrln, gcsrln, gnlrln, gnmrln, gnsrln, ionactivityprod, ionicstrength, lnactcoeff_a, &
     !$OMP & lnactcoeff_c, lnactcoeff_n, lnmeanmactcoeff, meanmolalactcoeff, mrespSalt, SMA, SMC, actcoeff_ion, molality_ion, &
     !$OMP & solvmixcorrMRa, solvmixcorrMRc, Tglass0, Tmolal, TmolalSolvMix, wtf, X, XN, XrespSalt, DebyeHrefresh, &
-    !$OMP & alphaHCO3, pCO2, VCO2, ln_etamix, ln_eta_aquelec )
+    !$OMP & alphaHCO3, alphaHmalo, alphaHglut, alphaHsucc, pCO2, VCO2, ln_etamix, ln_etamixZSR, ln_eta_aquelec, ln_etaZSR_org, &
+    !$OMP & ln_etaZSR_inorg, aquelecVar_save )
 
 !==========================================================================================================================
-    CONTAINS
+    contains
 !==========================================================================================================================
     
     !utility subroutine to allocate/deallocate module variables after mixture parameters are known (from definemixtures).
-    SUBROUTINE AllocModAIOMFACvar()
+    subroutine AllocModAIOMFACvar()
     
-    USE ModSystemProp, ONLY : NGI, nindcomp, NKNpNGS, nneutral, nelectrol
+    use ModSystemProp, only : NGI, nindcomp, NKNpNGS, nneutral, nelectrol
     
-    IMPLICIT NONE
+    implicit none
     
     !-- allocate several composition-dependent variables:
-    IF (ALLOCATED(wtf)) THEN
-        DEALLOCATE ( sma, smc, wtf, X, XN, solvmixcorrMRc, solvmixcorrMRa, XrespSalt, mrespSalt, &
+    if (allocated(wtf)) then
+        deallocate ( sma, smc, wtf, X, XN, solvmixcorrMRc, solvmixcorrMRa, XrespSalt, mrespSalt, &
         & activity, meanmolalactcoeff, actcoeff_n, actcoeff_c, actcoeff_a, ionactivityprod, ln_eta0, lneta_cpn, & 
         & fragil, gnlrln, gclrln, galrln, gnmrln, gcmrln, gamrln, gnsrln, gcsrln, gasrln, lnactcoeff_n, &
         & lnactcoeff_c, lnactcoeff_a, lnmeanmactcoeff, Tglass0 )
-    ENDIF
-    ALLOCATE( sma(NGI), smc(NGI), wtf(nindcomp), X(NKNpNGS), XN(NKNpNGS), XrespSalt(nindcomp), &
+    endif
+    allocate( sma(NGI), smc(NGI), wtf(nindcomp), X(NKNpNGS), XN(NKNpNGS), XrespSalt(nindcomp), &
         & mrespSalt(nindcomp), activity(nindcomp), meanmolalactcoeff(nelectrol), actcoeff_n(nneutral), actcoeff_c(NGI), &
-        & actcoeff_a(NGI), ionactivityprod(nelectrol), solvmixcorrMRc(NGI), solvmixcorrMRa(NGI), ln_eta0(NKNpNGS), & 
-        & fragil(NKNpNGS), lneta_cpn(NKNpNGS), Tglass0(NKNpNGS), & 
+        & actcoeff_a(NGI), ionactivityprod(nelectrol), solvmixcorrMRc(NGI), solvmixcorrMRa(NGI), ln_eta0(NKNpNGS), fragil(NKNpNGS), & 
+        & lneta_cpn(NKNpNGS), Tglass0(NKNpNGS), & 
         & lnactcoeff_n(nneutral), gnlrln(nneutral), gnmrln(nneutral), gnsrln(nneutral), &
         & lnactcoeff_c(NGI), gclrln(NGI), gcmrln(NGI), gcsrln(NGI), lnmeanmactcoeff(nelectrol), &
         & lnactcoeff_a(NGI), galrln(NGI), gamrln(NGI), gasrln(NGI) )
     
-    END SUBROUTINE AllocModAIOMFACvar
+    end subroutine AllocModAIOMFACvar
 !==========================================================================================================================
 
-END MODULE ModAIOMFACvar
+end module ModAIOMFACvar
