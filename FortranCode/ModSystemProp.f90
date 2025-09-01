@@ -11,7 +11,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2005                                                            *
-!*   -> latest changes: 2022-01-17                                                      *
+!*   -> latest changes: 2024-07-03                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -54,17 +54,19 @@ integer,public,parameter :: Nmaingroups = 76     !total number of SR (UNIFAC) ma
 integer,public,parameter :: topsubno = 265       !index no. of the last subgroup considered (top boundary of ITAB subgroups)
 !--
 integer,public :: nd, NGS, NGN, NGI, NG, NKNpNGS, nindcomp, nneutral, nelectrol, ninput, errorflagmix
-integer,public :: Nanion, Ncation                !Nanion = number of anions, Ncation = number of cations
-integer,public :: idH, idHSO4, idSO4, idHCO3, idCO3, idOH, idCO2, idCa !the index locations of these ions in the cation and anion arrays (e.g., in SMC, and SMA); idH = CatNr(205), idHSO4 = AnNr(248), idSO4 = AnNr(261)
+integer,public :: Nanion, Ncation                                             !Nanion = number of anions, Ncation = number of cations
+integer,public :: idH, idHSO4, idSO4, idHCO3, idCO3, idOH, idCO2, idCa, &
+    & idHmalo, idmalo, idHglut, idglut, idHsucc, idsucc, idMeOS, idEtOS, idIsopreneOS       !the index locations of these ions in the cation and anion arrays (e.g., in SMC, and SMA); idH = CatNr(205), idHSO4 = AnNr(248), idSO4 = AnNr(261)
+integer,public :: id_H2Adicarb, id_OSH                                                      !the index locations of neutral components
 integer,dimension(:),allocatable,public :: CompN
 integer,dimension(:,:),allocatable,public :: ElectComps, ElectNues
 integer,dimension(:),allocatable,public :: Ication, Ianion, ElectSubs, SolvSubs, AllSubs
 integer,dimension(:),allocatable,public :: Imaingroup, maingrindexofsubgr
-integer,dimension(201:topsubno),public :: CatNr, AnNr    !CatNr, AnNr: saves present mixture index entry of a certain ion related to Ication or Ianion list (whether it is cation 1, 2, 3,...).
+integer,dimension(201:topsubno),public :: CatNr, AnNr           !CatNr, AnNr: saves present mixture index entry of a certain ion related to Ication or Ianion list (whether it is cation 1, 2, 3,...).
 integer,dimension(:,:),allocatable,public :: ITAB, ITABsr, ITABMG, ITAB_dimflip
 !--
-real(wp),parameter,public :: Rgas = 8.3144598_wp              !the universal gas constant in J/(K*mol); 8.314 4598  according to NIST (2015)
-real(wp),dimension(:),allocatable,public :: cationZ, anionZ  !cationZ and anionZ are the integer charges of the cations and anions in current mixture ion order (as in Ication, Ianion);
+real(wp),parameter,public :: Rgas = 8.314462618_wp              !the universal gas constant in J/(K*mol); according to definition by NIST https://physics.nist.gov/cgi-bin/cuu/Value?r
+real(wp),dimension(:),allocatable,public :: cationZ, anionZ     !cationZ and anionZ are the integer charges of the cations and anions in current mixture ion order (as in Ication, Ianion);
 real(wp),dimension(:),allocatable,public :: OtoCratio, HtoCratio, ElectO2Cequiv 
 real(wp),dimension(201:240, 241:topsubno, 1:3),public :: IAPcoeffs
 real(wp),dimension(201:240, 241:topsubno),public :: KVLE_298K
@@ -76,8 +78,9 @@ character(len=200),dimension(:),allocatable,public :: cpname, compname, compname
 character(len=16),dimension(:),allocatable,public :: ionname, ionnameTeX
 character(len=3000),dimension(:),allocatable,public :: compsubgroups, compsubgroupsTeX, compsubgroupsHTML
 !--
-logical,public :: bisulfsyst, calcviscosity, elpresent, frominpfile, waterpresent, solvmixrefnd
-logical,public :: bicarbsyst, noCO2input
+logical,public :: calcviscosity, elpresent, frominpfile, waterpresent, solvmixrefnd
+logical,public :: bisulfsyst, bicarbsyst, malosyst, glutsyst, succsyst, dicarbsyst
+logical,public :: noCO2input, noH2Ainput, noOSHinput
 logical,public :: incl_bisulfate = .false.
 logical,public :: isPEGsystem                            !to mark a special case: systems containing a PEG polymer
 logical,dimension(:),allocatable,public :: ElectVolatile
@@ -90,8 +93,8 @@ interface
         logical,intent(in) :: datafromfile
         integer,intent(in) :: ninp
         !optional arguments at call:
-        character(len=200),dimension(ninp),intent(in),  OPTIONAL :: cpnameinp
-        integer,dimension(ninp,topsubno),intent(in), OPTIONAL :: cpsubginp
+        character(len=200),dimension(:),intent(in), optional :: cpnameinp
+        integer,dimension(:,:),intent(in), optional :: cpsubginp
     end subroutine SetSystem
     !--
     module subroutine definemixtures(ndi, ninputcomp, compID, cpsubg)
@@ -109,6 +112,15 @@ interface
         real(wp),dimension(:),intent(out) :: MolarM
     end subroutine SetMolarMass
     !--
+    pure module subroutine incrementNKSinput(NKSinput, NKSinputp1)
+        integer,intent(inout) :: NKSinput
+        integer,optional,intent(inout) :: NKSinputp1        
+    end subroutine incrementNKSinput
+    !--
+    pure module subroutine shiftinputconc(inputconc)
+        real(wp),dimension(nindcomp),intent(inout) :: inputconc       
+    end subroutine shiftinputconc
+    !--
     end interface
 !....................................................................................
 
@@ -119,6 +131,7 @@ interface
     !$OMP & frominpfile, bisulfsyst, waterpresent, calcviscosity, elpresent, isPEGsystem, maingrindexofsubgr,   &
     !$OMP & ElectComps, ElectNues, ElectVolatile, IAPcoeffs, KVLE_298K, K_el, SubGroupMW, ElectO2Cequiv, cationZ,  &
     !$OMP & anionZ, errorflagmix, errorflag_clist, nuestoich, idHCO3, idCO3, idOH, idCO2, idCa, bicarbsyst, &
-    !$OMP & noCO2input, incl_bisulfate)
+    !$OMP & noCO2input, noH2Ainput, noOSHinput, malosyst, glutsyst, succsyst, dicarbsyst, &
+    !$OMP &  idHmalo, idmalo, idHglut, idglut, idHsucc, idsucc,  idMeOS, idEtOS, idIsopreneOS, incl_bisulfate, id_H2Adicarb, id_OSH)
     
 end module ModSystemProp

@@ -10,7 +10,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2018                                                            *
-!*   -> latest changes: 2021-12-02                                                      *
+!*   -> latest changes: 2025-07-03                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -90,7 +90,7 @@ end interface
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2004                                                            *
-    !*   -> latest changes: 2021-09-23                                                      *
+    !*   -> latest changes: 2025-05-13                                                      *
     !*                                                                                      *
     !****************************************************************************************
     subroutine AIOMFAC_calc(WTFin, TKelvin) 
@@ -98,7 +98,7 @@ end interface
     !Public Variables:
     use ModSystemProp, only : anNr, catNr, ElectComps, ElectNues, Ianion, Ication, &
         Nanion, Ncation, nelectrol, nindcomp, nneutral, SolvMixRefnd, bisulfsyst, &
-        errorflag_clist, bicarbsyst !, noCO2input
+        errorflag_clist, bicarbsyst!, noCO2input
     use ModCompScaleConversion, only : MassFrac2IonMolalities
     use ModNumericalTransformations, only : safe_exp
 
@@ -108,10 +108,10 @@ end interface
     real(wp),intent(in) :: TKelvin
     !local variable declarations:
     integer :: I, ii, k, ic, ia
+    real(wp) :: t1, ma1, nuelngc, nuelnga, nuec, nuea
     real(wp),parameter :: dtiny = sqrt(tiny(1.0_wp))
-    real(wp) :: t1, ma1, nuelngc, nuelnga, nuec, nuea, trunc
     !.................................................................
-
+    
     T_K = TKelvin
     wtf = WTFin     !input concentration is in mass fractions; other concentration scales are derived (when needed) from this.
     !if (noCO2input) then   !not needed in the normal call, may be needed with the gas--particle partitioning code
@@ -136,21 +136,21 @@ end interface
     !convert mass fraction input (potentially involving mass frac. of electrolytes) to molalities 
     !of specific ions for use in MR and LR parts:
     call MassFrac2IonMolalities(wtf, SMC, SMA)
-    SumIonMolalities = sum(SMA(1:Nanion)) +sum(SMC(1:Ncation))
+    SumIonMolalities = sum(SMA(1:Nanion)) + sum(SMC(1:Ncation))
     
     if (bicarbsyst) then            !includes case for 'bisulfsyst .AND. bicarbsyst'
         call HSO4_and_HCO3_dissociation()
     else if (bisulfsyst) then
-        !Perform the dissociation check for bisulfate-system ions and, via this 
+        !Perform the dissociation check for bisulfate-system ions and, via this
         !subroutine, the activity coefficient calculations:
         call HSO4_dissociation()    !many variables are referenced through the module ModAIOMFACvar
     else
         alphaHSO4 = -9.999999_wp
         alphaHCO3 = -9.999999_wp
-        call Gammas()               !no partial dissociation of specific ions/electrolytes, so call Gammas for activity 
-                                    !coefficient calculation separately.
+        call Gammas()               !no partial dissociation of specific ions/electrolytes, so call Gammas for activity
+        !coefficient calculation separately.
     endif
-    
+
     !initialize the output arrays:
     lnactcoeff_n = -9999.9_wp
     lnactcoeff_c = -9999.9_wp
@@ -165,7 +165,7 @@ end interface
     !ln of the activity coefficient for the neutrals:
     do I = 1,nneutral
         if (wtf(I) > dtiny) then
-            lnactcoeff_n(I) = gnmrln(I) +gnsrln(I) +gnlrln(I)
+            lnactcoeff_n(I) = gnmrln(I) + gnsrln(I) + gnlrln(I)
             actcoeff_n(I) = safe_exp(lnactcoeff_n(I), logval_threshold)     !apply safe exponentiation function
         endif
     enddo
@@ -173,9 +173,9 @@ end interface
     !ln of the activity coefficient for the cations:
     do I = 1,Ncation
         if (SMC(I) > dtiny) then
-            lnactcoeff_c(I) = gcmrln(I) +gcsrln(I) +gclrln(I) -Tmolal   !this term converts to the molality scale (basis/scale conversion)
+            lnactcoeff_c(I) = gcmrln(I) +gcsrln(I) + gclrln(I) -Tmolal   !this term converts to the molality scale (basis/scale conversion)
             if (solvmixrefnd) then                                      !correction terms for MR and SR part, if reference solution is the solvent mixture
-                lnactcoeff_c(I) = lnactcoeff_c(I) +solvmixcorrMRc(I) +Tmolal -TmolalSolvmix    
+                lnactcoeff_c(I) = lnactcoeff_c(I) + solvmixcorrMRc(I) + Tmolal - TmolalSolvmix    
             endif
             actcoeff_c(I) = safe_exp(lnactcoeff_c(I), logval_threshold)
         endif
@@ -188,9 +188,9 @@ end interface
     !ln of the activity coefficient for the anions:
     do I = 1,Nanion 
         if (SMA(I) > dtiny) then
-            lnactcoeff_a(I) = gamrln(I) +gasrln(I) +galrln(I) -Tmolal
+            lnactcoeff_a(I) = gamrln(I) + gasrln(I) + galrln(I) - Tmolal
             if (solvmixrefnd) then
-                lnactcoeff_a(I) = lnactcoeff_a(I) +solvmixcorrMRa(I) +Tmolal -TmolalSolvmix 
+                lnactcoeff_a(I) = lnactcoeff_a(I) + solvmixcorrMRa(I) + Tmolal - TmolalSolvmix 
             endif
             actcoeff_a(I) = safe_exp(lnactcoeff_a(I), logval_threshold)
         endif
@@ -202,11 +202,16 @@ end interface
     enddo
 
     Xwdissoc = x(1)
-    activity(1:nneutral) = actcoeff_n(1:nneutral)*x(1:nneutral)
-
-    !if (dicarbsyst) then
-    !    pH_calc = -log10(SMC(idH)*actcoeff_c(idH))
-    !endif
+    activity(1:nneutral) = actcoeff_n(1:nneutral)*x(1:nneutral) 
+    
+    !!if (dicarbsyst .or. OSsyst) then
+    !!    if (SMC(idH) < dtiny) then
+    !!        !if no H+ present, populate pH_calc with an infeasible value
+    !!        pH_calc = -77.77_wp
+    !!    else
+    !!        pH_calc = -log10(SMC(idH)*actcoeff_c(idH))
+    !!    endif
+    !!endif
 
     !loop over all identified electrolyte components and calculate the corresponding mean molal activity coefficient and molal ion activity product:
     ii = 0
@@ -218,40 +223,17 @@ end interface
         ia = ElectComps(ii,2)       !get anion identifier
         i = CatNr(ic)               !array index number of cation ic in, e.g., SMC array
         k = AnNr(ia) 
-        if (SMC(i) > 0.0_wp .AND. SMA(k) > 0.0_wp) then
-            if (actcoeff_c(i) > 0.0_wp .AND. actcoeff_a(k) > 0.0_wp) then
+        if (SMC(i) > 0.0_wp .and. SMA(k) > 0.0_wp) then
+            if (actcoeff_c(i) > 0.0_wp .and. actcoeff_a(k) > 0.0_wp) then
                 nuec = real(ElectNues(ii,1), kind=wp)
                 nuea = real(ElectNues(ii,2), kind=wp)
                 nuelngc = nuec*lnactcoeff_c(i)
                 nuelnga = nuea*lnactcoeff_a(k)
-                ma1 = (nuelngc + nuelnga)/(nuec+nuea)
+                ma1 = (nuelngc + nuelnga) / (nuec + nuea)
                 lnmeanmactcoeff(ii) = ma1
-                if (ma1 > lntiny) then                          !no floating point underflow problem expected
-                    if (ma1 < lnhuge) then                      !no floating point overflow problem expected
-                        meanmolalactcoeff(ii) = exp(ma1)        !the mean molal activity coefficient of the ions of "electrolyte unit" ii
-                    else                                        !numerical issue, so output a large number (smaller than overflow risk)
-                        trunc = 0.1_wp*log( abs(ma1) )
-                        meanmolalactcoeff(ii) = exp(lnhuge + trunc)
-                        errorflag_clist(7) = .true.
-                    endif
-                else !underflow risk
-                    meanmolalactcoeff(ii) = exp(lntiny)         !i.e. tiny number, almost zero
-                    errorflag_clist(7) = .true.
-                endif
+                meanmolalactcoeff(ii) = safe_exp(ma1, lnhuge)
                 t1 = nuelngc + nuelnga + nuec*log(SMC(i)) + nuea*log(SMA(k))
-                if (t1 > lntiny) then                           !no floating point underflow problem expected
-                    if (t1 < lnhuge) then                       !no floating point overflow problem expected
-                        ionactivityprod(ii) = exp(t1)           !the mean molal activity coefficient of the ions of "electrolyte unit" ii
-                    else                                        !numerical issue, so output a large number (smaller than overflow risk)
-                        trunc = 0.1_wp*log( abs(t1) )
-                        ionactivityprod(ii) = exp(lnhuge + trunc)
-                        errorflag_clist(7) = .true.
-                    endif
-                else                                            !underflow risk
-                    trunc = 0.1_wp*log( abs(t1) )
-                    ionactivityprod(ii) = exp(lntiny - trunc)   !i.e. tiny number, almost zero
-                    errorflag_clist(7) = .true.
-                endif
+                ionactivityprod(ii) = safe_exp(t1, lnhuge)
             endif
         endif
     enddo !ii
@@ -306,7 +288,7 @@ end interface
     mNeutral = XN(1:nneutral)/meanSolventMW                             ![mol/kg], the molalities of the neutrals
 
     !Addition of the moles of substance (neutral and ionic) per 1 kg of electrolyte-free solvent mixture
-    if (bisulfsyst .OR. bicarbsyst) then    !update since it changes in DiffKsulfuricDissoc and DiffKcarbonateDissoc
+    if (bisulfsyst) then    !update since it changes in DiffKsulfuricDissoc and DiffKcarbonateDissoc
         SumIonMolalities = sum(SMA(1:Nanion)) +sum(SMC(1:Ncation))
     endif
     sum_molalities = sum(mNeutral) + SumIonMolalities                   !sum of all molalities

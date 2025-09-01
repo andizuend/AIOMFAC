@@ -79,8 +79,8 @@ end interface Copy
     s = s1                            ! remove possible last char null
     k = 0  ; if (s /= ' ') k = 1      ! string has at least 1 item
     do i = 1,len_trim(s)-1
-        if (s(i:i) /= ' '.AND.s(i:i) /= ',' &
-            .AND. s(i+1:i+1) == ' '.OR. s(i+1:i+1) == ',') k = k+1
+        if (s(i:i) /= ' '.and.s(i:i) /= ',' &
+            .and. s(i+1:i+1) == ' '.or. s(i+1:i+1) == ',') k = k+1
     end do
     Count_Items = k
     end function Count_Items
@@ -147,7 +147,7 @@ end interface Copy
 
     n = 0  ;  aex = Copy(ex)
     do i = 1,len(s)
-        if (.NOT.any(s(i:i) == aex)) cycle   ! dont pack char
+        if (.not.any(s(i:i) == aex)) cycle   ! dont pack char
         n = n+1 ; outs(n:n) = s(i:i)
     end do
     outs(n+1:) = ' '     ! pad with trailing blanks
@@ -188,7 +188,7 @@ end interface Copy
 
     do i = 1,len(s1)
         ch = s1(i:i)
-        if (ch >= 'a'.AND.ch <= 'z') ch = CHAR(ICHAR(ch)+DUC)
+        if (ch >= 'a'.and.ch <= 'z') ch = CHAR(ICHAR(ch)+DUC)
         s2(i:i) = ch
     end do
     end function Upper
@@ -203,7 +203,7 @@ end interface Copy
 
     do i = 1,len(s1)
         ch = s1(i:i)
-        if (ch >= 'A'.AND.ch <= 'Z') ch = CHAR(ICHAR(ch)-DUC)
+        if (ch >= 'A'.and.ch <= 'Z') ch = CHAR(ICHAR(ch)-DUC)
         s2(i:i) = ch
     end do
     end function Lower

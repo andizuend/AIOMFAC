@@ -3,17 +3,20 @@
 !*   Module providing access to the pure component viscosity parameter arrays.          *
 !*                                                                                      *
 !*   :: Author & Copyright ::                                                           *
-!*   Andi Zuend, Natalie Gervasi                                                        *
+!*   Andi Zuend, Natalie Gervasi, Zixuan Shen                                           *
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2012-09-07                                                      *
-!*   -> latest changes: 2021-11-29                                                      *
+!*   -> latest changes: 2025-07-06                                                      *
 !*                                                                                      *
 !*   :: List of subroutines and functions contained in this module:                     *
 !*   --------------------------------------------------------------                     *
 !*   -  subroutine DeRieux_Tno_Est                                                      *
+!*   -  function YingLi_Tg_Est                                                          *
+!*   -  subroutine Tg_ML_Armeli                                                         *
 !*   -  subroutine VogelTemp                                                            *
 !*   -  subroutine PureCompViscosity                                                    *
+!*   -  function is_Tg_file_matching                                                    *
 !*                                                                                      *
 !****************************************************************************************
 
@@ -24,11 +27,20 @@ use Mod_kind_param, only : wp
 implicit none
 !..................................
 !public parameter arrays:
-real(wp),dimension(1500,2),public :: CorrelTrange    !structure: (lower T limit, upper T limit) in [K]
-real(wp),dimension(1500,5),public :: ViscosCorrelPar !structure: (component no., param. A, B, C, D, E)
+integer,dimension(1500),public :: CorrelEqNo
+real(wp),dimension(1500,2),public :: CorrelTrange       !structure: (lower T limit, upper T limit) in [K]
+real(wp),dimension(1500,5),public :: ViscosCorrelPar    !structure: (component no., param. A, B, C, D, E)
+real(wp),public :: TgScale
+real(wp),public :: TgScalePlot = -1.0_wp                !initialize with an unphysical value
+real(wp),dimension(:),allocatable,private :: p0sat      ![Pa]
+real(wp),dimension(:),allocatable :: TgML               !array storing Tg based on Machine Learning method by Armeli et al. (2023)
+character(len=500),dimension(:),allocatable :: SMILES   !SMILES string of selected dataset ndi components
+
 !public procedures:
 public :: PureCompViscosity
 private     !as default
+
+!$OMP THREADPRIVATE(p0sat, SMILES, TgML, TgScale, TgScalePlot)
 
 !========================================================================================================== 
     contains
@@ -41,7 +53,10 @@ private     !as default
     !*                                                                                      *
     !*   :: Authors & Copyright ::                                                          *
     !*   Natalie Gervasi, Andi Zuend,                                                       *
-    !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *                         
+    !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *                       
+    !*                                                                                      *
+    !*   -> created:        2019-02-03                                                      *
+    !*   -> latest changes: 2025-07-06                                                      *      
     !*                                                                                      *
     !****************************************************************************************
     pure subroutine DeRieux_Tno_Est(ind, expTg, Tg)
@@ -57,26 +72,31 @@ private     !as default
     !local variables:
     real(wp),parameter :: nCO = 12.13_wp, bC = 10.95_wp, bH = -41.82_wp, bCH = 21.61_wp, bO = 118.96_wp, bCO = -24.38_wp
     real(wp),parameter :: nCO_k = 1.96_wp, bC_k = 61.99_wp, bH_k = -113.33_wp, bCH_k = 28.74_wp
-    real(wp) :: sumC, sumH, sumO, OtoC, HtoC
+    real(wp) :: cpCarbon, cpHydrogen, cpOxygen, cpNitrogen, cpSulfur, OtoC, HtoC, NtoC, StoC
     !..................................
     
-    call O2C_H2C_component(ind, sumC, sumH, sumO, OtoC, HtoC)
+    call O2C_H2C_component(ind, cpCarbon, cpHydrogen, cpOxygen, cpNitrogen, cpSulfur, OtoC, HtoC, NtoC, StoC)
 
     ! Tg is either calculated or an experimentally determined value is used
-    if (expTg > -999.0_wp) then     !use experimental value
+    if (expTg > -999.0_wp) then ! use experimental value
         Tg = expTg
     else
         !choose the constants for the Tg model based on whether the compound contains oxygen or not
-        if (sumO < 1.0_wp) then
-            Tg = bC_k*(nCO_k + log(sumC)) + bH_k*log(sumH) + bCH_k*log(sumC)*log(sumH)
+        if (cpHydrogen < 1.0_wp) then     !(AZ: added 2025-07-03); fix to allow for predictions when the compound contains no H (in those cases it often contains lots of N, which is ignored below, so the prediction may be poor anyways)
+            cpHydrogen = 1.0_wp
+        endif
+        if (cpOxygen < 1.0_wp) then
+            Tg = bC_k*(nCO_k + log(cpCarbon)) + bH_k*log(cpHydrogen) + bCH_k*log(cpCarbon)*log(cpHydrogen)
         else
             ! Shiraiwa et al. group model used to calculate Tg (DeRieux et al. 2018), eqn (2)
-            Tg = bC*(nCO + log(sumC)) + bH*log(sumH) + bCH*log(sumC)*log(sumH) + bO*log(sumO) + bCO*log(sumC)*log(sumO)
+            Tg = bC*(nCO + log(cpCarbon)) + bH*log(cpHydrogen) + bCH*log(cpCarbon)*log(cpHydrogen) + &
+                & bO*log(cpOxygen) + bCO*log(cpCarbon)*log(cpOxygen)
         endif
     endif
 
     end subroutine DeRieux_Tno_Est
     !========================================================================================================== 
+    
     
     
     !****************************************************************************************
@@ -95,20 +115,21 @@ private     !as default
     implicit none
 
     !interface
-    real(wp), intent(in) :: Tg, TempK   ! glass transition temperature, run temperature [K]
-    real(wp), intent(out) :: Tno, D     ! Vogel temperature [K], fragility parameter [-]
+    real(wp), intent(in) :: Tg, TempK    ! glass transition temperature, run temperature [K]
+    real(wp), intent(out) :: Tno, D      ! Vogel temperature [K], fragility parameter [-]
     !........................  
 
-    if (TempK < Tg) then                ! pure component substance below Tg that was once fragile will behave more strongly
+    if (TempK < Tg) then                 ! pure component substance below Tg that was once fragile will behave more strongly
         D = 30.0_wp
     else
-        D = 10.0_wp                     ! reasonable guess for organics (Shiraiwa et al., 2017)
+        D = 10.0_wp                      ! reasonable guess for organics (Shiraiwa et al., 2017)
     endif
-    Tno = (39.17_wp*Tg)/(D + 39.17_wp)  ! (DeRieux et al. 2018) eqn (7)
+    Tno = (39.17_wp*Tg)/(D + 39.17_wp)   ! (DeRieux et al. 2018) eqn (7)
 
     end subroutine VogelTemp
     !==========================================================================================================
     
+
     
     !****************************************************************************************
     !*   :: Purpose ::                                                                      *
@@ -210,7 +231,7 @@ private     !as default
         case(10)            !Vogel-Tammann-Fulcher (VFT), Angell (1991) using DeRieux et al. (2018) constants and DeRieux Tg
             if (Tvog >= TempK) then
                 iflag = 1           !1 = outside valid temperature range!
-                ln_eta0 = 1.0E300_wp
+                ln_eta0 = 600.0_wp
             else
                 ln_eta0 = ln10*( -5.0_wp + 0.434_wp*(fragility*Tvog/(TempK - Tvog)) )    !DeRieux et al. 2018, eqn (6)
             endif

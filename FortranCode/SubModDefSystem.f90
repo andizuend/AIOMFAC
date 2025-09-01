@@ -72,8 +72,8 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
     logical,intent(in) :: datafromfile   !set .true. if the system components are provided from an input file
     integer,intent(in) :: ninp           !value known at input only in the case of input from a file
     !optional input arguments:
-    character(len=200),dimension(ninp),intent(in),  OPTIONAL :: cpnameinp
-    integer,dimension(ninp,topsubno),intent(in), OPTIONAL :: cpsubginp
+    character(len=200),dimension(:),intent(in), optional :: cpnameinp
+    integer,dimension(:,:),intent(in), optional :: cpsubginp
     !...
     !local variables
     integer :: AnFree, CatFree, i, ninputcomp, nnp1
@@ -357,12 +357,12 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
     integer,dimension(200) :: SolvSubs2                          !temporary array for solvent subgroups (we allow a maximum of 200)
     integer,dimension(ninputcomp*2) :: ElectSubs2
     integer,dimension(201:topsubno) :: ElectPos
+    !character(len=3) :: cn
     logical :: already1, already2
     !--------------------------------------
 
     !initialize arrays and parameters:
     nd = ndi  !nd = 1 for web-version (single data file / mixture only)
-    solvmixrefnd = .false.
     errorflagmix = 0
     if (allocated(ITAB)) then
         deallocate(ITAB, ITABsr, ITABMG, ITAB_dimflip, compN, Imaingroup, maingrindexofsubgr)
@@ -373,7 +373,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
     !!do i = 1,topsubno
     !!    ITAB(:,i) = cpsubg(:,i) !transfer data to module array ITAB
     !!enddo
-    ITAB_dimflip = TRANSPOSE(ITAB)
+    ITAB_dimflip = transpose(ITAB)
     CompN = compID
 
     !count the number of neutral components, nneutral:
@@ -387,7 +387,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
                     if (i > nneutral) then
                         write(*,*) "ERROR: there are skipped neutral component numbers! Please check your input."
                         read(*,*)
-                        STOP
+                        stop
                     endif
                 endif
                 Icheck = i
@@ -407,7 +407,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
                     if (i-nneutral > nelectrol) then
                         write(*,*) "ERROR: there are skipped salt component numbers! Please check your input."
                         read(*,*)
-                        STOP
+                        stop
                         write(*,*) ""
                     endif
                 endif
@@ -478,7 +478,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
     do i = nneutral+1,ninputcomp
         do J = 1,NGS
             K = ElectSubs2(J)
-            if (ITAB_dimflip(K,i) > 0 .AND. ElectPos(K) == 0) then  !to make sure that every elect. subgroup is only checked once.
+            if (ITAB_dimflip(K,i) > 0 .and. ElectPos(K) == 0) then  !to make sure that every elect. subgroup is only checked once.
                 ElectPos(K) = q !the position in the later array of ElectSubs, so that the anions and cations in ElectSubs correspond.
                 q = q+1
             endif
@@ -525,10 +525,10 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
         already1 = .false.
         already2 = .false.
         K = ElectSubs(J)
-        if (K < 241 .AND. K > 200) then
+        if (K < 241 .and. K > 200) then
             do qq = 1,NGS
-                if (.NOT. already1) then
-                    if (Ication(qq) == 0 .OR. Ication(qq) == K) then
+                if (.not. already1) then
+                    if (Ication(qq) == 0 .or. Ication(qq) == K) then
                         Ication(qq) = K
                         CatNr(K) = qq
                         cationZ(qq) = real(Ioncharge(K), kind=wp)
@@ -536,10 +536,10 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
                     endif
                 endif
             enddo
-        else if (K <= topsubno .AND. K > 240) then !K > 240
+        else if (K <= topsubno .and. K > 240) then !K > 240
             do qq = 1,NGS
-                if (.NOT. already2) then
-                    if (Ianion(qq) == 0 .OR. Ianion(qq) == K) then
+                if (.not. already2) then
+                    if (Ianion(qq) == 0 .or. Ianion(qq) == K) then
                         Ianion(qq) = K
                         AnNr(K) = qq
                         anionZ(qq) = real(Ioncharge(K), kind=wp)
@@ -559,23 +559,34 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
     idHCO3 = AnNr(250)
     idCO3 = AnNr(262)
     idOH = AnNr(247)
-
+    
+    idHmalo = AnNr(251)
+    idmalo = AnNr(263)
+    idHglut = AnNr(252)
+    idglut = AnNr(264)
+    idHsucc = AnNr(253)
+    idsucc = AnNr(265)
+    
+    idMeOS = AnNr(254)
+    idEtOS = AnNr(255)
+    idIsopreneOS = AnNr(256)
+    
     !------------------------------------------------------------
     !Calculation of the number of different cations and the number of different anions:
     Ncation = count(Ication(:) > 0)
     Nanion = count(Ianion(:) > 0)
 
-    !define different binary cation--anion combinations as electrolyte components of the mixture:
+    !define different binary cation-anion combinations as electrolyte components of the mixture:
     if (nelectrol > 0) then
         elpresent = .true.
         !initialize KVLE(cation ID, anion ID) parameters for gas-liquid equilibria of different electrolyte components composed of binary cation+anion pairs
-        !FROM LANGE's Handbook of Chemistry 15th Edition, Gibbs Energy of Formation Data; with R* = 8.314459 [J K^-1 mol^-1]
+        !FROM LANGE's Handbook of Chemistry 15th Edition, Gibbs Energy of Formation Data; with R* = 8.314459 [J K^-1 mol^-1] or updated R* value 
         KVLE_298K = 0.0_wp
         KVLE_298K(205,243) = 7.236814145E8_wp  !HBr  7.235752425E8_wp
         KVLE_298K(205,242) = 1.986870884E6_wp  !HCl
         KVLE_298K(205,241) = 5.749865093E8_wp  !HF
         KVLE_298K(205,244) = 2.168075448E9_wp  !HI
-        KVLE_298K(205,245) = 4.191055023E6_wp  !HNO3
+        KVLE_298K(205,245) = 4.190574E+06_wp   !HNO3
         !KVLE_298K(205,204) = 1.07614415E11_wp !NH3  (i.e. NH3(g) + H+(aq) <--> NH4+(aq)
         !initialize the IAP vs. aw parameterization coefficients for semi-volatile electrolyte components considered:
         IAPcoeffs = 0.0_wp
@@ -610,7 +621,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
             Imaingroup(J) = JJ  !list of main groups (here not yet filtered and sorted)
         enddo
         !check input correctness with respect to OH groups and special CHn groups bonded to OH groups:
-        if (ITABMG(i,68) > 0 .OR. ITABMG(i,52) > 0) then
+        if (ITABMG(i,68) > 0 .or. ITABMG(i,52) > 0) then
             if (ITABMG(i,68) + ITABMG(i,52) > ITABMG(i,69)) then !this would indicate an input error
                 errorflagmix = 13
             endif
@@ -667,7 +678,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
     do J = 1,NGS
         ID = ElectSubs(J)
         !!i = sum(maxloc(ITAB(nneutral+1:nneutral+nelectrol, ID))) +nneutral
-        if (ID > 200 .AND. ID < 240) then !cation
+        if (ID > 200 .and. ID < 240) then !cation
             K = K+1
             ITABsr(K,ID) = 1   !transfer cation info; just set to one ion, actual amount is coming from molality of the ion
         else if (ID > 240) then !anion
@@ -711,7 +722,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
     call SetMolarMass(Mmass)    !Mmass lists the molar mass in [kg/mol] of all mixture components
     if (any(Mmass(:) < 0.0_wp)) then
         !$OMP CRITICAL
-        write(*,*) 'ERROR: A molar mass value is negative indicating a missing value set in ModSubgroupProp.'
+        write(*,'(A)') 'ERROR: A molar mass value is negative indicating a missing value set in ModSubgroupProp.'
         read(*,*)
         STOP
         !$OMP end CRITICAL
@@ -753,7 +764,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
 
     nnp1 = nneutral + 1
     !calculate all different electrolyte components that can be formed from the input electro-neutral
-    !cation--anion combinations (e.g. for gas-particle partitioning of different electrolytes):
+    !cation-anion combinations (e.g. for gas-particle partitioning of different electrolytes):
     iel = Ncation*Nanion !maximum number of possible electrolyte components just formed by one cation and anion each.
     if (allocated(ElectComps)) then
         deallocate( ElectComps, ElectNues, ElectVolatile, ElectO2Cequiv, K_el )
@@ -779,16 +790,16 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
         do J = 1,NGS
             !loop over ElectSubs(K)
             ion = ElectSubs(J)
-            if (KK == 0 .AND. ion > 200 .AND. ion < 240) then
+            if (KK == 0 .and. ion > 200 .and. ion < 240) then
                 if (ITAB_dimflip(ion,nneutral+i) > 0) then
                     KK = ion
                 endif
-            else if (JJ == 0 .AND. ion > 240 .AND. ion <= topsubno) then
+            else if (JJ == 0 .and. ion > 240 .and. ion <= topsubno) then
                 if (ITAB_dimflip(ion,nneutral+i) > 0) then
                     JJ = ion
                 endif
             endif
-            if (KK > 0 .AND. JJ > 0) then
+            if (KK > 0 .and. JJ > 0) then
                 iel = iel+1
                 ElectComps(iel,1) = KK
                 ElectComps(iel,2) = JJ
@@ -801,31 +812,32 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
         endif
         zc = Ioncharge(KK)
         za = abs(Ioncharge(JJ))
-        !now attribute the stoichiometric cation and anion numbers to creat an electroneutral component:
-        if (zc == za) then !1:1 electrolyte (both the same charge of +-1 or +-2)
+        !now attribute the stoichiometric cation and anion numbers to create an electroneutral component:
+        if (zc == za) then                  !1:1 electrolyte (both the same charge of +-1 or +-2)
             ElectNues(iel,1) = 1
             ElectNues(iel,2) = 1
             ElectO2Cequiv(iel) = (IonO2Cequiv(KK)*IonO2Cequiv(JJ))**0.5_wp
             nuestoich(nneutral+iel) = 2.0_wp
         else
             select case(zc)
-            case(1) !2:1 electrolyte
+            case(1)                         !2:1 electrolyte
                 ElectNues(iel,1) = 2
-                ElectNues(iel,2) = 1 !anion charge: -2
+                ElectNues(iel,2) = 1        !anion charge: -2
                 ElectO2Cequiv(iel) = (IonO2Cequiv(KK)**2 *IonO2Cequiv(JJ))**onethird
                 nuestoich(nneutral+iel) = 3.0_wp
-            case(2) !1:2 electrolyte
-                ElectNues(iel,1) = 1 !cation charge: +2
+            case(2)                         !1:2 electrolyte
+                ElectNues(iel,1) = 1        !cation charge: +2
                 ElectNues(iel,2) = 2
                 ElectO2Cequiv(iel) = (IonO2Cequiv(KK)*IonO2Cequiv(JJ)**2)**onethird
                 nuestoich(nneutral+iel) = 3.0_wp
             end select
         endif
-        if (KK == 205 .AND. JJ /= 261 .AND. JJ /= 262 .AND. JJ /= 250 .AND. JJ /= 248 &
-        & .OR. (KK == 204 .AND. JJ == 245)) then
+        if (KK == 205 .and. JJ /= 261 .and. JJ /= 262 .and. JJ /= 250 .and. JJ /= 248 &
+        & .or. (KK == 204 .and. JJ == 245)) then
             ElectVolatile(iel) = .true.
         endif
     enddo !i
+    
     !Second, make all other possible electroneutral binary cation-anion combinations for electrolytes and add to the lists:
     i = iel
     do K = 1,Ncation
@@ -835,11 +847,11 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
             !check if cation-anion combination is already assigned to a component:
             already1 = .false.
             do q = 1,i
-                if (ElectComps(q,1) == KK .AND. ElectComps(q,2) == JJ) then
+                if (ElectComps(q,1) == KK .and. ElectComps(q,2) == JJ) then
                     already1 = .true.
                 endif
             enddo
-            if (.NOT. already1) then !found new electrolyte component
+            if (.not. already1) then            !found new electrolyte component
                 i = i+1
                 ElectComps(i,1) = KK
                 ElectComps(i,2) = JJ
@@ -847,34 +859,34 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
                 zc = Ioncharge(KK)
                 za = abs(Ioncharge(JJ))
                 !now attribute the stoichiometric cation and anion numbers to creat an electroneutral component:
-                if (zc == za) then !1:1 electrolyte (both the same charge of +-1 or +-2)
+                if (zc == za) then              !1:1 electrolyte (both the same charge of +-1 or +-2)
                     ElectNues(i,1) = 1
                     ElectNues(i,2) = 1
                     ElectO2Cequiv(i) = (IonO2Cequiv(KK)*IonO2Cequiv(JJ))**0.5_wp
                     nuestoich(nneutral+i) = 2.0_wp
                 else
                     select case(zc)
-                    case(1) !2:1 electrolyte
+                    case(1)                     !2:1 electrolyte
                         ElectNues(i,1) = 2
-                        ElectNues(i,2) = 1 !anion charge: -2
+                        ElectNues(i,2) = 1      !anion charge: -2
                         ElectO2Cequiv(i) = (IonO2Cequiv(KK)**2 *IonO2Cequiv(JJ))**onethird
                         nuestoich(nneutral+i) = 3.0_wp
-                    case(2) !1:2 electrolyte
-                        ElectNues(i,1) = 1 !cation charge: +2
+                    case(2)                     !1:2 electrolyte
+                        ElectNues(i,1) = 1      !cation charge: +2
                         ElectNues(i,2) = 2
                         ElectO2Cequiv(i) = (IonO2Cequiv(KK)*IonO2Cequiv(JJ)**2)**onethird
                         nuestoich(nneutral+i) = 3.0_wp
                     end select
                 endif
-                if (KK == 205 .AND. JJ /= 261 .AND. JJ /= 262 .AND. JJ /= 250 .AND. JJ /= 248 &
-                & .OR. (KK == 204 .AND. JJ == 245)) then
+                if (KK == 205 .and. JJ /= 261 .and. JJ /= 262 .and. JJ /= 250 .and. JJ /= 248 &
+                & .or. (KK == 204 .and. JJ == 245)) then
                     ElectVolatile(i) = .true.
                 endif
             endif
         enddo !J
     enddo !K
-    nelectrol = i !the total number of different possible electrolyte components of the system (including both input electrolytes and additional, electroneutral ion combinations)
-    NG = NGN + NGS !maximum number of molecular / ionic groups
+    nelectrol = i                               !the total number of different possible electrolyte components of the system (including both input electrolytes and additional, electroneutral ion combinations)
+    NG = NGN + NGS                              !maximum number of molecular / ionic groups
 
     end subroutine defElectrolytes
     !==========================================================================================================================
@@ -912,6 +924,98 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
     enddo
 
     end subroutine SetMolarMass
-!==========================================================================================================================
+    !==========================================================================================================================
+    
+    
+    !****************************************************************************************
+    !*                                                                                      *
+    !*   Increment NKSinput variable when the number of neutral components changes          *                                                                       *
+    !*                                                                                      *
+    !**************************************************************************************** 
+    pure module subroutine incrementNKSinput(NKSinput, NKSinputp1)
+
+    use ModSystemProp, only : noCO2input, noH2Ainput, noOSHinput, idCO2, id_H2Adicarb, id_OSH
+
+    implicit none
+    !Interface variables:
+    integer,intent(inout) :: NKSinput
+    integer,optional,intent(inout) :: NKSinputp1
+    !------------------------------------------------------------------
+
+    if (noCO2input) then
+        if (idCO2 > 0) then !CO2 present, but not as input component;
+            !shift input components since CO2 had been automatically added as the 
+            !last neutral (non-electrolyte) component in SetSystem
+            NKSinput = NKSinput +1
+            if (present(NKSinputp1)) then
+                NKSinputp1 = NKSinputp1 +1
+            endif
+        endif
+    endif
+    
+    if (noH2Ainput) then
+        if (id_H2Adicarb > 0) then !H2A present, but not as input component;
+            !shift input components since H2A had been automatically added as the 
+            !last neutral (non-electrolyte) component in SetSystem
+            NKSinput = NKSinput +1
+            if (present(NKSinputp1)) then
+                NKSinputp1 = NKSinputp1 +1
+            endif
+        endif
+    endif
+    
+    if (noOSHinput) then
+        if (id_OSH > 0) then !OSH present, but not as input component;
+            !shift input components since OSH had been automatically added as the 
+            !last neutral (non-electrolyte) component in SetSystem
+            NKSinput = NKSinput +1
+            if (present(NKSinputp1)) then
+                NKSinputp1 = NKSinputp1 +1
+            endif
+        endif
+    endif
+
+    end subroutine incrementNKSinput
+    !==========================================================================================================================
+    
+    
+    !****************************************************************************************
+    !*                                                                                      *
+    !*   Shift inputconc array when the number of neutral components changes                *                                                                       *
+    !*                                                                                      *
+    !**************************************************************************************** 
+    pure module subroutine shiftinputconc(inputconc)
+
+    use ModSystemProp, only : noCO2input, noH2Ainput, noOSHinput, idCO2, id_H2Adicarb, id_OSH, nindcomp
+
+    implicit none
+    !Interface variables:
+    real(wp),dimension(nindcomp),intent(inout) :: inputconc
+    !------------------------------------------------------------------
+
+    if (noCO2input) then
+        if (idCO2 > 0) then !CO2 present, but not as input component;
+            inputconc(idCO2+1:nindcomp) = inputconc(idCO2:nindcomp-1)
+            inputconc(idCO2) = 0.0_wp
+        endif   
+    endif
+    
+    if (noH2Ainput) then
+        if (id_H2Adicarb > 0) then !H2A present, but not as input component;
+            inputconc(id_H2Adicarb+1:nindcomp) = inputconc(id_H2Adicarb:nindcomp-1)
+            inputconc(id_H2Adicarb) = 0.0_wp
+        endif   
+    endif
+    
+    if (noOSHinput) then
+        if (id_OSH > 0) then !OSH present, but not as input component;
+            inputconc(id_OSH+1:nindcomp) = inputconc(id_OSH:nindcomp-1)
+            inputconc(id_OSH) = 0.0_wp
+        endif   
+    endif
+
+    end subroutine shiftinputconc
+    !==========================================================================================================================
+
     
 end submodule SubModDefSystem

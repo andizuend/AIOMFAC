@@ -10,7 +10,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2009 (based on non-module version from 2005)                    *
-!*   -> latest changes: 2023-09-05                                                      *
+!*   -> latest changes: 2024-07-03                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -38,9 +38,9 @@ implicit none
 !Public module variables:
 real(wp),public :: alphaHSO4, diffKHSO4, ionicstrength, lastTK, meanSolventMW, &
     & partial_log10_etamix, pH_calc, SumIonMolalities, T_K, Tmolal, TmolalSolvMix, Xwdissoc
-real(wp),public :: alphaHCO3, alphaHmalo, alphaHglut, alphaHsucc, pCO2, VCO2 
+real(wp),public :: alphaHCO3, alphaHmalo, alphaHglut, alphaHsucc, alphaH2malo, alphaH2glut, alphaH2succ, alphaMeOSH, alphaEtOSH, alphaIsopreneOSH, pCO2, VCO2 
 real(wp),public :: ln_etamix, ln_etamixZSR, ln_eta_aquelec, ln_etaZSR_org, ln_etaZSR_inorg
-real(wp),dimension(4),public :: aquelecVar_save 
+real(wp),dimension(4),public :: aquelecVar_save, delGstar_save 
 real(wp),dimension(:),allocatable,public :: actcoeff_a, actcoeff_c, actcoeff_n, activity, ln_eta0, lneta_cpn, &
     & fragil, galrln, gamrln, gasrln, gclrln, gcmrln, gcsrln, gnlrln, gnmrln, gnsrln, ionactivityprod, lnactcoeff_a, &
     & lnactcoeff_c, lnactcoeff_n, lnmeanmactcoeff, meanmolalactcoeff, mrespSalt, SMA, SMC, solvmixcorrMRa, &
@@ -55,8 +55,8 @@ logical,public :: DebyeHrefresh
     !$OMP & gclrln, gcmrln, gcsrln, gnlrln, gnmrln, gnsrln, ionactivityprod, ionicstrength, lnactcoeff_a, &
     !$OMP & lnactcoeff_c, lnactcoeff_n, lnmeanmactcoeff, meanmolalactcoeff, mrespSalt, SMA, SMC, actcoeff_ion, molality_ion, &
     !$OMP & solvmixcorrMRa, solvmixcorrMRc, Tglass0, Tmolal, TmolalSolvMix, wtf, X, XN, XrespSalt, DebyeHrefresh, &
-    !$OMP & alphaHCO3, alphaHmalo, alphaHglut, alphaHsucc, pCO2, VCO2, ln_etamix, ln_etamixZSR, ln_eta_aquelec, ln_etaZSR_org, &
-    !$OMP & ln_etaZSR_inorg, aquelecVar_save )
+    !$OMP & alphaHCO3, alphaHmalo, alphaHglut, alphaHsucc, alphaH2malo, alphaH2glut, alphaH2succ, alphaMeOSH, alphaEtOSH, alphaIsopreneOSH, &
+    !$OMP & pCO2, VCO2, ln_etamix, ln_etamixZSR, ln_eta_aquelec, ln_etaZSR_org, ln_etaZSR_inorg, aquelecVar_save, delGstar_save )
 
 !==========================================================================================================================
     contains

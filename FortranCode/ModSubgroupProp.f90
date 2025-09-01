@@ -11,7 +11,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2018 (based on non-module version from 2009)                    *
-!*   -> latest changes: 2023-12-11                                                      *
+!*   -> latest changes: 2025-07-06                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -58,16 +58,16 @@ integer,dimension(topsubno),parameter,public :: NKTAB = [ &
             & 19, 20, 20, 21, 21, 21, 22, 22, 22, 23, 23, 24, 25, 26, 26, 26, 27, 28, 29, 29, &
             & 30, 31, 32, 33, 34, 34, 35, 36, 37, 02, 38, 39, 39, 40, 40, 40, 41, 42, 42, 42, &
             & 42, 43, 43, 43, 44, 45, 45, 45, 45, 45, 45, 45, 45, 46, 46, 46, 46, 46, 46, 47, &
-            & 47, 48, 48, 48, 49, 50, 50, 50, 00, 00, 00, 00, 53, 54, 55, 55, 56, 56, 56, 56, &
+            & 47, 48, 48, 48, 49, 50, 50, 50, 00, 00, 00, 00, 00, 54, 55, 55, 56, 56, 56, 56, &
             & 57, 57, 57, 58, 59, 59, 59, 59, 60, 61, 62, 62, 62, 62, 63, 64, 20, 00, 00, 00, &
             & 66, 66, 66, 66, 67, 67, 67, 67, 68, 68, 52, 52, 69, 70, 71, 71, 71, 72, 72, 72, &
-            & 73, 74, 74, 74, 74, 74, 74, 74, 74, 74, 74, 75, 76, 00, 00, 00, 00, 00, 00, 00, &
+            & 73, 74, 74, 74, 74, 74, 74, 74, 74, 74, 74, 75, 76, 53, 00, 00, 00, 00, 00, 00, &
             & 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, &
             & (51, i = 201,topsubno) ]  !51 indicates that main group is an ion (same for all ions)
 
 !Molar masses of the neutral subgroups [g/mol]:
 real(wp),dimension(200),parameter,public :: GroupMW = [ &
-!subgroup no.: 1,         2,            3,            4,            5,            6,            7,            8,            9,           10,   etc. (11, ..., 20 on next row, etc.)
+!subgroup no.: 1,            2,               3,               4,               5,               6,               7,               8,               9,              10,   etc. (11, ..., 20 on next row, etc.)
     &  1.50340E+01_wp,  1.40260E+01_wp,  1.30180E+01_wp,  1.20100E+01_wp,  2.70440E+01_wp,  2.60000E+01_wp,  2.60000E+01_wp,  2.50280E+01_wp,  1.30180E+01_wp,  1.20100E+01_wp, &
     &  2.70440E+01_wp,  2.60000E+01_wp,  2.50000E+01_wp,  1.70080E+01_wp,  3.20000E+01_wp,  1.801528E+01_wp, 2.90000E+01_wp,  4.30000E+01_wp,  4.20000E+01_wp,  2.90000E+01_wp, &
     &  5.90000E+01_wp,  5.80000E+01_wp,  4.50000E+01_wp,  3.10000E+01_wp,  3.00268E+01_wp,  2.90000E+01_wp,  3.00000E+01_wp,  3.10500E+01_wp,  3.00000E+01_wp,  2.90000E+01_wp, &
@@ -85,16 +85,16 @@ real(wp),dimension(200),parameter,public :: GroupMW = [ &
     &  1.50340E+01_wp,  1.40260E+01_wp,  1.30180E+01_wp,  1.20100E+01_wp,  1.50340E+01_wp,  1.40260E+01_wp,  1.30180E+01_wp,  1.20100E+01_wp,  1.50340E+01_wp,  1.40260E+01_wp, &
     &  1.30180E+01_wp,  1.20100E+01_wp,  1.70080E+01_wp,  4.40528E+01_wp,  7.60260E+01_wp,  7.50180E+01_wp,  7.40100E+01_wp,  4.70340E+01_wp,  4.60260E+01_wp,  4.50180E+01_wp, &
     &  6.10180E+01_wp,  6.20680E+01_wp,  6.10600E+01_wp,  6.00520E+01_wp,  5.90440E+01_wp,  6.00520E+01_wp,  5.90440E+01_wp,  5.80360E+01_wp,  5.80360E+01_wp,  5.70280E+01_wp, &
-    &  5.60200E+01_wp,  1.06010E+02_wp,  4.40100E+01_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp, &
+    &  5.60200E+01_wp,  1.06010E+02_wp,  4.40100E+01_wp,  9.70690E+01_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp, &
     &  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp, &
     &  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp ]
    
 !List of the molecular masses of the ions [g/mol]; 
-!The order is ion ID -200 for cations, e.g. SMWC(2) is molar mass of ion 202 = Na+, 
-! and ion-ID -240 for anions, e.g.(e.g. SMWA(3) is molar mass of ion 243 = Br-). 
+!The order is ion-ID -200 for cations, e.g. SMWC(2) is molar mass of ion 202 = Na+, 
+! and ion-ID -240 for anions (e.g. SMWA(3) is molar mass of ion 243 = Br-). 
 ! values of -8.8888E+05_wp indicate that the actual value is not set for the pertaining ion/component; it will trigger an error when used.
 real(wp),dimension(40),parameter,public :: SMWC = [ &  
-!cation no.: 1,             2,            3,            4,            5,            6,            7,            8,            9,           10,  etc. (11, ..., 20 on next row, etc.)
+!cation no.: 1,                2,               3,               4,               5,               6,               7,               8,               9,              10,  etc. (11, ..., 20 on next row, etc.)
     &  6.94100E+00_wp,  2.29900E+01_wp,  3.90980E+01_wp,  1.80380E+01_wp,  1.00800E+00_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp, &
     &  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp, &
     &  4.00780E+01_wp,  1.37330E+02_wp,  2.43050E+01_wp,  8.76200E+01_wp,  5.89330E+01_wp,  5.86930E+01_wp,  6.35460E+01_wp,  6.53900E+01_wp,  2.00590E+02_wp,  -8.8888E+05_wp, &
@@ -102,9 +102,9 @@ real(wp),dimension(40),parameter,public :: SMWC = [ &
 
 !list of anion molar masses [g/mol]:
 real(wp),dimension(40),parameter,public :: SMWA = [ &  
-!anion no.:  1,             2,            3,            4,            5,            6,            7,            8,            9,           10,  etc. (11, ..., 20 on next row, etc.)
+!anion no.:  1,                2,               3,               4,               5,               6,               7,               8,               9,              10,  etc. (11, ..., 20 on next row, etc.)
     &  1.89980E+01_wp,  3.54530E+01_wp,  7.99040E+01_wp,  1.26905E+02_wp,  6.20040E+01_wp,  1.74903E+02_wp,  1.700728E+01_wp, 9.70710E+01_wp,  9.50925E+01_wp,  6.10160E+01_wp, &
-    &  1.03018E+02_wp,  1.31070E+02_wp,  1.17090E+02_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp, &
+    &  1.03018E+02_wp,  1.31070E+02_wp,  1.17090E+02_wp,  1.11906E+02_wp,  1.25123E+02_wp,  2.15204E+02_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp, &
     &  9.60630E+01_wp,  6.00080E+01_wp,  1.02010E+02_wp,  1.30062E+02_wp,  1.16070E+02_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp, &
     &  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp,  -8.8888E+05_wp ]
 
@@ -119,7 +119,7 @@ integer,dimension(201:topsubno),parameter,public :: Ioncharge = [ &
 !These values are used to generate initial guesses in PhaseSeparation.
 ! (default values: 3.0 for single-charge ions, 4.0 for double-charge ions.)
 real(wp),dimension(201:topsubno),parameter,public :: IonO2Cequiv = [ &
-!ion ID.: 201,     202,     203,     204,     205,     206,     207,     208,     209,     210,  etc. (211, ..., 220 on next row, etc.)
+!ion ID.: 201,         202,          203,          204,          205,          206,          207,          208,          209,          210,  etc. (211, ..., 220 on next row, etc.)
     &  3.60E+00_wp,  4.00E+00_wp,  3.00E+00_wp,  3.00E+00_wp,  2.80E+00_wp,  3.00E+00_wp,  3.00E+00_wp,  3.00E+00_wp,  3.00E+00_wp,  3.00E+00_wp, &
     &  3.00E+00_wp,  3.00E+00_wp,  3.00E+00_wp,  3.00E+00_wp,  3.00E+00_wp,  3.00E+00_wp,  3.00E+00_wp,  3.00E+00_wp,  3.00E+00_wp,  3.00E+00_wp, &
     &  4.00E+00_wp,  4.00E+00_wp,  4.00E+00_wp,  4.00E+00_wp,  4.00E+00_wp,  4.00E+00_wp,  4.00E+00_wp,  4.00E+00_wp,  4.00E+00_wp,  4.00E+00_wp, &
@@ -196,6 +196,8 @@ real(wp),dimension(201:topsubno),parameter,public :: IonO2Cequiv = [ &
     subgC(56) = 1; subgH(56) = 1; subgO(56) = 2; subgN(56) = 1; !(CHNO2) nitro
     subgC(57) = 1; subgH(57) = 0; subgO(57) = 2; subgN(57) = 1; !(ACNO2) aromatic nitro
     
+    subgC(67) = 2; subgH(67) = 6; subgO(67) = 1; subgN(67) = 0; subgS(67) = 1; !(DMSO) dimethyl sulfoxide, contains also one sulfur (S)
+    
     subgC(141) = 1; subgH(141) = 3;  !subgrname(141) ="(CH3[alc])"        
     subgC(142) = 1; subgH(142) = 2;  !subgrname(142) ="(CH2[alc])"        
     subgC(143) = 1; subgH(143) = 1;  !subgrname(143) ="(CH[alc])"         
@@ -227,7 +229,8 @@ real(wp),dimension(201:topsubno),parameter,public :: IonO2Cequiv = [ &
     subgC(170) = 2; subgH(170) = 1; subgO(170) = 2;  !subgrname(170) ="(CHOOC[perox])"    
     subgC(171) = 2; subgH(171) = 0; subgO(171) = 2;  !subgrname(171) ="(COOC[perox])"     
     subgC(172) = 1; subgH(172) = 0; subgO(172) = 5; subgN(172) = 1;  !subgrname(172) ="(C(=O)OONO2[perox])"
-    subgC(173) = 1; subgH(173) = 0; subgO(173) = 2; !CO2 (carbon dioxide)
+    subgC(173) = 1; subgH(173) = 0; subgO(173) = 2;  !subgrname(173) ="(CO2)"
+    subgC(174) = 0; subgH(174) = 1; subgO(174) = 4; subgS(174) = 1;  !subgrname(174) ="(OSOOOH)"
     
     end subroutine SubgroupAtoms
     !========================================================================================================== 
@@ -299,6 +302,8 @@ real(wp),dimension(201:topsubno),parameter,public :: IonO2Cequiv = [ &
     subgrname(56) = "(CHNO2)"           ;  subgrnameTeX(56) = "(CHNO$_2$)"              ;  subgrnameHTML(56) = "(CHNO<sub>2</sub>)"
     subgrname(57) = "(ACNO2)"           ;  subgrnameTeX(57) = "(ACNO$_2$)"              ;  subgrnameHTML(57) = "(ACNO<sub>2</sub>)"
     
+    subgrname(67) = "(DMSO)"            ;  subgrnameTeX(67) = "(DMSO)"                  ;  subgrnameHTML(67) = "(DMSO)" !dimethyl sulfoxide
+    
     subgrname(137) = "(COOH)"           ;  subgrnameTeX(137) = "(COOH)"                  ;  subgrnameHTML(137) = "(COOH)"
     subgrname(141) = "(CH3[alc])"       ;  subgrnameTeX(141) = "(CH$_3$$^{[alc]}$)"      ;  subgrnameHTML(141) = "(CH<sub>3</sub><sup>[alc]</sup>)"
     subgrname(142) = "(CH2[alc])"       ;  subgrnameTeX(142) = "(CH$_2$$^{[alc]}$)"      ;  subgrnameHTML(142) = "(CH<sub>2</sub><sup>[alc]</sup>)"
@@ -333,6 +338,7 @@ real(wp),dimension(201:topsubno),parameter,public :: IonO2Cequiv = [ &
     subgrname(171) ="(COOC[perox])"     ;  subgrnameTeX(171) ="(COOC[perox])"            ;  subgrnameHTML(171) ="(COOC[perox])"
     subgrname(172) ="(C(=O)OONO2[perox])"; subgrnameTeX(172) ="(C(=O)OONO$_2$[perox])"   ;  subgrnameHTML(172) ="(C(=O)OONO<sub>2</sub>[perox])"
     subgrname(173) ="(CO2)"             ;  subgrnameTeX(173) ="(CO$_2$)"                 ;  subgrnameHTML(173) ="(CO<sub>2</sub>)"
+    subgrname(174) ="(OSOOOH)"          ;  subgrnameTeX(174) ="(OSOOOH)"                 ;  subgrnameHTML(174) ="(OSOOOH)"
 
     !list of subgroup names of inorganic ions:
     subgrname(201) = "(Li+)"     ;  subgrnameTeX(201) = "(Li$^+$)"           ;  subgrnameHTML(201) = "(Li<sup>+</sup>)"
@@ -355,6 +361,9 @@ real(wp),dimension(201:topsubno),parameter,public :: IonO2Cequiv = [ &
     subgrname(251) = "(HMalo-)"  ;  subgrnameTeX(251) = "(HMalo$^{-}$)"      ;  subgrnameHTML(251) = "(HMalo<sup>-</sup>)"
     subgrname(252) = "(HGlut-)"  ;  subgrnameTeX(252) = "(HGlut$^{-}$)"      ;  subgrnameHTML(252) = "(HGlut<sup>-</sup>)"
     subgrname(253) = "(HSucc-)"  ;  subgrnameTeX(253) = "(HSucc$^{-}$)"      ;  subgrnameHTML(253) = "(HSucc<sup>-</sup>)"
+    subgrname(254) = "(MeOS-)"   ;  subgrnameTeX(254) = "(MeOS$^{-}$)"       ;  subgrnameHTML(254) = "(MeOS<sup>-</sup>)"
+    subgrname(255) = "(EtOS-)"   ;  subgrnameTeX(255) = "(EtOS$^{-}$)"       ;  subgrnameHTML(255) = "(EtOS<sup>-</sup>)"
+    subgrname(256) = "(IsopreneOS-)" ;  subgrnameTeX(256) = "(IsopreneOS$^{-}$)" ;  subgrnameHTML(256) = "(IsopreneOS<sup>-</sup>)"
     subgrname(261) = "(SO4--)"   ;  subgrnameTeX(261) = "(SO$_4$$^{2-}$)"    ;  subgrnameHTML(261) = "(SO<sub>4</sub><sup>2-</sup>)"
     subgrname(262) = "(CO3--)"   ;  subgrnameTeX(262) = "(CO$_3$$^{2-}$)"    ;  subgrnameHTML(262) = "(CO<sub>3</sub><sup>2-</sup>)"
     subgrname(263) = "(Malo--)"  ;  subgrnameTeX(263) = "(Malo$^{2-}$)"      ;  subgrnameHTML(263) = "(Malo<sup>2-</sup>)"
@@ -432,8 +441,9 @@ real(wp),dimension(201:topsubno),parameter,public :: IonO2Cequiv = [ &
     !Inorganic ions (not further specified in UNIFAC/AIOMFAC main groups (since subgroup = main group)
     maingrname(51) = "(Inorg_Ions)"
     maingrname(52) = "(CH[OH])"
+    !Extension by Ben Bergen (2024):
+    maingrname(53) = "(OSOOOH)"
     !Extension by Ming and Russell (2001); to be replaced...
-    maingrname(53) = "(OH[MingR_long-chain])"
     maingrname(54) = "(COOH[MingR_long-chain])"
     maingrname(55) = "(CHnCO[MingR_long-chain])"
     maingrname(56) = "(CHn[MingR_monosaccharides])"
@@ -595,46 +605,55 @@ real(wp),dimension(201:topsubno),parameter,public :: IonO2Cequiv = [ &
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *   
     !*   -> created:        2012                                                            *
-    !*   -> latest changes: 2018-09-14                                                      * 
+    !*   -> latest changes: 2025-07-06                                                      * 
     !*                                                                                      *                                   
     !****************************************************************************************
-    pure subroutine O2C_H2C_component(ind, compC, compH, compO, O2C, H2C)
+    pure subroutine O2C_H2C_component(ind, cpCarbon, cpHydrogen, cpOxygen, cpNitrogen, cpSulfur, O2C, H2C, N2C, S2C)
 
     use ModSystemProp, only : ITAB_dimflip, SolvSubs, NGN
 
     implicit none
     !..................................
     !interface input:
-    integer,intent(in) :: ind  !the component index number in current mixture (e.g. index location of component in ITAB_dimflip)
-    real(wp),intent(out) :: compC, compH, compO, O2C, H2C
+    integer,intent(in) :: ind                                   !the component index number in current mixture
+    real(wp),intent(out) :: cpCarbon, cpHydrogen, cpOxygen      !elemental amounts per component
+    real(wp),intent(out) :: cpNitrogen, cpSulfur    
+    real(wp),intent(out) :: O2C, H2C, N2C, S2C                  !component's element X to carbon ratio
     !local variables:
     integer :: isub, k, nsub
     !..................................    
     
     !(1) determine number of oxygen, hydrogen and carbon for a given compound
-    compO = 0.0_wp
-    compH = 0.0_wp
-    compC = 0.0_wp
-    !loop over subgroups to count the O, H, and C atoms:
-    do k = 1,NGN    !loop over organic subgroups (SolvSubs excl. water)
-        isub = SolvSubs(k)  !subgoup
-        if (isub /= 16 .AND. isub /= 173) then  !exclude water (= subgroup 16) from the calculations; also exclude CO2(aq) (subgroup 173);
+    cpOxygen = 0.0_wp
+    cpHydrogen = 0.0_wp
+    cpCarbon = 0.0_wp
+    cpNitrogen = 0.0_wp
+    cpSulfur = 0.0_wp
+    do k = 1,NGN                                    !loop over organic subgroups (SolvSubs excl. water)
+        isub = SolvSubs(k)                          !subgoup
+        if (isub /= 16 .and. isub /= 173) then      !exclude water (= subgroup 16) from the calculations, also exclude CO2(aq) (subgroup 173);
             nsub = ITAB_dimflip(isub,ind)
-            if (nsub > 0) then !subgroup is present
-                compO = compO + nsub*subgO(isub)
-                compH = compH + nsub*subgH(isub)
-                compC = compC + nsub*subgC(isub)
+            if (nsub > 0) then                      !subgroup is present
+                cpOxygen = cpOxygen + nsub*subgO(isub)
+                cpHydrogen = cpHydrogen + nsub*subgH(isub)
+                cpCarbon = cpCarbon + nsub*subgC(isub)
+                cpNitrogen = cpNitrogen + nsub*subgN(isub)
+                cpSulfur = cpSulfur + nsub*subgS(isub)
             endif
         endif
     enddo
     
-    !(2) compute O:C and H:C of this pure component:
-    if (compC > 0.0_wp) then
-        O2C = compO / compC
-        H2C = compH / compC
+    !(2) compute O:C, H:C, and other ratios of this pure component:
+    if (cpCarbon > 0.0_wp) then
+        O2C = cpOxygen / cpCarbon
+        H2C = cpHydrogen / cpCarbon
+        N2C = cpNitrogen / cpCarbon
+        S2C = cpSulfur / cpCarbon
     else !O:C and H:C are undefined, labeled as negative numbers.
         O2C = -77.77777_wp
         H2C = -77.77777_wp
+        N2C = -77.77777_wp
+        S2C = -77.77777_wp
     endif
 
     end subroutine O2C_H2C_component
@@ -652,7 +671,7 @@ real(wp),dimension(201:topsubno),parameter,public :: IonO2Cequiv = [ &
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2012                                                            *
-    !*   -> latest changes: 2018-09-14                                                      *
+    !*   -> latest changes: 2025-07-06                                                      *
     !*                                                                                      *
     !****************************************************************************************
     pure subroutine OtoCandHtoCmix(n, x, OtoCorgmix, HtoCorgmix)
@@ -666,7 +685,8 @@ real(wp),dimension(201:topsubno),parameter,public :: IonO2Cequiv = [ &
     real(wp),intent(out) :: OtoCorgmix, HtoCorgmix
     !local variables:
     integer :: ind, istart
-    real(wp) :: compO, compH, compC, sumO, sumH, sumC, O2C, H2C
+    real(wp) :: cpCarbon, cpHydrogen, cpOxygen, cpNitrogen, cpSulfur, &
+        & sumO, sumH, sumC, O2C, H2C, N2C, S2C
     !...........................................................
   
     sumC = 0.0_wp
@@ -680,19 +700,19 @@ real(wp),dimension(201:topsubno),parameter,public :: IonO2Cequiv = [ &
         istart = 1
     endif
     do ind = istart,n 
-        call O2C_H2C_component(ind, compC, compH, compO, O2C, H2C)
-        sumC = sumC + x(ind)*compC
-        sumH = sumH + x(ind)*compH
-        sumO = sumO + x(ind)*compO
+        call O2C_H2C_component(ind, cpCarbon, cpHydrogen, cpOxygen, cpNitrogen, cpSulfur, O2C, H2C, N2C, S2C)
+        sumC = sumC + x(ind)*cpCarbon
+        sumH = sumH + x(ind)*cpHydrogen
+        sumO = sumO + x(ind)*cpOxygen
     enddo
 
     !calculate organic O:C and H:C ratios for the present mixture:
-    if (sumC > 0.0_wp) then !the ratios are defined
+    if (sumC > 0.0_wp) then             !the ratios are defined
         OtoCorgmix = sumO / sumC 
         HtoCorgmix = sumH / sumC
     else
-        OtoCorgmix = -77.77777_wp  !indicate O:C not defined 
-        HtoCorgmix = -77.77777_wp  !indicate H:C not defined
+        OtoCorgmix = -77.77777_wp       !indicate O:C not defined 
+        HtoCorgmix = -77.77777_wp       !indicate H:C not defined
     endif
 
     end subroutine OtoCandHtoCmix

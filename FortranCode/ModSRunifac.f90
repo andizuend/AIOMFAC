@@ -39,7 +39,7 @@ module ModSRunifac
 use Mod_kind_param, only : wp
 use ModAIOMFACvar, only : lastTK, ln_eta0
 use ModSystemProp, only : nd, nneutral, NG, NGN, Allsubs, ITABsr, Nmaingroups, topsubno, &
-    & maingrindexofsubgr, Imaingroup, isPEGsystem, calcviscosity, solvmixrefnd, COMPN
+    & maingrindexofsubgr, Imaingroup, isPEGsystem, calcviscosity, solvmixrefnd !, compN
 use ModSRparam, only : ARR, BRR, CRR, SR_RR, SR_QQ
 
 implicit none
@@ -92,7 +92,7 @@ logical,private :: gcombrefresh
     real(wp),dimension(:),intent(in) :: X, XN               ![-] mole fraction array X; structure is: 
                                                             !   1) neutral components in component order,
                                                             !   2) ions: first the cations, then the anions
-    logical,intent(in) :: refreshgref 
+    logical,intent(in) :: refreshgref                       !logical switch for refreshing SRgref calculation
     real(wp),dimension(:),intent(out) :: lnGaSR             ![-] ln(total short-range activity coeff.)
     !local variables:
     real(wp),dimension(NK) :: lnGaC, lnGaR, XieC, XieR
@@ -100,7 +100,7 @@ logical,private :: gcombrefresh
     
     !Determine the reference values (lnGaRref, XieRref) for the residual part:
     grefcallID = 0
-    if (refreshgref .OR. solvmixrefnd .OR. calcviscosity) then
+    if (refreshgref .or. solvmixrefnd .or. calcviscosity) then
         call SRgref(NK, T_K, XN, refreshgref, lnGaRref, XieRref)
     endif
 
@@ -139,7 +139,7 @@ logical,private :: gcombrefresh
     !****************************************************************************************
     subroutine SRcalcvisc(NK, X, XN, lnGaSR, XieC, XieR)
     
-    use ModAIOMFACvar, only : ln_etamix, ln_eta0, lneta_cpn, ln_eta_aquelec, aquelecVar_save
+    use ModAIOMFACvar, only : ln_etamix, ln_eta0, lneta_cpn, ln_eta_aquelec, delGstar_save, aquelecVar_save
     use ModViscEyring, only : AqueousElecViscosity, WaterMolefracCorrection, aquelec
     use ModCompScaleConversion, only : zSolution2SpeciesMolality
     
@@ -170,7 +170,7 @@ logical,private :: gcombrefresh
     
     !Select the mixing model affecting the viscosity calculation in mixed organic--inorganic (ion-containing) solutions.
     !Note that aquelec, aquorg or ZSR-based organic--inorganic mixing is set as option within 'ModViscEyring' (default is aquelec)
-    if (aquelec .AND. ionspresent) then     
+    if (aquelec .and. ionspresent) then     
         viscosity_mixmode = 1
     else
         viscosity_mixmode = 2
@@ -194,7 +194,7 @@ logical,private :: gcombrefresh
             phi = XN*RS/RSS        
             Xnew = XN
         endif
-        call AqueousElecViscosity(X, lnGaSR, RS, ln_eta0(1), ln_eta_aquelec)
+        call AqueousElecViscosity(X, lnGaSR, RS, ln_eta0(1), ln_eta_aquelec, delGstar_save)
         if (XN(1) > 0.0_wp) then
             XieC_loc(1) = XieC_loc(1)*(ln_eta_aquelec/ln_eta0(1))*Xnew(1)/XN(1)     !the XieC of water corrected for by ion effects on the "pure" component viscosity of water.
         else
@@ -238,8 +238,10 @@ logical,private :: gcombrefresh
             else
                 Xnew = X
             endif
-            call AqueousElecViscosity(Xnew, lnGaSR_loc, RS, ln_etaw, ln_etamix)
+            call AqueousElecViscosity(Xnew, lnGaSR_loc, RS, ln_etaw, ln_etamix, delGstar_save)
             !the returned ln_etamix will account for ion effects...
+        else
+            ln_eta_aquelec = ln_eta0(1)                 !save pure water value for use in LLEetamix																		   
         endif
     end select
     
@@ -347,7 +349,7 @@ logical,private :: gcombrefresh
                     write(*,*) ""
                     write(*,*) "WARNING: a pure compound viscosity for component",I, "could not be set due to missing parameters or a temperature outside the available bounds!"
                     write(*,*) "Dataset is nd = ", nd
-                    !read(*,*)
+                    read(*,*)
                     !$OMP end CRITICAL
                 end select
             endif
@@ -424,7 +426,7 @@ logical,private :: gcombrefresh
 
     !--------------------------------------------------------
     !Viscosity of mixture calculation; residual part.
-    if (calcviscosity .OR. grefcallID > 0) then
+    if (calcviscosity .or. grefcallID > 0) then
         do k = 1,NG !k
             do I = 1,NG !m
                 S4(I) = sum(TH(1:NG)*PsiT(1:NG,I))
@@ -445,6 +447,7 @@ logical,private :: gcombrefresh
                 !calculate viscosity contributions by individual subgroups:
                 do k = 1,NG
                     Xiek(k) = (Q(k)/R(k))*Nvis(k,I)*sum(THmn(1:NG,k)*log(PsiT(1:NG,k))) !Natalie mod 4
+                    !Xiek(k) = 0.0_wp    !AZ mod 5; better especially for large molecules and oligomers
                 enddo
                 XieR(I) = sum(SRNY_dimflip(1:NG,I)*Xiek(1:NG))
                 if (isPEGsystem) then  !presently special treatment for systems containing PEG oligomers (ignore residual contribution)
@@ -473,7 +476,7 @@ logical,private :: gcombrefresh
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2004                                                            *
-    !*   -> latest changes: 2018/05/18                                                      *
+    !*   -> latest changes: 2018-05-18                                                      *
     !*                                                                                      *
     !****************************************************************************************
     subroutine SRgcomb(X, lnGaC, NK, XieC)
@@ -532,7 +535,7 @@ logical,private :: gcombrefresh
         else
             XieC = -55555.5_wp
         endif
-    else !a default value indicating "no viscosity calc."
+    else !a default value indicating "NO viscosity calc."
         XieC = -99999.9_wp
     endif
     !--------------------------------------------------------
@@ -554,7 +557,7 @@ logical,private :: gcombrefresh
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2004                                                            *
-    !*   -> latest changes: 2018/05/18                                                      *
+    !*   -> latest changes: 2018-05-18                                                      *
     !*                                                                                      *
     !****************************************************************************************
     subroutine SRsystm(NK)
@@ -569,7 +572,6 @@ logical,private :: gcombrefresh
     real(wp) :: Roxyethylene
     !.....................end of variable declarations.............................
 
-    !--------------------------------------------------------------------------------------------------------
     if (allocated(parA)) then
         deallocate(parA, parB, parC, PsiT, PsiT_dimflip, SRNY, SRNY_dimflip, Nvis, R, Q, XL, RS, QS, lnGaCinf, lnGaRref, XieRref)
     endif
@@ -613,6 +615,7 @@ logical,private :: gcombrefresh
             parC(L,J) = CRR(L1,J1)
             !Apply check to avoid using SR inteaction parameters that are not assigned correctly or were not estimated yet:
             if (ARR(L1,J1) < -888887.0_wp) then  !this parameter has not yet been estimated nor is a fitparameter set, so don't use it!!
+                !$OMP critical
                 errorflagmix = 14
                 write(*,*) ""
                 write(*,*) "======================================================="
@@ -624,10 +627,27 @@ logical,private :: gcombrefresh
                 write(*,*) "======================================================="
                 write(*,*) ""
                 read(*,*)               !to read(*,*) and wait for user interaction
+                !$OMP end critical
+            endif
+            if (L1 == J1 .and. abs(ARR(L1,J1)) > deps) then     !self-interactions among main groups should always be set to 0.0_wp
+                !$OMP critical
+                errorflagmix = 14
+                write(*,*) ""
+                write(*,*) "======================================================="
+                write(*,*) "        WARNING from SRsystem:"
+                write(*,*) "A neutral main group <-> main group interaction coeff. is "
+                write(*,*) "incorrectly deviating from zero for a self interaction. "
+                write(*,*) "System nd: ", nd
+                write(*,*) "L1, J1, ARR(L1,J1): ", L1, J1, ARR(L1,J1)
+                write(*,*) "======================================================="
+                write(*,*) ""
+                read(*,*)               !to read(*,*) and wait for user interaction
+                !$OMP end critical
             endif
             select case(nd)
             case(500:800, 2000:2500)     !potentially used for 3-parameter AIOMFAC (UNIFAC) part for non-electrolyte systems
-                if (BRR(L1,J1) < -888887.0_wp .OR. CRR(L1,J1) < -888887.0_wp) then    !this parameter has not yet been estimated nor is a fitparameter set, so don't use it!!
+                if (BRR(L1,J1) < -888887.0_wp .or. CRR(L1,J1) < -888887.0_wp) then    !this parameter has not yet been estimated nor is a fitparameter set, so don't use it!!
+                    !$OMP critical
                     errorflagmix = 15
                     write(*,*) ""
                     write(*,*) "======================================================="
@@ -640,6 +660,7 @@ logical,private :: gcombrefresh
                     write(*,*) "======================================================="
                     write(*,*) ""
                     read(*,*) !to read(*,*) and wait for user interaction
+                    !$OMP end critical
                 endif
             end select
         enddo
@@ -650,7 +671,7 @@ logical,private :: gcombrefresh
             RS(I) = RS(I) +SRNY_dimflip(J,I)*R(J) !RS(I) +SRNY(I,J)*R(J)
             QS(I) = QS(I) +SRNY_dimflip(J,I)*Q(J) !QS(I) +SRNY(I,J)*Q(J)
             if (isPEGsystem) then !PEG-polymer solution; use special subgroups and some scaled parameters
-                if (AllSubs(J) == 154 .AND. SRNY_dimflip(J,I) > 0) then  !oxyethylene group in PEG polymer, so use a special parametrisation for RS(I) in those cases (idea adapted from Ninni et al., (1999), but implemented in different form, basically to fit RS(I)/QS(I) of oxyethylene group rather than taking fixed Bondi (1964) values.):
+                if (AllSubs(J) == 154 .and. SRNY_dimflip(J,I) > 0) then  !oxyethylene group in PEG polymer, so use a special parametrisation for RS(I) in those cases (idea adapted from Ninni et al., (1999), but implemented in different form, basically to fit RS(I)/QS(I) of oxyethylene group rather than taking fixed Bondi (1964) values.):
                     RS(I) = RS(I) -SRNY_dimflip(J,I)*R(J) !reset above set value for this group.
                     R(J) = 1.381433_wp   !fitSRparam(211)    
                     RS(I) = RS(I) + SRNY_dimflip(J,I)*R(J)
@@ -661,7 +682,7 @@ logical,private :: gcombrefresh
                 endif
             endif
         enddo
-        XL(I) = 5.0_wp*(RS(I)-QS(I)) -RS(I) +1.0_wp  !corresponds to l(i) eq. (3) in UNIFAC Fredenslund et al. (1975) paper
+        XL(I) = 5.0_wp*(RS(I)-QS(I)) -RS(I) + 1.0_wp  !corresponds to l(i) eq. (3) in UNIFAC Fredenslund et al. (1975) paper
         !...
         !calculate Nvis for viscosity calculations according to Cao et al. (1993), Ind. Eng. Chem. Res., 32, 2088--2092.
         do J = 1,NG

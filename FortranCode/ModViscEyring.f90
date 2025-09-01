@@ -46,14 +46,14 @@ real(wp),public :: delGstar_by_RT_w, ionicstrengthsave
 !logical,private :: gel_eqn1, gel_eqn2 
 
 !private variables with initial values that may change:
-logical,private :: fitmap_complete = .true.                  !fitmap for viscosity model parameter init; needs to be .true. here; changed after first use
-logical,private :: calc_gel = .false.                        !false by default; currently gel effects are in development
+logical,private :: fitmap_complete = .true.                 !fitmap for viscosity model parameter init; needs to be .true. here; changed after first use
+logical,private :: calc_gel = .false.                       !false by default; currently gel effects are in development
 !****
 !**** set a few parameters for viscosity model calculation options:
-logical,parameter,public :: aquelec = .true.                 !true is default, false sets 'aquorg' mixing as mixing rule (except when ZSRvisc_on is true);
-logical,parameter,public :: ZSRvisc_on = .false.             !false is default, true activates ZSR viscosity subroutine for org--inorg viscosity mixing
+logical,parameter,public :: aquelec = .true.                !true is default, false sets 'aquorg' mixing as mixing rule (except when ZSRvisc_on is true);
+logical,parameter,public :: ZSRvisc_on = .false.            !false is default, true activates ZSR viscosity subroutine for org--inorg mixing.
 logical,parameter,private :: calc_catan = .true.
-logical,parameter,private :: newcatanPrime = .true.          !if true, use the non-normalized tau'. If false use normalized tau.
+logical,parameter,private :: newcatanPrime = .true.         !if true, use the non-normalized tau'. If false use normalized tau.
 !****
 !****
 real(wp),dimension(1:105),parameter,public :: fitpar = [ &
@@ -83,7 +83,7 @@ private     !default setting for procedures and variables
 !=====================================   
     
     !-------------------------------------------------------------------------------------
-    subroutine AqueousElecViscosity(X_, lnGaSR_, RS_, ln_etaw, ln_eta_aquelec)
+    subroutine AqueousElecViscosity(X_, lnGaSR_, RS_, ln_etaw, ln_eta_aquelec, delGstar_save)
     
     use ModAIOMFACvar, only : galrln, gamrln, gasrln, gclrln, gcmrln, &
         & gcsrln, SMC, SMA, lnactcoeff_c, lnactcoeff_a, solvmixcorrMRc, solvmixcorrMRa, Tmolal, &
@@ -98,7 +98,7 @@ private     !default setting for procedures and variables
     !interface variables:
     real(wp),dimension(:),intent(in) :: X_, lnGaSR_, RS_
     real(wp),intent(in) :: ln_etaw
-    real(wp),intent(out) :: ln_eta_aquelec
+    real(wp),intent(out) :: ln_eta_aquelec, delGstar_save(4)
     !local variables:
     integer :: I, NKNpNcat, nnp1, allocstat
     integer :: iion, icat, ian
@@ -106,7 +106,7 @@ private     !default setting for procedures and variables
     real(wp),parameter :: logval_threshold = 0.4_wp*lnhuge
     real(wp),parameter :: dtiny = epsilon(1.0_wp) 
     real(wp),parameter :: Vw = 1.39564E-5_wp        ![m^3/mol]  Vw for water molec. volume;
-    real(wp) :: ionicstrength1, sumXion, sumX, ionicstrengthfactor, Vcomp, xw
+    real(wp) :: ionicstrength1, sumXion, sumX, ionicstrengthfactor, delGstar_gels, Vcomp, xw
     real(wp),dimension(201:topsubno) :: act_ion, X_ion, X_ion_organicfree
     !................................................
     
@@ -129,7 +129,7 @@ private     !default setting for procedures and variables
     gcsrln(1:Ncation) = lnGaSR_(nnp1:NKNpNcat)
     gasrln(1:Nanion)  = lnGaSR_(NKNpNcat+1:NKNpNcat+Nanion)
     
-    if (aquelec .AND. wtf(1) > 0.0_wp) then    
+    if (aquelec .and. wtf(1) > 0.0_wp) then    
         ionicstrengthfactor = sum(wtf(1:nneutral))/wtf(1)
     else
         ionicstrengthfactor = 1.0_wp
@@ -187,20 +187,26 @@ private     !default setting for procedures and variables
         X_ion(iion) = X_(nneutral+Ncation+I)
     enddo
     
-    !ionicstrengthfactor  is used to change solvent to H2O instead of all neutral components:
+    !ionicstrengthfactor is used to change solvent to H2O instead of all neutral components:
     ionicstrength1 = 0.5_wp*ionicstrengthfactor*( sum(SMC(1:Ncation)*cationZ(1:Ncation)**2) + sum(SMA(1:Nanion)*anionZ(1:Nanion)**2) )
     ionicstrengthsave = ionicstrength1
+
+    if (calc_gel) then
+        call ViscGelContribution(X_, X_ion, act_ion, ionicstrength1, delGstar_gels)
+    else
+        delGstar_gels = 0.0_wp
+    endif
     
     if (aquelec) then
         sumXion = sum(X_ion(:))
         X_ion_organicfree = X_ion(:) / (X_(1) + sumXion)
         xw = 1.0_wp - sum(X_ion_organicfree(:))
-        call GoldsackViscEqn(X_ion_organicfree, act_ion, ionicstrength1, xw, Vw, ln_etaw, ln_eta_aquelec, errorflag_clist)
+        call GoldsackViscEqn(X_ion_organicfree, act_ion, ionicstrength1, xw, Vw, ln_etaw, ln_eta_aquelec, errorflag_clist, delGstar_save, delGstar_gels)
     else !aquorg. in GoldsackViscEqn, xw = 1 - sum(X_ion), so mole fractions of organics are effectively counted as mole fraction of water
         xw = 1.0_wp - sum(X_ion(:))
         sumX = sum(X(1:nneutral))
         Vcomp = 15.17E-06_wp * sum((X(1:nneutral)/sumX) * RS_(1:nneutral))   !use X (full system mole fractions to calc solvent volume)
-        call GoldsackViscEqn(X_ion, act_ion, ionicstrength1, xw, Vcomp, ln_etaw, ln_eta_aquelec, errorflag_clist) !
+        call GoldsackViscEqn(X_ion, act_ion, ionicstrength1, xw, Vcomp, ln_etaw, ln_eta_aquelec, errorflag_clist, delGstar_save, delGstar_gels) !
     endif
     
     deallocate( ions )
@@ -210,20 +216,20 @@ private     !default setting for procedures and variables
     
     
     !-------------------------------------------------------------------------------------
-    pure subroutine GoldsackViscEqn(xin_, actin_, ionicstrength_, xw, Vw, ln_etaw, ln_etacalc, errorflag_clist)
+    pure subroutine GoldsackViscEqn(xin_, actin_, ionicstrength_, xw, Vw, ln_etaw, ln_etacalc, errorflag_clist, delGstar_save, delGstar_gels)
     
     use ModSystemProp, only : Ianion, Ication, Nanion, Ncation, topsubno
 
     implicit none
     
     real(wp),dimension(201:topsubno),intent(in) :: xin_, actin_
-    real(wp),intent(in) :: ionicstrength_, ln_etaw, Vw, xw
-    real(wp),intent(out) :: ln_etacalc
+    real(wp),intent(in) :: ionicstrength_, ln_etaw, Vw, xw, delGstar_gels
+    real(wp),intent(out) :: ln_etacalc, delGstar_save(4)
     logical,dimension(:),intent(inout) :: errorflag_clist
     !local variables:
     integer :: iion, icat, ian
     ! Goldsack & Franchetto vars and parameters:
-    integer :: cation, anion, numion                            !which value they refer to in the AIOMFAC ion numbering system (201:topsubno)
+    integer :: cation, anion, numion                     !which value they refer to in the AIOMFAC ion numbering system (201:261)
     real(wp) :: delGstar_over_RT, delGstar_by_RT_w, V, Garg_both, Garg_ion
     real(wp) :: delGstar_ions, delGstar_catans, sumtauPrime, sumXz 
     real(wp),dimension(201:topsubno) :: chargefrac, delGstar_ion
@@ -231,8 +237,8 @@ private     !default setting for procedures and variables
     real(wp),dimension(201:240,241:topsubno) :: tauPrime, tau
     real(wp),parameter :: deps = epsilon(1.0_wp)
     real(wp),parameter :: R = 8.3144598_wp                      ![J K^-1 mol^-1]  ideal gas constant
-    real(wp),parameter :: hPlanck = 6.62607015E-34_wp           ![J s]            Planck's constant
-    real(wp),parameter :: NA = 6.02214076E+23_wp                ![#/mol]          Avogadro's constant
+    real(wp),parameter :: hPlanck = 6.62607015E-34_wp            ![J s]            Planck's constant
+    real(wp),parameter :: NA = 6.02214076E+23_wp                 ![#/mol]          Avogadro's constant
     real(wp),parameter :: MmassH2O = 1.801528E-02_wp            ![kg mol^-1]
     real(wp),parameter :: hNA = hPlanck*NA                      ![J s #/mol]
     real(wp),parameter :: ln_hNA = log(hNA)                     ![-] (normalized)
@@ -271,13 +277,13 @@ private     !default setting for procedures and variables
             cation = Ication(icat)
             do ian = 1,Nanion
                 anion = Ianion(ian)
-                !only one fitpar per catan pair:
+                !only one fitpar per catan pair
                 if (catanfitmapfwd(1,cation,anion) /= 0 ) then
                     Garg_both = fitpar(catanfitmapfwd(1,cation,anion)) * sqrt(ionicstrength_)
                     if (Garg_both < deps) then
                         Garg_both = 1.0_wp
                     endif
-                    !implementation of new catan treatment (17 June 2021):
+                    !Implementation of new catan treatment (17 June 2021)
                     chargefrac(anion) = (xin_(anion)*abs(Zion(anion))) / sumXz
                     tauPrime(cation,anion) = xin_(cation)/nuecat(cation,anion) * chargefrac(anion)
                     delGstar_catan(cation,anion) = Garg_both
@@ -288,7 +294,7 @@ private     !default setting for procedures and variables
             enddo
         enddo
         sumtauPrime = sum(tauPrime(:,:))
-        if (newcatanPrime .OR. sumtauPrime < deps) then
+        if (newcatanPrime .or. sumtauPrime < deps) then
             where (delGstar_catan(:,:) > 0.0_wp)
                 delGstar_catan(:,:) = delGstar_catan(:,:)*tauPrime(:,:)
             end where
@@ -307,10 +313,17 @@ private     !default setting for procedures and variables
     !(4) deltaG_water + delGstar_ions + delGstar_catan
     delGstar_over_RT = &
         &   delGstar_ions &         !all cation & anion contributions multiplied by xin
-        & + delGstar_catans &       !ionic strength term multiplied by tau weighting
-        & + delGstar_by_RT_w        !water contribution multiplied by xw
+        & + delGstar_catans &       !ion strength term multiplied by tau weighting
+        & + delGstar_by_RT_w &      !water contribution multiplied by xw
+        & + delGstar_gels           !gel contribution from ViscGelContribution
 
     ln_etacalc = ln_hNA -log(V) + delGstar_over_RT      !normalized ln(eta/[Pa s])
+
+    !save delGstar terms for comparison plot
+    delGstar_save(1) = delGstar_by_RT_w
+    delGstar_save(2) = delGstar_ions
+    delGstar_save(3) = delGstar_catans
+    delGstar_save(4) = delGstar_gels
 
     end subroutine GoldsackViscEqn
     !-------------------------------------------------------------------------------------
@@ -490,11 +503,190 @@ private     !default setting for procedures and variables
     catanfitmapfwd(1,204,246) = fitmapfwd(104) !NH4IO3
     catanfitmapfwd(1,223,246) = fitmapfwd(105) !Mg(IO3)2
     nuean(223,246) = 2.0_wp
+    
+    
+    !without CO3--, HCO3-, OH-, IO3-
+    !catanfitmapfwd(1,205,242) = fitmapfwd(28) !HCl
+    !catanfitmapfwd(1,201,242) = fitmapfwd(29) !LiCl
+    !catanfitmapfwd(1,203,242) = fitmapfwd(30) !KCl
+    !catanfitmapfwd(1,202,242) = fitmapfwd(31) !NaCl
+    !catanfitmapfwd(1,221,242) = fitmapfwd(32) !CaCl2
+    !nuean(221,242) = 2.0_wp
+    !catanfitmapfwd(1,204,242) = fitmapfwd(33) !NH4Cl
+    !catanfitmapfwd(1,223,242) = fitmapfwd(34) !MgCl2
+    !nuean(223,242) = 2.0_wp
+    !catanfitmapfwd(1,205,243) = fitmapfwd(35) !HBr
+    !catanfitmapfwd(1,201,243) = fitmapfwd(36) !LiBr
+    !catanfitmapfwd(1,203,243) = fitmapfwd(37) !KBr
+    !catanfitmapfwd(1,202,243) = fitmapfwd(38) !NaBr
+    !catanfitmapfwd(1,221,243) = fitmapfwd(39) !CaBr2
+    !nuean(221,243) = 2.0_wp
+    !catanfitmapfwd(1,204,243) = fitmapfwd(40) !NH4Br
+    !catanfitmapfwd(1,223,243) = fitmapfwd(41) !MgBr2
+    !nuean(223,243) = 2.0_wp
+    !catanfitmapfwd(1,205,245) = fitmapfwd(42) !HNO3
+    !catanfitmapfwd(1,201,245) = fitmapfwd(43) !LiNO3
+    !catanfitmapfwd(1,203,245) = fitmapfwd(44) !KNO3
+    !catanfitmapfwd(1,202,245) = fitmapfwd(45) !NaNO3
+    !catanfitmapfwd(1,221,245) = fitmapfwd(46) !CaNO32
+    !nuean(221,245) = 2.0_wp
+    !catanfitmapfwd(1,204,245) = fitmapfwd(47) !NH4NO3
+    !catanfitmapfwd(1,223,245) = fitmapfwd(48) !MgNO32
+    !nuean(223,245) = 2.0_wp
+    !catanfitmapfwd(1,205,261) = fitmapfwd(49) !H2SO4 (H+ and SO4--)
+    !nuecat(205,261) = 2.0_wp
+    !catanfitmapfwd(1,201,261) = fitmapfwd(50) !Li2SO4
+    !nuecat(201,261) = 2.0_wp
+    !catanfitmapfwd(1,203,261) = fitmapfwd(51) !K2SO4
+    !nuecat(203,261) = 2.0_wp
+    !catanfitmapfwd(1,202,261) = fitmapfwd(52) !Na2SO4
+    !nuecat(202,261) = 2.0_wp
+    !catanfitmapfwd(1,221,261) = fitmapfwd(53) !CaSO4
+    !catanfitmapfwd(1,204,261) = fitmapfwd(54) !NH42SO4
+    !nuecat(204,261) = 2.0_wp
+    !catanfitmapfwd(1,223,261) = fitmapfwd(55) !MgSO4
+    !catanfitmapfwd(1,205,248) = fitmapfwd(56) !H2SO4 (H+ and HSO4-)
+    !catanfitmapfwd(1,201,248) = fitmapfwd(57) !LiHSO4
+    !catanfitmapfwd(1,203,248) = fitmapfwd(58) !KHSO4
+    !catanfitmapfwd(1,202,248) = fitmapfwd(59) !NaHSO4
+    !catanfitmapfwd(1,221,248) = fitmapfwd(60) !Ca(HSO4)2
+    !nuean(221,248) = 2.0_wp
+    !catanfitmapfwd(1,204,248) = fitmapfwd(61) !NH4HSO4
+    !catanfitmapfwd(1,223,248) = fitmapfwd(62) !Mg(HSO4)2
+    !nuean(223,248) = 2.0_wp
+    !catanfitmapfwd(1,205,244) = fitmapfwd(63) !HI
+    !catanfitmapfwd(1,201,244) = fitmapfwd(64) !LiI
+    !catanfitmapfwd(1,203,244) = fitmapfwd(65) !KI
+    !catanfitmapfwd(1,202,244) = fitmapfwd(66) !NaI
+    !catanfitmapfwd(1,221,244) = fitmapfwd(67) !CaI2
+    !nuean(221,244) = 2.0_wp
+    !catanfitmapfwd(1,204,244) = fitmapfwd(68) !NH4I
+    !catanfitmapfwd(1,223,244) = fitmapfwd(69) !MgI2
+    !nuean(223,244) = 2.0_wp
 
     end subroutine MapIons2Fitpars3
     !-------------------------------------------------------------------------------------
      
 
+    !-------------------------------------------------------------------------------------
+    subroutine ViscGelContribution(X_, xin_, actin_, ionicstrength_, delGstar_gels)
+
+    use ModSystemProp, only : Ication, topsubno, COMPN, nneutral
+
+    real(wp),dimension(:),intent(in) :: X_
+    real(wp),dimension(201:topsubno),intent(in) :: actin_, xin_
+    real(wp),intent(in) :: ionicstrength_!
+    real(wp),intent(out) :: delGstar_gels !Pa s
+
+    real(wp),dimension(1:nneutral,201:topsubno) :: delGstar_gel !, chargefracgel 
+    real(wp) :: Garg_gel, xw, effSolvRatio, gelfitpar
+    integer :: cation, neutrel
+    integer :: icat, ineut
+    real(wp),parameter:: gelSolvMolecules = 12.0_wp
+
+    !rho and rhoPrime are the weighting factors for delGstar from gels (akin to delGstar for cation--anion pairs)
+    !   (optional) deltaG_gel (Garg_both of all relevant cation-organic pairs, summed)
+
+    xw = X_(1) !water
+    if (xin_(221) > 0.0_wp .or. xin_(223) > 0.0_wp)  then
+        effSolvRatio = xw/(xin_(221)+xin_(223)) !if this is greater than 6, no gel expected
+    else
+        calc_gel = .false.
+    endif
+
+    if (calc_gel) then   !if (calc_gel .and. effSolvRatio < gelSolvMolecules) then
+        delGstar_gel = 0.0_wp
+        !initialize variables with zero values
+        !rhoPrime = 0.0_wp
+        !rho = 0.0_wp
+        !sumrhoPrime = 0.0_wp
+        !chargefracgel = 0.0_wp !chargefrac is not necessarily included... we will assume that anions are mixed in the gel in a stoichiometrically consistent way
+        !use ion mole fractions
+        !sumXz = sum(xin_(242:261)*abs(chargeion(242:261))) !for newcatan (see below), anions
+        !use ion molalities
+        do icat = 1,Ncation !ncat
+            cation = Ication(icat)
+            do ineut = 2,nneutral   !nan
+                neutrel = COMPN(ineut)
+                if ((cation == 221) .or. (cation == 223)) then !Ca or Mg
+                    Garg_gel = actin_(cation)
+                    select case(neutrel)
+                    case(228,629,655) !gluconic-acid, sorbitol, D-glucopyranose)
+                        !Garg_both =  ( actin(cation,i,nf)**(nuecat(cation,anion) ) * actin(anion,i,nf)**(nuean(cation,anion)) ) ! Ion Activity Product
+                        !Garg_both = fitpar(catanfitmapfwd(1,cation,anion)) * sqrt(ionicstrength_)
+                        !if (ionicstrength_ < 3.6E5_wp) then
+                        !Garg_gel = fitpar(catanfitmapfwd(1,cation,anion)) * exp(sqrt(ionicstrength_)) !use exponential form to cover wider range and use adapative ranging
+                        select case(cation)
+                        case(221)
+                            select case(neutrel)
+                            case(228)
+                                gelfitpar = 1.8_wp !cacl2-gluconic (GOOD), cano32-gluconic (too high)
+                            case(629,655)
+                                gelfitpar = 1.2_wp !cacl2-glucose, cacl2-sorbitol (too low)
+                            end select
+                        case(223)
+                            select case(neutrel)
+                            case(228)
+                                gelfitpar = 1.8_wp !mgcl2-gluconic (too high)
+                                if (xin_(261) > 0.0_wp) then
+                                    gelfitpar = 1.2_wp  !mgso4-gluconic (slightly too high)
+                                endif
+                            case(629,655)
+                                gelfitpar = 1.5_wp !mgcl2-glucose, mgcl2-sorbitol
+                            end select
+                        end select
+                        !Garg_gel = X_(ineut) * (fitpar(ionfitmapfwd(1,cation)) * log(Garg_gel) + fitpar(ionfitmapfwd(2,cation)))
+                        !Garg_gel = X_(ineut) * (fitpar(ionfitmapfwd(1,cation)) * ionicstrength_ + fitpar(ionfitmapfwd(2,cation)))
+                        delGstar_gel(ineut,cation) = X_(ineut)*ionicstrength_**gelfitpar!X_(ineut)*xin_(cation)*1.0E3_wp!Garg_gel
+                        Garg_gel = 1.0_wp
+                        !delGstar_ion(numion)
+                        !else
+                        !    Garg_both = fitpar(catanfitmapfwd(1,cation,anion)) * sqrtionicstrengthlimit !use exponential form to cover wider range and use adapative ranging
+                        !endif
+                        !else
+                        !    Garg_gel = fitpar(catanfitmapfwd(1,cation,anion)) * sqrt(ionicstrength_) !use 10** form for fitpars to cover wider range and use adapative ranging
+                        !endif
+                        !Take exp of Garg_both or multiply it by the exp of the IAP (use just one fitpar)
+                        !Garg_both = fitpar(1) * exp( fitpar(2) * sqrt(ionicstrength(i,nf)))
+                        !Garg_both = fitpar(1) * exp( fitpar(2) * IAP)
+
+                        !Implementation of new catan treatment (17 June 2021)
+                        ! chargefrac, tau, tauPrime are defined as module variables
+                        !if (gel_eqn1) then
+                        !    chargefrac(anion) = (xin_(anion)*abs(Zion(anion))) / sumXz !defined for anions (sum over cations)
+                        !    tauPrime(cation,anion) = xin_(cation)/nuecat(cation,anion) * chargefrac(anion)
+                        !    delGstar_catan(cation,anion) = Garg_gel
+                        !endif
+                    case default
+                        delGstar_gel(ineut,cation) = 0.0_wp  !nuesum = nuecat(cation,anion) + nuean(cation,anion)
+                    end select
+                    !xmean = xin_(cation)**(nuecat(cation,anion)/nuesum) * xin_(anion)**(nuean(cation,anion)/nuesum)
+                    !!delGstar_catan(cation,anion) = fitpar(catanfitmapfwd(cation,anion)) * xmean * log(Garg_both) !moved fitpar to inside of log
+                    !delGstar_catan(cation,anion) = xmean * Garg_both
+                else
+                    delGstar_gel(ineut,cation) = 0.0_wp
+                endif
+            enddo
+        enddo
+        !if (gel_eqn1) then !use non-normalized rho as the weighting factor
+        !    sumrhoPrime = sum(rhoPrime(:,:))
+        !    if ((gel_eqn2) .or. (sumrhoPrime == 0.0_wp)) then
+        !        where (delGstar_gel(:,:) > 0.0_wp)
+        !            delGstar_gel(:,:) = delGstar_gel(:,:)*rhoPrime(:,:)
+        !        end where
+        !    else !use normalized rho as the weighting factor
+        !        rho(:,:) = rhoPrime(:,:)/sumrhoPrime
+        !        where (delGstar_gel(:,:) > 0.0_wp)
+        !            delGstar_gel(:,:) = delGstar_gel(:,:)*rho(:,:)
+        !        end where
+        !    endif
+        delGstar_gels = sum(delGstar_gel(:,:))
+    else
+        delGstar_gels = 0.0_wp
+    endif !calc_gel
+
+    end subroutine ViscGelContribution
+    !-------------------------------------------------------------------------------------
     
 !Interaction param numbers (= 27 + interaction index)
 !       H, Li, K, Na, Ca, NH4, Mg

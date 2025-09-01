@@ -293,10 +293,10 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                     read(unitx,*,IOSTAT=istat) txtcheck !read only the first argument on this line
                     if (txtcheck(1:4) == equalsigns .or. istat /= 0) then !"====" indicates no more composition points (and last line of input file)
                         exit !leave the do-loop (normal exit point)
-                    else if (IACHAR(txtcheck(1:1)) > 47 .and. IACHAR(txtcheck(1:1)) < 58) then !validate that the data is actual intended input and not some sort of text field spam).
+                    else if (iachar(txtcheck(1:1)) > 47 .and. iachar(txtcheck(1:1)) < 58) then !validate that the data is actual intended input and not some sort of text field spam).
                         backspace unitx
                         read(unitx,*) txtcheck, dummy !read only the first two arguments on this line
-                        if (IACHAR(dummy(1:1)) > 47 .and. IACHAR(dummy(1:1)) < 58) then !it is a number
+                        if (iachar(dummy(1:1)) > 47 .and. iachar(dummy(1:1)) < 58) then !it is a number
                             backspace unitx
                             read(unitx,*) i, T_K(npoints), composition(npoints,2:ncp) !read the temperature in [K] and composition values of the components [2:ncp] into the array
                         else

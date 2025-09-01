@@ -107,7 +107,7 @@ private
     !calculate the total derivative for each component from the absolute values of the partial derivatives:
     dact = 0.0_wp
     dactcoeff = 0.0_wp
-    if (.NOT. onlyDeltaVisc) then
+    if (.not. onlyDeltaVisc) then
         do ni = 1,nindcomp
             dact(ni) = sum(abs(partdact(ni,1:nindcomp)))
             dactcoeff(ni) = sum(abs(partdactcoeff(ni,1:nindcomp)))
@@ -141,8 +141,10 @@ private
 
     use ModSystemProp, only : nindcomp, nneutral, nd, Mmass, errorflag_clist, calcviscosity
     use ModCompScaleConversion
-    use ModAIOMFACvar, only : activity, meanmolalactcoeff, actcoeff_n, partial_log10_etamix, ln_etamix
+    use ModAIOMFACvar, only : activity, meanmolalactcoeff, actcoeff_n, partial_log10_etamix, ln_etamix, ln_etamixZSR
     use ModCalcActCoeff, only : AIOMFAC_calc
+    use ModViscEyring, only : ZSRvisc_on
+    use ModZSRvisc, only : ZSRviscosity
     
     implicit none
 
@@ -174,9 +176,15 @@ private
     !..
     !Call AIOMFAC_calc to calculate the activity at composition xplus:
     call MoleFrac2MassFrac(xplus, Mmass, wtf) 
-    if (j == 1 .AND. i == 1) then
-        call AIOMFAC_calc(wtf, TKelvin)
-        ln_etamixplus = ln_etamix
+    if (j == 1 .and. i == 1) then
+        if (calcviscosity .and. ZSRvisc_on .and. nelectrol > 0 .and. nneutral > 1) then
+            call ZSRviscosity(wtf, TKelvin)
+            ln_etamixplus = ln_etamixZSR
+            call AIOMFAC_calc(wtf, TKelvin)     !call here for full system calculation of activity coeff. after ZSRviscosity
+        else
+            call AIOMFAC_calc(wtf, TKelvin)
+            ln_etamixplus = ln_etamix
+        endif
     else
         call AIOMFAC_calc(wtf, TKelvin)
     endif
@@ -189,9 +197,15 @@ private
     !..
     !calculate the activity & activity coeff. at the initial composition xinit:
     call MoleFrac2MassFrac(xinit, Mmass, wtf) 
-    if (j == 1 .AND. i == 1) then
-        call AIOMFAC_calc(wtf, TKelvin)
-        ln_etamixinit = ln_etamix
+    if (j == 1 .and. i == 1) then
+        if (calcviscosity .and. ZSRvisc_on .and. nelectrol > 0 .and. nneutral > 1) then
+            call ZSRviscosity(wtf, TKelvin)
+            ln_etamixinit = ln_etamixZSR
+            call AIOMFAC_calc(wtf, TKelvin)
+        else
+            call AIOMFAC_calc(wtf, TKelvin)
+            ln_etamixinit = ln_etamix
+        endif
         !partial forward difference for mixture viscosity:
         if (calcviscosity) then
             partial_log10_etamix = (ln_etamixplus - ln_etamixinit) / (dn * ln10)
@@ -210,23 +224,23 @@ private
     !..
     !calculate the numerical forward differences with respect to activity at point xinit 
     !(partial derivative of component j with resp. to a small molar change, dn, in component i)
-    if (actplus > 0.0_wp .AND. actinit > 0.0_wp) then
-        if (abs(actplus -actinit) < tinyn) then                  !floating point underflow risk
-            if (actplus -actinit < 0.0_wp) then                      !"negative zero"
-                partdact_ji = -tinyn                             !almost zero
+    if (actplus > 0.0_wp .and. actinit > 0.0_wp) then
+        if (abs(actplus -actinit) < tinyn) then                     !floating point underflow risk
+            if (actplus -actinit < 0.0_wp) then                     !"negative zero"
+                partdact_ji = -tinyn                                !almost zero
             else                                                    !"positive zero"
                 partdact_ji = tinyn                  
             endif
         else !no underflow
-            if (actplus -actinit > hugen) then                    !floating overflow risk
-                partdact_ji = hugen +(log(actplus) -log(actinit)) !set to huge positive number to allow following computations but prevent overflow
-            else if (actplus -actinit < -hugen) then              !floating overflow risk
-                partdact_ji = -hugen -(log(actplus) -log(actinit))!set to huge negative number to allow following computations but prevent overflow
+            if (actplus -actinit > hugen) then                      !floating overflow risk
+                partdact_ji = hugen +(log(actplus) -log(actinit))   !set to huge positive number to allow following computations but prevent overflow
+            else if (actplus -actinit < -hugen) then                !floating overflow risk
+                partdact_ji = -hugen -(log(actplus) -log(actinit))  !set to huge negative number to allow following computations but prevent overflow
             else
                 partdact_ji = (actplus -actinit)/dn                 !the finite difference derivative with respect to component i (while all other component's moles are kept const.) 
             endif
         endif
-        if (abs(actcoeffplus -actcoeffinit) < tinyn) then        !floating underflow risk
+        if (abs(actcoeffplus -actcoeffinit) < tinyn) then           !floating underflow risk
             if (actcoeffplus -actcoeffinit < 0.0_wp) then 
                 partdactcoeff_ji = -tinyn 
             else !"positive zero"
@@ -241,7 +255,7 @@ private
                 partdactcoeff_ji = (actcoeffplus -actcoeffinit)/dn
             endif
         endif
-    else if (xinit(j) > deps .AND. (actplus < deps .OR. actinit < deps)) then 
+    else if (xinit(j) > deps .and. (actplus < deps .or. actinit < deps)) then 
         !there is some amount of a component in the mixture, but the model activity coefficient is too large (thus, very steep derivative)
         partdact_ji = 1.11111111E5_wp  !value indicating a floating point overflow in AIOMFAC_calc, while not suppressing the feedback of such a value.
         partdactcoeff_ji = 1.11111111E5_wp

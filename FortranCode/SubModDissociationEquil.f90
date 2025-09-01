@@ -11,7 +11,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2018    (originally as non-submodule part of ModCalcActCoeff)   *
-!*   -> latest changes: 2023-09-11                                                      *
+!*   -> latest changes: 2024-08-30                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -46,15 +46,15 @@ use ModCompScaleConversion, only : MassFrac2SolvMolalities, MassFrac2IonMolaliti
 
 implicit none
 !submodule parameters and variables:
-integer,dimension(:),allocatable :: map_solver2molarinp             !array storing the indices for mapping between the active set of solver variables and the "molarinp" variables;
+integer,dimension(:),allocatable :: map_solver2molarinp         !array storing the indices for mapping between the active set of solver variables and the "molarinp" variables;
 !..
-real(wp),parameter :: deps = epsilon(1.0_wp), sqrtdeps = sqrt(deps)
+real(wp),parameter :: deps = epsilon(1.0_wp), sqrtdeps = sqrt(epsilon(1.0_wp))
 real(wp),parameter :: ztiny = tiny(1.0_wp)**0.3_wp, lztiny = 4.0_wp*deps
 real(wp),parameter :: minlim = log(1.0E-6_wp*deps)    
-real(wp),parameter :: Rgas_atm = 8.2057366081E-5_wp                 !Rgas in units of [m^3.atm.K^-1.mol^-1]
+real(wp),parameter :: Rgas_atm = 8.2057366081E-5_wp             !Rgas in units of [m^3.atm.K^-1.mol^-1]
 !..
-real(wp),parameter :: T0 = 298.15_wp                                ![K] reference temperature for dissociation constant temperature dependency calculation
-real(wp),parameter :: MolarMassHSO4 = 0.097071_wp                                                                           !the molar mass of the bisulfate ion in [kg/mol]
+real(wp),parameter :: T0 = 298.15_wp                            ![K] reference temperature for dissociation constant temperature dependency calculation
+real(wp),parameter :: MolarMassHSO4 = 0.097071_wp               !the molar mass of the bisulfate ion in [kg/mol]
 real(wp),parameter :: c1 = 2.63468E-01_wp, c2 = 2.63204E-01_wp, c3 = 1.72067_wp, c4 = 7.30039E+01_wp, c5 = 7.45718E-01_wp   !fitted parameters for the estimation of alphaHSO4pred based on scaled mass fraction of HSO4max
 real(wp),parameter :: DH0 = -1.8554748598E4_wp, cp0 = -2.05594443486E2_wp, dcpdT = -9.94992864240E-1_wp                     !parameters for the temperature dependent bisulfate dissociation constant calculation.
 real(wp),parameter :: fe1 = 1.0_wp/8.314472_wp, fe2 = DH0-cp0*T0+0.5_wp*dcpdT*T0*T0, fe3 = 1.0_wp/T0, fe4 = cp0-dcpdT*T0    !terms/factors for the temperature dependent bisulfate dissociation constant calculation.
@@ -62,11 +62,11 @@ real(wp),parameter :: fe1 = 1.0_wp/8.314472_wp, fe2 = DH0-cp0*T0+0.5_wp*dcpdT*T0
 real(wp) :: lngbisulf, lngK1bicarb, lngK2bicarb, lngKbisulf, lngKOH, lnK1HCO3atT, lnK2HCO3atT, lnKCO2atT, lnKH2OatT, &
     & lnKHSO4atT, mHmax, mHSO4max, mHSO4min, mSulfmax, nCarbmax, nCO2_init, nCO2gas, nCO2max, nH2O_init, nHCO3max,  &
     & nHmax, nHSO4max, nOH_init, nOHmax, nSulfmax, ntiny, nVmax, target_CO2gas_ppm, V
-real(wp) :: mCarb, mCO2, mH, mHCO3, mHSO4, mOH, mSulf            !molalities for activity calculations
-real(wp) :: nCarb, nCO2, nH, nHCO3, nHSO4, nOH, nSulf            !molar amounts for composition determination
+real(wp) :: mCarb, mCO2, mH, mHCO3, mHSO4, mOH, mSulf           !molalities for activity calculations
+real(wp) :: nCarb, nCO2, nH, nHCO3, nHSO4, nOH, nSulf           !molar amounts for composition determination
 real(wp),dimension(8) :: ln_maxval_inp
-real(wp),dimension(:),allocatable :: mNeutral, molNeutral        !molalities and moles of neutral species
-real(wp),dimension(:),allocatable :: SNA, SNC                    !moles of ions
+real(wp),dimension(:),allocatable :: mNeutral, molNeutral       !molalities and moles of neutral species
+real(wp),dimension(:),allocatable :: SNA, SNC                   !moles of ions
 real(wp),dimension(:),allocatable :: solve_var, solve_var_maxval, solve_var_saved
 logical :: use_CO2gas_equil
 
@@ -202,13 +202,13 @@ logical :: use_CO2gas_equil
         geomscal = .false.
         allocate(mSb1(1:ntry+1), mSb2(1:ntry+1))
         call zerobracket_inwards(fHSO4dissoc, mHSO4Guess1, mHSO4Guess2, ntry, geomscal, nb, mSb1, mSb2, success)
-        if (.NOT. success) then                         !check lower bracket
+        if (.not. success) then                         !check lower bracket
             if (mHSO4min < mHSO4Guess1-mscale) then     !(1b) search in full interval from mSulfmin to mSulfmax:
                 mHSO4Guess1 = mHSO4Guess1+mscale
                 call zerobracket_inwards(fHSO4dissoc, mHSO4min, mHSO4Guess1, ntry, geomscal, nb, mSb1, mSb2, success)
             endif
         endif
-        if ((.NOT. success) ) then
+        if ((.not. success) ) then
             if (mHSO4Guess2 < mHSO4max-mscale) then     !check upper bracket !(1c) search in full interval from mSulfmin to mSulfmax:
                 mHSO4Guess2 = mHSO4Guess2-mscale
                 call zerobracket_inwards(fHSO4dissoc, mHSO4Guess2, mHSO4max, ntry, geomscal, nb, mSb1, mSb2, success)
@@ -218,7 +218,7 @@ logical :: use_CO2gas_equil
             !(2) use Brent's method to find the root.
             mHSO4Guess1 = mSb1(1)
             mHSO4Guess2 = mSb2(1)
-            tol = min( max(mHSO4Guess1, mHSO4guess2)*sqrtdeps, 1.0E-2_wp*sqrtdeps )
+            tol = min( max(mHSO4Guess1, mHSO4guess2)*1.0E-6_wp*sqrtdeps, 1.0E-5_wp*sqrtdeps )
             mHSO4 = brentzero(mHSO4Guess1, mHSO4Guess2, deps, tol, fHSO4dissoc)     !using Brent's method with fHSO4dissoc
             !check found zero and return best found mHSO4:
             calcviscosity = calcviscosity_saved
@@ -238,7 +238,7 @@ logical :: use_CO2gas_equil
             endif
             !now solve a quadratic equation, keeping the ion activity coeff. constant 
             !to determine the exact bisulfate-system ion molalities.
-            if (lngKbisulf > 300.0_wp .OR. lngKbisulf < -300.0_wp) then       !apply floating point overflow protection measures
+            if (lngKbisulf > 300.0_wp .or. lngKbisulf < -300.0_wp) then       !apply floating point overflow protection measures
                 lngKbisulf = sign(300.0_wp, lngKbisulf)
             endif
             mr = exp(lnKHSO4atT - lngKbisulf)
@@ -264,8 +264,8 @@ logical :: use_CO2gas_equil
                 calcviscosity = calcviscosity_saved
                 call DiffKsulfuricDissoc(mHSO4, diffK)
                 alphaHSO4 = 1.0_wp-(mHSO4/mHSO4max)
-                if ((abs(diffK) > 0.1_wp .AND. abs(alphaHSO4 -alphaHSO4pred) > 0.4_wp) &
-                    & .OR. abs(alphaHSO4 -alphaHSO4pred) > 0.99_wp) then
+                if ((abs(diffK) > 0.1_wp .and. abs(alphaHSO4 -alphaHSO4pred) > 0.4_wp) &
+                    & .or. abs(alphaHSO4 -alphaHSO4pred) > 0.99_wp) then
                     call DiffKsulfuricDissoc(mHSO4Guess1, diffK)
                     mHSO4 = SMA(idHSO4)
                 endif
@@ -519,7 +519,7 @@ logical :: use_CO2gas_equil
     !n: the number of unknowns / equations to solve:
     allocate(solve_var(n), solve_var_maxval(n), map_solver2molarinp(n), randomval(n), diffK(n))
     map_solver2molarinp = 0                            
-    if (.NOT. allocated(solve_var_saved)) then
+    if (.not. allocated(solve_var_saved)) then
         allocate(solve_var_saved(n))                    !allocate submodule variable on first use, but not subsequently
         solve_var_saved = -0.99_wp*huge(1.0_wp)         !initialized with an unfeasible value
     endif
@@ -571,7 +571,7 @@ logical :: use_CO2gas_equil
         lnK1HCO3atT = fa1 + fa2*T + fa3/T + fa4*log(T) + fa5/(T**2)
         lnK2HCO3atT = fb1 + fb2*T + fb3/T + fb4*log(T) + fb5/(T**2)
         lnKCO2atT = fc1 + fc2*T + fc3/T + fc4*log(T) + fc5/(T**2)
-        lnKH2OatT = fd1 + fd2*T + fd3*(T**2) + fd4*(T**3)   !Valid from 273K to 323 K.
+        lnKH2OatT = fd1 + fd2*T + fd3*(T**2) + fd4*(T**3)   !Valid from 273K to 323 K.  fd1 = -1.4816780E+02_wp, fd2 = 8.933802E-01_wp, fd3 = -2.332199E-03_wp, fd4 = 2.146860E-06_wp
         if (bisulfsyst) then
             !calculate the reference value of the 2nd dissociation constant of H2SO4 as a function of temperature 
             !using parameterization by Knopf et al. (2003) (corrected equation 16). 
@@ -579,9 +579,9 @@ logical :: use_CO2gas_equil
             !replace T with 180 K temporarily and use the ln(KHSO4_T) 
             !of that temperature as that might be the best estimate for that case.
             T = T_K
-            if (T < 180.0_wp) then          !use T of 180 K for parameterization
+            if (T < 180.0_wp) then !use T of 180 K for parameterization
                 T = 180.0_wp
-            else if (T > 473.0_wp) then     !use T of 473 K
+            else if (T > 473.0_wp) then !use T of 473 K
                 T = 473.0_wp
             endif
             lnKHSO4atT = -4.54916799587_wp -fe1*(fe2*(1.0_wp/T-fe3)-fe4*log(T/T0) -0.5_wp*dcpdT*(T-T0))
@@ -590,17 +590,17 @@ logical :: use_CO2gas_equil
         !##! section to compute a good initial guess for the msulf1, msulf2 range based on a parameterization of alphaHSO4 as a function of mass frac. of HSO4(max) in the water portion of the solvent mixture.
         if (bisulfsyst) then
             !(A) calculate the special normalized mass fraction of HSO4max in water plus HSO4max: wfHSO4max; only the water fractional amount associated with HSO4max is considered (excluding water associated with other ions in the system).
-            mfHSO4maxinions = 2.0_wp*nSulfmax/SumIonMolalities      !mole fraction of (HSO4max plus counter cations) relative to all ion molar amounts.
+            mfHSO4maxinions = 2.0_wp*nSulfmax/SumIonMolalities !mole fraction of (HSO4max plus counter cations) relative to all ion molar amounts.
             wfHSO4max = nSulfmax*MolarMassHSO4/(nSulfmax*MolarMassHSO4 + mfHSO4maxinions*wtf(1)/sum(wtf(1:nneutral)))
             !(B) calculate the predicted degree of dissociation at this wfHSO4max value based on the parameterization:
             alphaHSO4pred = 1.0_wp - 1.0_wp/(1.0_wp + (1.0_wp/wfHSO4max**c1 - 1.0_wp/wfHSO4max**c2))**c4 &
                 & + c3*wfHSO4max**c5*(1.0_wp-wfHSO4max)**1.75_wp
-            alphaHSO4pred = min(alphaHSO4pred, 1.0_wp-deps)         !prevent values larger than 1.0_wp
+            alphaHSO4pred = min(alphaHSO4pred, 1.0_wp-deps) !prevent values larger than 1.0_wp
             alphaHSO4pred = max(alphaHSO4pred, deps)
         endif
 
         call random_seed (size = nrd)
-        call random_seed(PUT=[(k*211839831, k=1,nrd)])              !initialize the pseudo-random number generator each time with the same seed (for debugging reproducability)
+        call random_seed(PUT=[(k*211839831, k=1,nrd)])     !initialize the pseudo-random number generator each time with the same seed (for debugging reproducability)
         if (HighPrecSolving) then
             maxiloop = 40
             tol = 1.0E-2_wp*sqrtdeps
@@ -613,7 +613,7 @@ logical :: use_CO2gas_equil
             info = -1
             if (iloop == 1) then
                 !set the index mapping between molarinp entries and the array of solver variables via map_solver2molarinp:
-                if (bisulfsyst .AND. use_CO2gas_equil) then
+                if (bisulfsyst .and. use_CO2gas_equil) then
                     map_solver2molarinp(1:n) = [1, 2, 3, 4, 5, 6, 7, 8]
                 else if (bisulfsyst) then
                     map_solver2molarinp(1:n) = [1, 2, 3, 4, 5, 6]
@@ -624,7 +624,7 @@ logical :: use_CO2gas_equil
                 endif
                 solve_var_maxval(1:n) = ln_maxval_inp(map_solver2molarinp(1:n))
                 !initial guess
-                if (memory_initial_guess .AND. solve_var_saved(1) > -0.98*huge(1.0_wp)) then 
+                if (memory_initial_guess .and. minval(solve_var_saved(1:n)) > -0.98*huge(1.0_wp)) then 
                     !use saved solution from prior succesful calculation (previous data point input) as initial guess:
                     solve_var(1:n) = solve_var_saved(1:n)
                     call rboundsCheck( solve_var(1:n), minlim, ntiny, solve_var_maxval(1:n) )
@@ -634,7 +634,7 @@ logical :: use_CO2gas_equil
                         molarinp(1) = 1.60E-6_wp*nHCO3max       !nHCO3
                         molarinp(2) = 3.0_wp*deps*nCarbmax      !nCarb
                         if (use_CO2gas_equil) then
-                            molarinp(3) = 2.0E-5_wp*nCO2max     !nCO2(aq)
+                            molarinp(3) = 2.0E-5_wp*nCO2max    !nCO2(aq)
                         else
                             molarinp(3) = 0.9999_wp*nCO2max     !nCO2(aq)
                         endif
@@ -693,7 +693,7 @@ logical :: use_CO2gas_equil
         !    t1 = sum(SMA(1:NGI)*abs(anionZ(1:NGI)))             !test the electrical charge neutrality condition in the solution
         !    t2 = sum(SMC(1:NGI)*cationZ(1:NGI))
         !    t3 = t1 - t2
-        !    if (t3 < 1.0E6_wp .AND. abs(t3) > 1.0E-9_wp) then  !test
+        !    if (t3 < 1.0E6_wp .and. abs(t3) > 1.0E-9_wp) then  !test
         !        write(*,'(A, ES15.8)') "WARNING: Electrical charge neutrality condition violated! ", t3
         !        write(*,'(A, I0,1X,ES15.8)') "nd, wtf(1) ", nd, wtf(1)
         !    endif
@@ -721,7 +721,7 @@ logical :: use_CO2gas_equil
             r = sum(abs(diffK))
             if (r > sqrtdeps) then
                 errorflag_clist(17) = .true.
-                !if (.NOT. frominpfile) then
+                !if (.not. frominpfile) then
                 !    !$OMP CRITICAL
                 !    write(*,'(A)') "AIOMFAC ERROR 17: Issue with ion dissociation equilibria calculations."
                 !    write(*,'(A)') "The numerical solution of electrolyte/ion dissociation equilibria was &
@@ -795,7 +795,7 @@ logical :: use_CO2gas_equil
     nCarb = exp_solve_var(2)
     nCO2 = exp_solve_var(3)
     nOH = exp_solve_var(4)
-    if (bisulfsyst .AND. use_CO2gas_equil) then
+    if (bisulfsyst .and. use_CO2gas_equil) then
         nHSO4 = exp_solve_var(5)
         nH = exp_solve_var(6)
         nCO2gas = exp_solve_var(7)
@@ -956,7 +956,7 @@ logical :: use_CO2gas_equil
             diffK1 = min(diffK1, logval_threshold)
             mHCO3check = (mCO2*xwater)/mH*exp(diffK1)
             if (mHCO3check*solvmass < dtiny) then   !assume mHCO3check is essentially zero, so no equation to solve;
-                diffK(1) = 0.0_wp                   !set for this exception
+                diffK(1) = 0.0_wp  !set for this exception
                 nHCO3 = solvmass*mHCO3check
             else
                 mgeomean = sqrt(mHCO3*mHCO3check)
@@ -981,8 +981,8 @@ logical :: use_CO2gas_equil
             diffK2 = max(diffK2, -logval_threshold)
             diffK2 = min(diffK2, logval_threshold)
             mCarbcheck = mHCO3/mH*exp(diffk2)
-            if (mCarbcheck*solvmass < dtiny) then   !assume mCarb is essentially zero, so no equation to solve;
-                diffK(2) = 0.0_wp                   !set for this exception
+            if (mCarbcheck*solvmass < dtiny) then !assume mCarb is essentially zero, so no equation to solve;
+                diffK(2) = 0.0_wp  !set for this exception
                 nCarb = solvmass*mCarbcheck
             else
                 mgeomean = sqrt(mCarb*mCarbcheck)
@@ -1010,7 +1010,7 @@ logical :: use_CO2gas_equil
             diffK3 = max(diffK3, -logval_threshold)
             diffK3 = min(diffK3, logval_threshold)
             mOHcheck = xwater/mH*exp(diffK3)
-            if (mOHcheck*solvmass < dtiny) then     !assume mCarb is essentially zero, so no equation to solve;
+            if (mOHcheck*solvmass < dtiny) then !assume mCarb is essentially zero, so no equation to solve;
                 diffK(3) = 0.0_wp
                 nOH = solvmass*mOHcheck
             else
@@ -1023,7 +1023,7 @@ logical :: use_CO2gas_equil
         endif
     endif !mOH
     if (bisulfsyst) then
-        if (mSulf > lztiny .AND. mHSO4 > lztiny) then
+        if (mSulf > lztiny .and. mHSO4 > lztiny) then
             if (mratio4 > 0.0_wp) then
                 diffK(4) = (lngbisulf +log(mratio4)) -lnKHSO4atT
             else
@@ -1052,7 +1052,7 @@ logical :: use_CO2gas_equil
         endif !mSulf
     endif
 
-    if (bisulfsyst .AND. use_CO2gas_equil) then
+    if (bisulfsyst .and. use_CO2gas_equil) then
         !write(*,'(*(ES13.6,1X))') [nHCO3, nCarb, nCO2, nOH, nHSO4, nH, nCO2gas, V]
         solve_var = log([nHCO3, nCarb, nCO2, nOH, nHSO4, nH, nCO2gas, V])
         diffK(5) = mCO2*exp(min(lngammaCO2, logval_threshold))*2.5E3_wp - exp(lnKCO2atT)
@@ -1141,7 +1141,7 @@ logical :: use_CO2gas_equil
     !sort the list from smallest to largest in magnitude (ignoring neg/pos signs):
     summed = 0.0_wp
     do i = 1,size(list)
-        k = minloc(abs(list(:)), mask = available(:), DIM=1)   
+        k = minloc(abs(list(:)), mask = available(:), dim=1)   
         available(k) = .false.
         summed = summed + list(k) 
     enddo
