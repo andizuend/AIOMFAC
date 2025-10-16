@@ -164,13 +164,15 @@ private     !as default
 
     !initialize:
     if (ind > 0) then
-        if (ITAB(ind,16) > 0) then      !is water
+        if (ITAB(ind,16) > 0) then          !is water
             cpn = 401
+        else if (ITAB(ind,173) > 0) then    !is CO2(aq)
+            cpn = 402
         else
-            cpn = compN(ind)            !organic or water component ID (when defined)
+            cpn = compN(ind)                !organic or water component ID (when defined)
         endif
     else if (ind == -1) then
-        cpn = 401                       !water
+        cpn = 401                           !water
     endif
 
     select case(cpn)
@@ -187,7 +189,7 @@ private     !as default
             CorrelTrange(cpn,2) = 495.0_wp
         else
             equationNo = 10
-            a = 136.0_wp                 !Tg of water from experiments (see, e.g. Koop et al., 2011, PCCP);
+            a = 136.0_wp                    !Tg of water from experiments (see, e.g. Koop et al., 2011, PCCP);
             b = -999.0_wp
             c = -999.0_wp
             d = -999.0_wp
