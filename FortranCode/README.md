@@ -1,6 +1,7 @@
 ## About this code folder
-This folder contains all Fortran files (.f90) needed to compile and link the modular AIOMFAC Fortran program. 
+This folder contains all Fortran files (.f90) needed to compile and link the modular AIOMFAC(-web) Fortran program. 
 For a list of releases and associated descriptions, including the latest release of the Fortran code, see https://github.com/andizuend/AIOMFAC/releases.
+
 ### Compiling and linking
 The file [build_command_line.txt](./build_command_line.txt) provides information about how to compile and link the source code with `gfortran` or `ifx` (specifically for v3.00 and more recent).
 
