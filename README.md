@@ -32,7 +32,7 @@ On Linux, the main folder structure should look as illustrated below (not showin
 ```mermaid
 graph TD
     AIOMFAC[AIOMFAC] --> Auxiliary;
-    AIOMFAC --> Fortran_code;
+    AIOMFAC --> FortranCode;
     AIOMFAC --> Inputfiles;
     AIOMFAC --> Outputfiles;
     AIOMFAC --> TgML_Armeli[TgML_Armeli];
