@@ -139,7 +139,7 @@ private
     !****************************************************************************************
     subroutine partialdactcoeff(xin, TKelvin, j, i, partdact_ji, partdactcoeff_ji)
 
-    use ModSystemProp, only : nindcomp, nneutral, nd, Mmass, errorflag_clist, calcviscosity
+    use ModSystemProp, only : nindcomp, nneutral, Mmass, errorflag_clist, calcviscosity
     use ModCompScaleConversion
     use ModAIOMFACvar, only : activity, meanmolalactcoeff, actcoeff_n, partial_log10_etamix, ln_etamix, ln_etamixZSR
     use ModCalcActCoeff, only : AIOMFAC_calc
@@ -170,9 +170,9 @@ private
     !compositions for the forward / backward differences at the given point xinit (component i is the one to be enhanced/diminished):
     ntplus = 1.0_wp + dn     !as the molar sum of all components can be set arbitrarily to 1.0_wp
     !calculate the mole fractions at the slightly changed compositions:
-    xplus(1:i-1) = xinit(1:i-1)/ntplus
-    xplus(i) = (xinit(i)+dn)/ntplus
-    xplus(i+1:nindcomp) = xinit(i+1:nindcomp)/ntplus
+    xplus(1:i-1) = xinit(1:i-1) / ntplus
+    xplus(i) = (xinit(i) + dn) / ntplus
+    xplus(i+1:nindcomp) = xinit(i+1:nindcomp) / ntplus
     !..
     !Call AIOMFAC_calc to calculate the activity at composition xplus:
     call MoleFrac2MassFrac(xplus, Mmass, wtf) 

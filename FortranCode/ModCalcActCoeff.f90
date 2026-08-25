@@ -120,7 +120,7 @@ end interface
     !endif
     
     !initialize the variables/arrays:
-    errorflag_clist = .false.
+    errorflag_clist(1:18) = .false. !reset only component-specific errors
     gnmrln = 0.0_wp
     gnlrln = 0.0_wp
     gnsrln = 0.0_wp
@@ -138,7 +138,7 @@ end interface
     call MassFrac2IonMolalities(wtf, SMC, SMA)
     SumIonMolalities = sum(SMA(1:Nanion)) + sum(SMC(1:Ncation))
     
-    if (bicarbsyst) then            !includes case for 'bisulfsyst .AND. bicarbsyst'
+    if (bicarbsyst) then            !includes case for 'bisulfsyst .and. bicarbsyst'
         call HSO4_and_HCO3_dissociation()
     else if (bisulfsyst) then
         !Perform the dissociation check for bisulfate-system ions and, via this
@@ -255,12 +255,13 @@ end interface
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2004                                                            *
-    !*   -> latest changes: 2023-03-17                                                      *
+    !*   -> latest changes: 2026-07-19                                                      *
     !*                                                                                      *
     !**************************************************************************************** 
     subroutine Gammas()
     
-    use ModSystemProp, only : nneutral, NKNpNGS, Ncation, Nanion, Mmass, bisulfsyst, bicarbsyst
+    use ModSystemProp, only : nneutral, NKNpNGS, Ncation, Nanion, Mmass, bisulfsyst, &
+        & bicarbsyst, is_heat_transfer
     use ModSRunifac, only : SRsystm, SRunifac
     use ModMRpart, only : LR_MR_activity, GammaCO2
     use ModAIOMFACvar, only : meanSolventMW
@@ -269,6 +270,7 @@ end interface
     implicit none
     !local variables:
     integer :: NKNpNcat, nnp1
+    real(wp),parameter :: deps = epsilon(1.0_wp)
     real(wp) :: sum_molalities, sumXN
     real(wp),dimension(NKNpNGS) :: lnGaSR
     real(wp),dimension(nneutral) :: wtfbycompMW, mNeutral
@@ -284,26 +286,26 @@ end interface
     sumXN = sum(wtfbycompMW)
     XN(1:nneutral) = wtfbycompMW/sumXN
     
-    meanSolventMW = sum(Mmass(1:nneutral)*XN(1:nneutral))               !mean molar mass of the solvent mixture (only non-electrolytes)
-    mNeutral = XN(1:nneutral)/meanSolventMW                             ![mol/kg], the molalities of the neutrals
+    meanSolventMW = sum(Mmass(1:nneutral)*XN(1:nneutral))           !mean molar mass of the solvent mixture (only non-electrolytes)
+    mNeutral = XN(1:nneutral)/meanSolventMW                         ![mol/kg], the molalities of the neutrals
 
     !Addition of the moles of substance (neutral and ionic) per 1 kg of electrolyte-free solvent mixture
     if (bisulfsyst) then    !update since it changes in DiffKsulfuricDissoc and DiffKcarbonateDissoc
         SumIonMolalities = sum(SMA(1:Nanion)) +sum(SMC(1:Ncation))
     endif
-    sum_molalities = sum(mNeutral) + SumIonMolalities                   !sum of all molalities
+    sum_molalities = sum(mNeutral) + SumIonMolalities               !sum of all molalities
 
     !Calculation of the mole fraction (X) of the neutral components and the ions with respect to dissociated electrolytes/ions.
     !==> the structure of the mole fraction array X is: 
     !1) neutral components in component order,
     !2) ions: first the cations, then the anions
-    X(1:nneutral) = mNeutral/sum_molalities                             !mole fraction of the neutral components (on the basis of dissociated electrolytes)    
+    X(1:nneutral) = mNeutral/sum_molalities                         !mole fraction of the neutral components (on the basis of dissociated electrolytes)    
     NKNpNcat = nneutral + Ncation
-    X(nnp1:NKNpNcat) = SMC(1:Ncation)/sum_molalities                    !mole fractions of the cations
-    X(NKNpNcat+1:NKNpNcat+Nanion) = SMA(1:Nanion)/sum_molalities        !mole fractios of the anions
+    X(nnp1:NKNpNcat) = SMC(1:Ncation)/sum_molalities                !mole fractions of the cations
+    X(NKNpNcat+1:NKNpNcat+Nanion) = SMA(1:Nanion)/sum_molalities    !mole fractios of the anions
 
     !check whether temperature-dependent parameters need to be updated in SR and LR parts:
-    if (abs(T_K - lastTK) > 1.0E-2_wp) then !detected a change in temperature --> PsiT and other coeff. need to be updated
+    if (is_heat_transfer .or. abs(T_K - lastTK) > 1.0E2*deps) then      !detected a change in temperature --> PsiT and other coeff. need to be updated
         refreshgref = .true.
         DebyeHrefresh = .true.
         lastTK = T_K

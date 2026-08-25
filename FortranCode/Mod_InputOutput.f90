@@ -33,9 +33,14 @@
 module Mod_InputOutput
 
 use Mod_kind_param, only : wp
+use ModSystemProp, only : maxsmileslength
 
 implicit none
 private
+
+!public variables
+character(len=maxsmileslength),dimension(:),allocatable,public :: cpsmiles      !list of smiles components indexed to total components
+logical,public :: armeliON                                                      !declare TgML Armeli method selection
 
 public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
 
@@ -53,7 +58,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
     !*                                                                                      *
     !*   -> created:        2011                                                            *
-    !*   -> latest changes: 2019-10-17                                                      *
+    !*   -> latest changes: 2026-08-24                                                      *
     !*                                                                                      *
     !*   :: License ::                                                                      *
     !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -71,7 +76,8 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     subroutine ReadInputFile(filepath, folderpathout, filename, ninpmax, maxpoints, unito, verbose, &
         & ncp, npoints, warningind, errorind, filevalid, cpnameinp, cpsubg, T_K, composition, xinputtype)
 
-    use ModSystemProp, only : topsubno
+    use ModSystemProp, only : topsubno, errorflag_clist
+    use ModComponentNames, only : NKname, NKsmiles
 
     implicit none
 
@@ -84,7 +90,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     integer,intent(out) :: ncp, npoints
     integer,intent(inout) :: warningind, errorind
     logical,intent(out) :: filevalid
-    character(len=200),dimension(:),intent(out) :: cpnameinp    !list of assigned component names (from input file)
+    character(len=7+maxsmileslength),dimension(:),intent(out) :: cpnameinp    !list of assigned component names (from input file)
     integer,dimension(:,:),intent(out) :: cpsubg                !list of input component subgroups and corresponding subgroup quantities
     real(wp),dimension(:),intent(out) :: T_K                    !temperature of data points in Kelvin
     real(wp),dimension(:,:),intent(out) :: composition          !array of mixture composition points for which calculations should be run
@@ -92,13 +98,13 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     !--
     !local variables:
     character(len=:),allocatable :: cn                          !this assumes a maximum four-digit component number in the system (max. 9999); to be adjusted otherwise.
-    character(len=4) :: dashes, equalsigns, pluses
+    character(len=4) :: dashes, equalsigns, pluses, atsigns
     character(len=20) :: dummy, cnformat
     character(len=50) :: txtcheck, inpfolder, outpfolder
     character(len=3000) :: errlogfile, fname
     character(len=20),dimension(ninpmax) :: txtarray
-    integer :: cpno, i, inpfilesize, istat, k, kinpf, qty, subg, unitx
-    logical :: fileopened, fileexists
+    integer :: cpno, i, inpfilesize, istat, k, kinpf, qty, subg, unitx, ind
+    logical :: fileopened, fileexists, newfileformat
     !...................................................................................
 
     !initialize variables
@@ -106,12 +112,17 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     cpsubg = 0
     cpnameinp = "none"
     composition = 0.0_wp
-    T_K = 298.15_wp      !default temperature in [K]
+    T_K = 298.15_wp             !default temperature in [K]
     dashes = "----"
     equalsigns = "===="
     pluses = "++++"
+    atsigns = "@@@@"
     fileexists = .false.
     filevalid = .false.
+    armeliON = .true.           !default = True
+    newfileformat = .true.      !default = True
+    if (.not. allocated(cpsmiles)) allocate(cpsmiles(size(cpnameinp)))
+    cpsmiles = ""
 
     !==== read INPUT data ===========================================================
 
@@ -164,21 +175,21 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     !create an error-logfile associated with the input file name:
     errlogfile = "Errorlog_"//filename(i-4:)
     fname = trim(folderpathout)//trim(errlogfile)
-    open (NEWUNIT = unito, FILE = fname, STATUS ='UNKNOWN') !unito is the error / logfile unit
+    open (newunit = unito, file = fname, status ='unknown') !unito is the error / logfile unit
     !-----
     !check if file exists and read its content if true:
     fname = trim(filepath)
-    inquire(FILE = fname, EXIST = fileexists, size = inpfilesize) !inpfilesize is the file size in [bytes]
+    inquire(file = fname, EXIST = fileexists, size = inpfilesize) !inpfilesize is the file size in [bytes]
     !Delete very large files that can only mean uploaded spam content and not actual input:
     if (fileexists) then
         if (real(inpfilesize, kind=wp) > 50.0_wp*(ninpmax +ninpmax*maxpoints) ) then !likely not a valid input file
             fname = trim(filepath)
-            open (NEWUNIT = unitx, FILE = fname, IOSTAT=istat, ACTION='read', STATUS='OLD')
+            open (newunit = unitx, file = fname, iostat=istat, action='read', status='old')
             read(unitx,*) dummy, dummy, dummy, txtcheck
             close(unitx)
             if (.not. (txtcheck(1:11) == "AIOMFAC-web")) then !invalid file (likely spam)
-                open (NEWUNIT = unitx, FILE = fname, STATUS='OLD')
-                close(unitx, STATUS='DELETE')  !close and delete the file
+                open (newunit = unitx, file = fname, status='old')
+                close(unitx, status='delete')  !close and delete the file
                 fileexists = .false.
             endif
         endif
@@ -188,13 +199,13 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     if (fileexists) then
         if (verbose) then
             write(unito,*) ""
-            write(unito,*) "MESSAGE from AIOMFAC: input file exists."
+            write(unito,'(A)') "MESSAGE from AIOMFAC: input file exists."
         endif
         fname = trim(filepath)
-        open (NEWUNIT = unitx, FILE = fname, IOSTAT=istat, ACTION='read', STATUS='OLD')
+        open (newunit = unitx, file = fname, iostat=istat, action='read', status='old')
         if (istat /= 0) then ! an error occurred
             write(unito,*) ""
-            write(unito,*) "MESSAGE from AIOMFAC: an error occurred while trying to open the file! IOSTAT: ", istat
+            write(unito,'(A, I0.1)') "MESSAGE from AIOMFAC: an error occurred while trying to open the file! iostat: ", istat
         endif
         !validate file as a correct input text-file (no spam):
         read(unitx,*) dummy, dummy, dummy, txtcheck
@@ -202,7 +213,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
             filevalid = .true.
             if (verbose) then
                 write(unito,*) ""
-                write(unito,*) "MESSAGE from AIOMFAC: input file has passed the first line text validation and will be read."
+                write(unito,'(A)') "MESSAGE from AIOMFAC: input file has passed the first line text validation and will be read."
             endif
             !read input data from file:
             backspace unitx !jump back to beginning of record (to the beginning of the line)
@@ -214,14 +225,14 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
             filevalid = .false.
             if (verbose) then
                 write(unito,*) ""
-                write(unito,*) "MESSAGE from AIOMFAC: input file does not pass first line text validation and will be deleted."
+                write(unito,'(A)') "MESSAGE from AIOMFAC: input file does not pass first line text validation and will be deleted."
             endif
         endif
         !loop over mixture components with variable numbers of subgroups to read (using inner loop):
         if (filevalid) then
             if (verbose) then
                 write(unito,*) ""
-                write(unito,*) "MESSAGE from AIOMFAC: reading component data from input file."
+                write(unito,'(A)') "MESSAGE from AIOMFAC: reading component data from input file."
             endif
             k = max(2, ceiling(log10(real(ninpmax))) ) !determine order of magnitude digits
             write(dummy,'(I0)') k
@@ -230,10 +241,15 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
             do ncp = 1,ninpmax
                 if (verbose .and. istat /= 0) then
                     write(unito,*) ""
-                    write(unito,*) "MESSAGE from AIOMFAC: file end found in input file at ncp = ", ncp
+                    write(unito,'(A, I0.1)') "MESSAGE from AIOMFAC: file end found in input file at ncp = ", ncp
                 endif
-                read(unitx,*,IOSTAT=istat) txtcheck !read only first argument on this line for subsequent check
-                if (txtcheck(1:4) == pluses .or. istat /= 0) then !"++++" indicates end of this components definition part
+                read(unitx,*,iostat=istat) txtcheck !read only first argument on this line for subsequent check
+                if (txtcheck(1:4) == pluses .or. txtcheck(1:4) == atsigns .or. istat /= 0) then !"++++" indicates end of this components definition part
+                    if (txtcheck(1:4) == atsigns) then
+                        newfileformat = .true.      !"@@@@" indicates new file format
+                    else
+                        newfileformat = .false.     !"++++" indicates file format is outdated
+                    endif
                     exit !exit ncp do-loop
                 else !in this case, argument 3 of txtcheck is the component no.:
                     backspace unitx !jump back to beginning of record (to the beginning of the line)
@@ -246,10 +262,31 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                 endif
                 if (verbose) then
                     write(unito,*) ""
-                    write(unito,*) "MESSAGE from AIOMFAC: found a component cpno =", cpno
+                    write(unito,'(A, A, A, I0.1)') "MESSAGE from AIOMFAC: found component [", trim(cpnameinp(cpno)), "] at cpno = ", cpno
+                endif
+                if (index(cpnameinp(cpno), "smiles") == 1) then !identify smiles components
+                    cpsmiles(cpno) = trim(cpnameinp(cpno)(8:))  !collect smiles string after "smiles "
+                    if (len(cpsmiles(cpno)) > maxsmileslength) then !check that smiles length is < 500 characters
+                        errorflag_clist(25) = .true.            !throw error
+                    endif
+                    if (verbose) then
+                        write(unito,*) ""
+                        write(unito,'(A, A, A, I0.1)') "MESSAGE from AIOMFAC: identified smiles = ", trim(cpsmiles(cpno)), " at component cpno = ", cpno
+                    endif
+                elseif (any(NKname == trim(cpnameinp(cpno)))) then
+                    ind = findloc(NKname, trim(cpnameinp(cpno)), dim=1) !extract index
+                    if (NKsmiles(ind) /= "not_defined") then
+                        cpsmiles(cpno) = trim(NKsmiles(ind))            !extract SMILES definition of component
+                        if (verbose) then
+                            write(unito,*) ""
+                            write(unito,'(A, A, A, I0.1)') "MESSAGE from AIOMFAC: identified smiles = ", trim(cpsmiles(cpno)), " at component cpno = ", cpno
+                        endif
+                    endif
+                else
+                    !cpsmiles(cpno) = "" by default (via initialization)
                 endif
                 do !until exit
-                    read(unitx,*,IOSTAT=istat) txtcheck !read only first argument on this line
+                    read(unitx,*,iostat=istat) txtcheck !read only first argument on this line
                     !check whether another subgroup is present or not
                     if (txtcheck(1:4) == dashes .or. istat /= 0) then !"----" indicates no more subgroups of this component
                         exit !leave the inner do-loop
@@ -263,23 +300,36 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
             ncp = ncp-1 !ncp-1 is the number of different components in this mixture
             if (verbose) then
                 write(unito,*) ""
-                write(unito,*) "MESSAGE from AIOMFAC: component data read."
-                write(unito,*) "MESSAGE from AIOMFAC: number of components: ", ncp
+                write(unito,'(A)') "MESSAGE from AIOMFAC: component data read."
+                write(unito,'(A, I0.1)') "MESSAGE from AIOMFAC: number of components: ", ncp
             endif
             if (ncp == ninpmax) then
-                read(unitx,*,IOSTAT=istat) txtcheck !read only first argument on this line for subsequent check
-                if (txtcheck(1:4) /= pluses) then
+                read(unitx,*,iostat=istat) txtcheck !read only first argument on this line for subsequent check
+                if (txtcheck(1:4) /= pluses .or. txtcheck(1:4) /= atsigns) then
                     errorind = 34
                     filevalid = .false.
                     write(*,*) "AIOMFAC ERROR 34: maximum number of input components reached while reading input file."
                     write(*,*) "AIOMFAC ERROR 34: check whether ninpmax value is too small."
                     write(unito,*) ""
-                    write(unito,*) "AIOMFAC ERROR 34: maximum number of input components reached while reading input file."
+                    write(unito,'(A)') "AIOMFAC ERROR 34: maximum number of input components reached while reading input file."
                 endif
             endif
             if (filevalid) then
-                read(unitx,*) dummy, dummy     !read mixture composition line
-                read(unitx,*) dummy, dummy, i  !read mass fraction? line
+                if (newfileformat) then
+                    read(unitx,*) dummy, dummy  !read calculation options: line
+                    read(unitx,*) dummy, dummy, dummy, i    !read smiles-based pure-component method? line
+                    if (i == 1) then            !use Armeli Tg method
+                        armeliON = .true.
+                    else
+                        armeliON = .false.
+                    endif
+                    read(unitx,*) dummy         !read dashes line
+                    read(unitx,*) dummy         !read "++++" line
+                else
+                    !no calculation options present
+                endif
+                read(unitx,*) dummy, dummy      !read mixture composition line
+                read(unitx,*) dummy, dummy, i   !read mass fraction? line
                 if (i == 1) then !composition in mass fractions
                     xinputtype = .false.
                 else !composition in mole fractions
@@ -290,7 +340,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                 !now read the lines with the mixture composition points:
                 read(unitx,*) txtarray(1:ncp) !read header line of composition table
                 do npoints = 1,maxpoints !or until exit
-                    read(unitx,*,IOSTAT=istat) txtcheck !read only the first argument on this line
+                    read(unitx,*,iostat=istat) txtcheck !read only the first argument on this line
                     if (txtcheck(1:4) == equalsigns .or. istat /= 0) then !"====" indicates no more composition points (and last line of input file)
                         exit !leave the do-loop (normal exit point)
                     else if (iachar(txtcheck(1:1)) > 47 .and. iachar(txtcheck(1:1)) < 58) then !validate that the data is actual intended input and not some sort of text field spam).
@@ -321,12 +371,12 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                 npoints = npoints-1 !the number of composition points
                 if (verbose) then
                     write(unito,*) ""
-                    write(unito,*) "MESSAGE from AIOMFAC: composition points read."
-                    write(unito,*) "MESSAGE from AIOMFAC: number of points: ", npoints
+                    write(unito,'(A)') "MESSAGE from AIOMFAC: composition points read."
+                    write(unito,'(A, I0.1)') "MESSAGE from AIOMFAC: number of points: ", npoints
                 endif
                 if (.not. filevalid) then
                     !close and delete file from server:
-                    close(unitx, STATUS = 'DELETE')
+                    close(unitx, status = 'delete')
                 else
                     close(unitx)
                 endif
@@ -338,7 +388,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
         endif !filevalid1
     else
         write(unito,*) ""
-        write(unito,*) "ERROR in AIOMFAC: Input file does not exist at expected location: ", trim(filename)
+        write(unito,'(A, A)') "ERROR in AIOMFAC: Input file does not exist at expected location: ", trim(filename)
         write(unito,*) ""
     endif !fileexists
 
@@ -346,16 +396,16 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
         if (.not. filevalid) then !input file contains errors or is completely invalid (submitted spam etc.)
             if (verbose) then
                 write(unito,*) ""
-                write(unito,*) "MESSAGE from AIOMFAC: input file did not pass full validation and may be a spam file."
-                write(unito,*) "MESSAGE from AIOMFAC: the input file will be deleted to prevent spam files and malicious code from occupying the server."
+                write(unito,'(A)') "MESSAGE from AIOMFAC: input file did not pass full validation and may be a spam file."
+                write(unito,'(A)') "MESSAGE from AIOMFAC: the input file will be deleted to prevent spam files and malicious code from occupying the server."
                 write(unito,*) ""
             endif
-            inquire(FILE = fname, OPENED = fileopened)
+            inquire(file = fname, OPENED = fileopened)
             if (errorind == 0) then
                 errorind = 32
                 !close and delete file from server:
                 if (fileopened) then
-                    close(unitx, STATUS = 'DELETE')
+                    close(unitx, status = 'delete')
                 endif
             else
                 if (fileopened) then
@@ -368,7 +418,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                 errorind = 33 !no input in text field..
                 if (verbose) then
                     write(unito,*) ""
-                    write(unito,*) "MESSAGE from AIOMFAC: no composition points have been entered in the text field. There is nothing to calculate."
+                    write(unito,'(A)') "MESSAGE from AIOMFAC: no composition points have been entered in the text field. There is nothing to calculate."
                     write(unito,*) ""
                 endif
                 filevalid = .false.
@@ -390,7 +440,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
     !*                                                                                      *
     !*   -> created:        2011                                                            *
-    !*   -> latest changes: 2021-12-08                                                      *
+    !*   -> latest changes: 2026-08-24                                                      *
     !*                                                                                      *
     !*   :: License ::                                                                      *
     !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -409,8 +459,8 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
         & px, out_data, out_viscdata)
 
     !module variables:
-    use ModSystemProp, only : compname, compsubgroups, compsubgroupsTeX, idCO2, NGS, NKNpNGS, &
-        & ninput, nneutral
+    use ModSystemProp, only : compname, compsubgroups, compsubgroupsTeX, idCO2, maxsmileslength, &
+        & NGS, NKNpNGS, ninput, nneutral
     use ModSubgroupProp, only : subgrname, subgrnameTeX
 
     implicit none
@@ -418,7 +468,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     character(len=*),intent(in) :: fname 
     character(len=*),intent(in) :: VersionNo
     integer,intent(in) ::  nspecmax, npoints, watercompno
-    character(len=200),dimension(nspecmax),intent(in) :: cpnameinp   !list of assigned component names (from input file)
+    character(len=7+maxsmileslength),dimension(nspecmax),intent(in) :: cpnameinp   !list of assigned component names (from input file)
     real(wp),dimension(npoints),intent(in) :: T_K
     integer,dimension(nspecmax),intent(inout) :: px
     real(wp),dimension(7,npoints,NKNpNGS),intent(in) :: out_data
@@ -428,7 +478,8 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     character(len=:),allocatable :: cn
     character(len=5) :: tlen
     character(len=50) :: subntxt, Iformat
-    character(len=150) :: cnformat, horizline, txtn, tablehead
+    character(len=150) :: cnformat, horizline, tablehead
+    character(len=7+maxsmileslength) :: txtn
     character(len=3000) :: txtsubs, mixturestring
     integer ::  i, k, kms, pointi, qty, unitx
     real(wp) :: RH
@@ -446,11 +497,11 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     !loop over all further components / species:
     do i = 2,nspecmax
         px(i) = max(1, px(i))
-        if (INT(out_data(6,px(i),i)) == 0) then !neutral component
+        if (int(out_data(6,px(i),i)) == 0) then !neutral component
             txtn = trim(adjustl(cpnameinp(i)))
         else !ion (with its own link)
-            if (INT(out_data(6,px(i),i)) > 1) then
-                txtn = trim( adjustl(subgrname(INT(out_data(6,px(i),i) ))) )
+            if (int(out_data(6,px(i),i)) > 1) then
+                txtn = trim( adjustl(subgrname(int(out_data(6,px(i),i) ))) )
             else
                 txtn = "unknown_sub"
             endif
@@ -467,13 +518,12 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     enddo
     mixturestring = adjustl(mixturestring)
 
-    open (NEWUNIT = unitx, FILE = fname, STATUS = "UNKNOWN")
+    open (newunit = unitx, file = fname, status = "unknown")
     write(unitx,'(A)') "==========================================================================================================="
     write(unitx,'(A)') "AIOMFAC-web, version "//VersionNo
     write(unitx,'(A)') "==========================================================================================================="
     write(unitx,*) ""
     mixturestring = "'"//trim(mixturestring)//"'"
-    ![Note that Intel Fortran allows for variable format statements like A<len_trim(txtn)>, but that is a non-standard extension not supported by gfortran and other compilers - therefore avoided here.]
     write(unitx, '(A,A)') "Mixture name:  ", trim(mixturestring)
     write(unitx, '(A,I0.2)') "Number of independent input components: ", ninput
     write(unitx, '(A,I0.2)') "Number of different neutral components: ", nneutral
@@ -526,7 +576,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
         else
             RH = 0.0_wp
         endif
-        write(unitx,'(I5.3,2X,F7.2,2X,F7.2,3X,2(ES12.5,10X),9X,I2)') pointi, T_K(pointi), RH, out_viscdata(1,pointi), out_viscdata(2,pointi), INT(out_viscdata(3,pointi))
+        write(unitx,'(I5.3,2X,F7.2,2X,F7.2,3X,2(ES12.5,10X),9X,I2)') pointi, T_K(pointi), RH, out_viscdata(1,pointi), out_viscdata(2,pointi), int(out_viscdata(3,pointi))
     enddo !pointi
     write(unitx,'(A)') adjustl(horizline)
     write(unitx,*) ""
@@ -536,14 +586,21 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
         write(cn,cnformat) i !component / species number as character string
         write(unitx,*) ""
         !distinguish between neutral components and ionic species:
-        if (INT(out_data(6,px(i),i)) == 0) then !neutral component
+        if (int(out_data(6,px(i),i)) == 0) then !neutral component
             write(unitx,'(A,I0.2)') "Mixture's component # : ", i
             txtn = "'"//trim(adjustl(compname(i)))//"'"
-            write(unitx, '(A,A)')  "Component's name      : ", trim(txtn)
+            write(unitx, '(A,A)') "Component's name      : ", trim(txtn)
+            if (cpsmiles(i) == "") then    !for display
+                cpsmiles(i) = "not_available (SMILES input required)"
+            endif
+            if (watercompno > 0 .and. i > 1) then   !skip first component if water present in system
+                txtn = "'"//trim(adjustl(cpsmiles(i)))//"'"
+                write(unitx, '(A,A)') "Component's SMILES    : ", trim(txtn)
+            endif
             txtsubs = "'"//trim(compsubgroups(i))//"'"
             write(unitx, '(A,A)') "Component's subgroups : ", trim(txtsubs)
             txtsubs = "'"//trim(compsubgroupsTeX(i))//"'"
-            write(unitx, '(A,A)') "Subgroups, TeX format : ", trim(txtsubs)
+            write(unitx, '(A,A)') "Subgroups, TeX format : ", trim(txtsubs)            
             !write table column headers:
             write(unitx,'(A)') trim(horizline)
             if (i == idCO2) then  !check exception: CO2 has the activity defined on molality basis like ions:
@@ -553,16 +610,16 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
             endif
             write(unitx, '(2X,A)') trim(tablehead)
             !--
-        else if (INT(out_data(6,px(i),i)) < 240) then !cation
+        else if (int(out_data(6,px(i),i)) < 240) then !cation
             write(unitx,'(A,I0.2)') "Mixture's species, #  : ", i
-            subntxt = trim(adjustl(subgrname(INT(out_data(6,px(i),i)))))
+            subntxt = trim(adjustl(subgrname(int(out_data(6,px(i),i)))))
             qty = len_trim(subntxt)
             txtn = adjustl(subntxt(2:qty-1)) !to print the ion name without the enclosing parenthesis ()
             txtn = "'"//trim(txtn)//"'"
             write(unitx, '(A,A)')  "Cation's name         : ", trim(txtn)
             txtsubs = "'"//trim(subntxt)//"'"
             write(unitx,'(A,A)') "Cation's subgroups    : ", trim(txtsubs)
-            subntxt = trim(adjustl(subgrnameTeX(INT(out_data(6,px(i),i)))))
+            subntxt = trim(adjustl(subgrnameTeX(int(out_data(6,px(i),i)))))
             txtsubs = "'"//trim(subntxt)//"'"
             write(unitx, '(A,A)') "Subgroups, TeX format : ", trim(txtsubs)
             !write table column headers:
@@ -570,16 +627,16 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
             tablehead = "no.   T_[K]     RH_[%]   w("//cn//")          x_i("//cn//")        m_i("//cn//")        a_coeff_m("//cn//")   a_m("//cn//")        flag "
             write(unitx, '(2X,A)') trim(tablehead)
             !--
-        else if (INT(out_data(6,px(i),i)) > 240) then !anion
+        else if (int(out_data(6,px(i),i)) > 240) then !anion
             write(unitx,'(A,I0.2)') "Mixture's species, #  : ", i
-            subntxt = trim( adjustl( subgrname(INT(out_data(6,px(i),i))) ) )
+            subntxt = trim( adjustl( subgrname(int(out_data(6,px(i),i))) ) )
             qty = len_trim(subntxt)
             txtn = adjustl(subntxt(2:qty-1))
             txtn = "'"//trim(txtn)//"'"
             write(unitx, '(A,A)')  "Anion's name          : ", trim(txtn)
             txtsubs = "'"//trim(subntxt)//"'"
             write(unitx, '(A,A)') "Anion's subgroups     : ", trim(txtsubs)
-            subntxt = trim( adjustl( subgrnameTeX(INT(out_data(6,px(i),i))) ) )
+            subntxt = trim( adjustl( subgrnameTeX(int(out_data(6,px(i),i))) ) )
             txtsubs = "'"//trim(subntxt)//"'"
             write(unitx, '(A,A)') "Subgroups, TeX format : ", trim(txtsubs)
             !write table column headers:
@@ -602,7 +659,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
             else
                 RH = 0.0_wp
             endif
-            write(unitx,'(I5.3,2X,F7.2,2X,F7.2,3X,5(ES12.5,3X),3X,I2)') pointi, T_K(pointi), RH, out_data(1:5,pointi,i), INT(out_data(7,pointi,i))
+            write(unitx,'(I5.3,2X,F7.2,2X,F7.2,3X,5(ES12.5,3X),3X,I2)') pointi, T_K(pointi), RH, out_data(1:5,pointi,i), int(out_data(7,pointi,i))
         enddo !pointi
         write(unitx,'(A)') trim(horizline)
         write(unitx,*) ""
@@ -628,7 +685,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
     !*                                                                                      *
     !*   -> created:        2011                                                            *
-    !*   -> latest changes: 2021-12-05                                                      *
+    !*   -> latest changes: 2026-08-24                                                      *
     !*                                                                                      *
     !*   :: License ::                                                                      *
     !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -643,11 +700,12 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     !*   program. If not, see <http://www.gnu.org/licenses/>.                               *
     !*                                                                                      *
     !****************************************************************************************
-    subroutine Output_HTML(fname, VersionNo, nspecmax, npoints, watercompno, cpnameinp, T_K, &
-        & px, out_data, out_viscdata)
+    subroutine Output_HTML(fname, VersionNo, nspecmax, npoints, watercompno, T_K, px, &
+        & out_data, out_viscdata)
 
     !module variables:
-    use ModSystemProp, only : compname, compsubgroupsHTML, idCO2, NGS, NKNpNGS, ninput, nneutral
+    use ModSystemProp, only : compname, compsubgroupsHTML, idCO2, maxsmileslength, NGS, &
+        & NKNpNGS, ninput, nneutral
     use ModSubgroupProp, only : subgrnameHTML
 
     implicit none
@@ -655,7 +713,6 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     character(len=*),intent(in) :: fname 
     character(len=*),intent(in) :: VersionNo
     integer,intent(in) ::  nspecmax, npoints, watercompno
-    character(len=200),dimension(nspecmax),intent(in) :: cpnameinp      !list of assigned component names (from input file)
     real(wp),dimension(npoints),intent(in) :: T_K
     integer,dimension(nspecmax),intent(inout) :: px
     real(wp),dimension(7,npoints,NKNpNGS),intent(in) :: out_data
@@ -665,7 +722,8 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     character(len=:),allocatable :: cn
     character(len=5) :: tlen
     character(len=50) :: subntxt, Iformat
-    character(len=150) :: cnformat, tformat, txtn
+    character(len=150) :: cnformat, tformat
+    character(len=50+maxsmileslength) :: txtn
     character(len=400) :: outtxtleft
     character(len=3000) :: txtsubs, mixturestring
     integer ::  i, k, kms, pointi, qty, unitx
@@ -678,7 +736,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     cnformat = "("//Iformat//")"                    !constructed format specifier
     allocate(character(len=k) :: cn)
     !--
-    open (NEWUNIT = unitx, FILE = fname, STATUS = "UNKNOWN")
+    open (newunit = unitx, file = fname, status = "unknown")
     outtxtleft = adjustl("<h3>AIOMFAC-web, version "//VersionNo//"</h3>")
     write(unitx,'(A)') outtxtleft
     !create a character string of the mixture as a series of its components and add links to the components:
@@ -686,16 +744,16 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     mixturestring = '<a href="#'//trim(adjustl(compname(1)))//'">'//trim(adjustl(compname(1)))//'</a>' !first component
     !loop over all further components / species:
     do i = 2,nspecmax
-        if (INT(out_data(6,px(i),i)) == 0) then !neutral component
+        if (int(out_data(6,px(i),i)) == 0) then !neutral component
             txtn = '<a href="#'//trim(adjustl(compname(i)))//'">'//trim(adjustl(compname(i)))//'</a>'
         else !ion (with its own link)
-            txtn = '<a href="#'//trim(adjustl(subgrnameHTML(INT(out_data(6,px(i),i)))))//'">'//trim(adjustl(subgrnameHTML(INT(out_data(6,px(i),i) ))))//'</a>'
+            txtn = '<a href="#'//trim(adjustl(subgrnameHTML(int(out_data(6,px(i),i)))))//'">'//trim(adjustl(subgrnameHTML(int(out_data(6,px(i),i) ))))//'</a>'
         endif
-        k = len_trim(mixturestring) +len_trim(' + '//trim(txtn) )
+        k = len_trim(mixturestring) + len_trim(' + '//trim(txtn) )
         if (k < kms - 50) then
             mixturestring = trim(mixturestring)//' + '//trim(adjustl(txtn))
         else
-            qty = nspecmax -i
+            qty = nspecmax - i
             write(subntxt,'(I0)') qty
             mixturestring = trim(mixturestring)//' + '//trim(subntxt)//' additional components ...'
             exit
@@ -768,7 +826,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
             RH = 0.0_wp
         endif
         tformat = '(A8,I5.3,"</td><td>&nbsp;</td><td>",F7.2,"</td><td>&nbsp;</td><td>",F7.2,"</td><td>&nbsp;</td><td>",2(ES12.5,"</td><td>&nbsp;</td><td>"),I2,A10)'
-        write(unitx, tformat) "<tr><td>", pointi, T_K(pointi), RH, out_viscdata(1,pointi), out_viscdata(2,pointi), INT(out_viscdata(3,pointi)), "</td></tr>"
+        write(unitx, tformat) "<tr><td>", pointi, T_K(pointi), RH, out_viscdata(1,pointi), out_viscdata(2,pointi), int(out_viscdata(3,pointi)), "</td></tr>"
     enddo !pointi
     write(unitx,'(A)') '</tbody>'
     write(unitx,'(A)') '</table>'
@@ -779,7 +837,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     !write individual data tables for each component / ionic species:
     do i = 1,nspecmax
         write(cn,cnformat) i !component / species number as character string
-        if (INT(out_data(6,px(i),i)) == 0) then !neutral component
+        if (int(out_data(6,px(i),i)) == 0) then !neutral component
             write(unitx,'(A)') '<br>'
             write(unitx,'(A)') adjustl('<a id="'//trim(adjustl(compname(i)))//'"></a>')
             !write component properties table above data table:
@@ -789,6 +847,11 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
             txtn = trim(adjustl(compname(i)))
             txtn = trim(txtn)//"</td></tr>"
             write(unitx, '(A,A)') "<tr><td> Component's name </td> <td> &nbsp; : &nbsp; ", adjustl(txtn)
+            if (watercompno > 0 .and. i > 1) then   !skip first component if water present in system
+                txtn = trim(adjustl(cpsmiles(i)))
+                txtn = trim(txtn)//"</td></tr>"
+                write(unitx, '(A,A)') "<tr><td> Component's SMILES </td> <td> &nbsp; : &nbsp; ", adjustl(txtn)
+            endif
             txtsubs = '<span class="chemf">'//trim(compsubgroupsHTML(i))//"</span></td></tr>"
             write(unitx, '(A,A)') "<tr><td> Component's subgroups </td> <td> &nbsp; : &nbsp; ", adjustl(txtsubs)
             write(unitx,'(A)') '</tbody>'
@@ -807,15 +870,15 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
             endif
             write(unitx,'(A)') outtxtleft
             !--
-        else if (INT(out_data(6,px(i),i)) < 240) then !cation
+        else if (int(out_data(6,px(i),i)) < 240) then !cation
             write(unitx,'(A)') '<br>'
-            write(unitx,'(A)') '<a id="'//trim(adjustl(subgrnameHTML(INT(out_data(6,px(i),i)))))//'"></a>' !link target
+            write(unitx,'(A)') '<a id="'//trim(adjustl(subgrnameHTML(int(out_data(6,px(i),i)))))//'"></a>' !link target
             !---
             !write component properties table above data table:
             write(unitx,'(A)') adjustl('<table class="datatabname">')
             write(unitx,'(A)') '<tbody>'
             write(unitx,'(A,I0.2,A)') "<tr><td> Mixture's species, # </td> <td> &nbsp; : &nbsp; ", i ,"</td></tr>"
-            subntxt = trim(adjustl(subgrnameHTML(INT(out_data(6,px(i),i)))))
+            subntxt = trim(adjustl(subgrnameHTML(int(out_data(6,px(i),i)))))
             qty = len_trim(subntxt)
             txtn = adjustl(subntxt(2:qty-1)) !to print the ion name without the enclosing parenthesis ()
             txtn = '<span class="chemf">'//trim(txtn)//"</span></td></tr>"
@@ -832,15 +895,15 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                 & a_coeff_m('//cn//')</th><th>&nbsp;</th><th> a_m('//cn//')</th><th>&nbsp;</th><th> flag </th></tr> ')
             write(unitx,'(A)') outtxtleft
             !--
-        else if (INT(out_data(6,px(i),i)) > 240) then !anion
+        else if (int(out_data(6,px(i),i)) > 240) then !anion
             write(unitx,'(A)') '<br>'
-            write(unitx,'(A)') '<a id="'//trim(adjustl(subgrnameHTML(INT(out_data(6,px(i),i)))))//'"></a>'
+            write(unitx,'(A)') '<a id="'//trim(adjustl(subgrnameHTML(int(out_data(6,px(i),i)))))//'"></a>'
             !---
             !write component properties table above data table:
             write(unitx,'(A)') adjustl('<table class="datatabname">')
             write(unitx,'(A)') '<tbody>'
             write(unitx,'(A,I0.2,A)') "<tr><td> Mixture's species, # </td> <td> &nbsp; : &nbsp; ", i ,"</td></tr>"
-            subntxt = trim(adjustl(subgrnameHTML(INT(out_data(6,px(i),i)))))
+            subntxt = trim(adjustl(subgrnameHTML(int(out_data(6,px(i),i)))))
             qty = len_trim(subntxt)
             txtn = adjustl(subntxt(2:qty-1)) !to print the ion name without the enclosing parenthesis ()
             txtn = '<span class="chemf">'//trim(txtn)//"</span></td></tr>"
@@ -875,7 +938,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
             endif
             tformat = '(A8,I5.3,"</td><td>&nbsp;</td><td>",F7.2,"</td><td>&nbsp;</td><td>",F7.2,"</td><td>&nbsp;</td><td>",5(ES12.5, &
                 & "</td><td>&nbsp;</td><td>"),I2,A10)'
-            write(unitx, tformat) "<tr><td>", pointi, T_K(pointi), RH, (out_data(k,pointi,i), k = 1,5), INT(out_data(7,pointi,i)), "</td></tr>"
+            write(unitx, tformat) "<tr><td>", pointi, T_K(pointi), RH, (out_data(k,pointi,i), k = 1,5), int(out_data(7,pointi,i)), "</td></tr>"
         enddo !pointi
         write(unitx,'(A)') '</tbody>'
         write(unitx,'(A)') '</table>'
@@ -900,7 +963,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
     !*                                                                                      *
     !*   -> created:        2011                                                            *
-    !*   -> latest changes: 2022-01-17                                                      *
+    !*   -> latest changes: 2026-08-24                                                      *
     !*                                                                                      *
     !*   :: License ::                                                                      *
     !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -929,111 +992,111 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     !...................................................................................
 
     if (errorflagmix /= 0) then !some mixture related error occurred:
-        SELECT CASE(errorflagmix)
-        CASE(1)
+        select case(errorflagmix)
+        case(1)
             write(unito,*) ""
             write(unito,*) "======================================================="
-            write(unito,*) "AIOMFAC ERROR 1: mixture related."
-            write(unito,*) "An organic main group <-> cation interaction parameter"
-            write(unito,*) "is not defined for the requested mixture. "
-            write(unito,*) "Please check your mixture components for available parameters"
-            write(unito,*) "stated in the AIOMFAC interaction matrix."
+            write(unito,'(A)') "AIOMFAC ERROR 1: mixture related."
+            write(unito,'(A)') "An organic main group <-> cation interaction parameter"
+            write(unito,'(A)') "is not defined for the requested mixture. "
+            write(unito,'(A)') "Please check your mixture components for available parameters"
+            write(unito,'(A)') "stated in the AIOMFAC interaction matrix."
             write(unito,*) "======================================================="
             write(unito,*) ""
-        CASE(2)
+        case(2)
             write(unito,*) ""
             write(unito,*) "======================================================="
-            write(unito,*) "AIOMFAC ERROR 2: mixture related."
-            write(unito,*) "An organic main group <-> anion interaction parameter"
-            write(unito,*) "is not defined for the requested mixture. "
-            write(unito,*) "Please check your mixture components for available parameters"
-            write(unito,*) "stated in the AIOMFAC interaction matrix."
+            write(unito,'(A)') "AIOMFAC ERROR 2: mixture related."
+            write(unito,'(A)') "An organic main group <-> anion interaction parameter"
+            write(unito,'(A)') "is not defined for the requested mixture. "
+            write(unito,'(A)') "Please check your mixture components for available parameters"
+            write(unito,'(A)') "stated in the AIOMFAC interaction matrix."
             write(unito,*) "======================================================="
             write(unito,*) ""
-        CASE(9)
+        case(9)
             write(unito,*) ""
             write(unito,*) "======================================================="
-            write(unito,*) "AIOMFAC ERROR 9: mixture related."
-            write(unito,*) "At least one cation <-> anion interaction parameter is "
-            write(unito,*) "not defined for the requested mixture. "
-            write(unito,*) "Please check all ion combinations for available parameters"
-            write(unito,*) "stated in the AIOMFAC interaction matrix."
+            write(unito,'(A)') "AIOMFAC ERROR 9: mixture related."
+            write(unito,'(A)') "At least one cation <-> anion interaction parameter is "
+            write(unito,'(A)') "not defined for the requested mixture. "
+            write(unito,'(A)') "Please check all ion combinations for available parameters"
+            write(unito,'(A)') "stated in the AIOMFAC interaction matrix."
             write(unito,*) "======================================================="
             write(unito,*) ""
-        CASE(13)
+        case(13)
             write(unito,*) ""
             write(unito,*) "======================================================="
-            write(unito,*) "AIOMFAC ERROR 13: Incorrect hydroxyl group assignment."
-            write(unito,*) "At least one component containing (CH_n[(OH)]) groups"
-            write(unito,*) "has been assigned an incorrect number of (OH) groups."
-            write(unito,*) "Note that the notation of a CHn group bonded to an OH"
-            write(unito,*) "group does not include the OH group; rather the hydroxyl"
-            write(unito,*) "groups have to be defined separately.                   "
+            write(unito,'(A)') "AIOMFAC ERROR 13: Incorrect hydroxyl group assignment."
+            write(unito,'(A)') "At least one component containing (CH_n[(OH)]) groups"
+            write(unito,'(A)') "has been assigned an incorrect number of (OH) groups."
+            write(unito,'(A)') "Note that the notation of a CHn group bonded to an OH"
+            write(unito,'(A)') "group does not include the OH group; rather the hydroxyl"
+            write(unito,'(A)') "groups have to be defined separately.                   "
             write(unito,*) "======================================================="
             write(unito,*) ""
-        CASE(14)
+        case(14)
             write(unito,*) ""
             write(unito,*) "======================================================="
-            write(unito,*) "AIOMFAC ERROR 14: Missing short-range ARR parameter."
-            write(unito,*) "A neutral main group <-> main group interaction coeff."
-            write(unito,*) "of this particular mixture is not available in the SR."
-            write(unito,*) "part of the model."
-            write(unito,*) "Check your organic components and their subgroups in"
-            write(unito,*) "comparison to available subgroups in the AIOMFAC matrix."
+            write(unito,'(A)') "AIOMFAC ERROR 14: Missing short-range ARR parameter."
+            write(unito,'(A)') "A neutral main group <-> main group interaction coeff."
+            write(unito,'(A)') "of this particular mixture is not available in the SR."
+            write(unito,'(A)') "part of the model."
+            write(unito,'(A)') "Check your organic components and their subgroups in"
+            write(unito,'(A)') "comparison to available subgroups in the AIOMFAC matrix."
             write(unito,*) "======================================================="
             write(unito,*) ""
-        CASE(15)
+        case(15)
             write(unito,*) ""
             write(unito,*) "======================================================="
-            write(unito,*) "AIOMFAC ERROR 15: Missing short-range BRR parameter."
-            write(unito,*) "A neutral main group <-> main group interaction coeff."
-            write(unito,*) "of this particular mixture is not available in the SR."
-            write(unito,*) "part of the model for 3-parameter temperature dependence."
-            write(unito,*) "Check your organic components and their subgroups in"
-            write(unito,*) "comparison to available subgroups in the AIOMFAC matrix."
+            write(unito,'(A)') "AIOMFAC ERROR 15: Missing short-range BRR parameter."
+            write(unito,'(A)') "A neutral main group <-> main group interaction coeff."
+            write(unito,'(A)') "of this particular mixture is not available in the SR."
+            write(unito,'(A)') "part of the model for 3-parameter temperature dependence."
+            write(unito,'(A)') "Check your organic components and their subgroups in"
+            write(unito,'(A)') "comparison to available subgroups in the AIOMFAC matrix."
             write(unito,*) "======================================================="
             write(unito,*) ""
-        CASE DEFAULT
+        case default
             write(unito,*) ""
             write(unito,*) "======================================================="
-            write(unito,*) "AIOMFAC ERROR XX: an undefined mixture error occurred!"
+            write(unito,'(A)') "AIOMFAC ERROR XX: an undefined mixture error occurred!"
             write(unito,*) "errorflagmix = ", errorflagmix
             write(unito,*) "======================================================="
             write(unito,*) ""
-        end SELECT
+        end select
         errorind = errorflagmix
     else 
         !check warnings and errors related to occurences during specific data point calculations:
         if (warningflag > 0) then
-            SELECT CASE(warningflag)
-            CASE(10)
+            select case(warningflag)
+            case(10)
                 write(unito,*) ""
                 write(unito,*) "======================================================="
-                write(unito,*) "AIOMFAC WARNING 10: Temperature range related."
-                write(unito,*) "At least one data point has a set temperature outside of"
-                write(unito,*) "the recommended range for model calculations of "
-                write(unito,*) "electrolyte-containing mixtures. This may be intended, "
-                write(unito,*) "but caution is advised as AIOMFAC is not designed to  "
-                write(unito,*) "perform well at this temperature."
+                write(unito,'(A)') "AIOMFAC WARNING 10: Temperature range related."
+                write(unito,'(A)') "At least one data point has a set temperature outside of"
+                write(unito,'(A)') "the recommended range for model calculations of "
+                write(unito,'(A)') "electrolyte-containing mixtures. This may be intended, "
+                write(unito,'(A)') "but caution is advised as AIOMFAC is not designed to  "
+                write(unito,'(A)') "perform well at this temperature."
                 write(unito,*) "Data point no.: ", pointi
                 write(unito,*) "======================================================="
                 write(unito,*) ""
-            CASE(11)
+            case(11)
                 write(unito,*) ""
                 write(unito,*) "======================================================="
-                write(unito,*) "AIOMFAC WARNING 11: Temperature range related."
-                write(unito,*) "At least one data point has a set temperature outside of"
-                write(unito,*) "the recommended range for model calculations of "
-                write(unito,*) "electrolyte-free organic mixtures. This may be intended,"
-                write(unito,*) "but caution is advised as AIOMFAC is not designed to "
-                write(unito,*) "perform well at this temperature."
+                write(unito,'(A)') "AIOMFAC WARNING 11: Temperature range related."
+                write(unito,'(A)') "At least one data point has a set temperature outside of"
+                write(unito,'(A)') "the recommended range for model calculations of "
+                write(unito,'(A)') "electrolyte-free organic mixtures. This may be intended,"
+                write(unito,'(A)') "but caution is advised as AIOMFAC is not designed to "
+                write(unito,'(A)') "perform well at this temperature."
                 write(unito,*) "Data point no.: ", pointi
                 write(unito,*) "======================================================="
                 write(unito,*) ""
-            CASE(16)
+            case(16)
                 write(unito,*) ""
                 write(unito,*) "======================================================="
-                write(unito,*) "AIOMFAC-VISC WARNING 16: Mixture viscosity issue.      "
+                write(unito,'(A)') "AIOMFAC-VISC WARNING 16: Mixture viscosity issue.      "
                 write(unito,'(A)') "A problem occurred during the viscosity prediction, &
                     &likely related to a missing pure-component viscosity value. &
                     &Therefore, an unrealistic mixture viscosity of log_10(eta/[Pa.s]) = &
@@ -1041,77 +1104,77 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                 write(unito,*) "Data point no.: ", pointi
                 write(unito,*) "======================================================="
                 write(unito,*) ""
-            CASE DEFAULT
+            case default
                 write(unito,*) ""
                 write(unito,*) "======================================================="
-                write(unito,*) "AIOMFAC WARNING XX: an undefined WARNING occurred!"
+                write(unito,'(A)') "AIOMFAC WARNING XX: an undefined WARNING occurred!"
                 write(unito,*) "warningflag = ", warningflag
                 write(unito,*) "======================================================="
                 write(unito,*) ""
-            end SELECT
+            end select
             warningind = warningflag
         endif !warningflag
         if ( any(errorflag_list) ) then
             en = 0
             do n = 1,COUNT(errorflag_list)
                 en = en + findloc(errorflag_list(en+1:), VALUE = .true., dim=1)
-                SELECT CASE(en)
-                CASE(3)
+                select case(en)
+                case(3)
                     write(unito,*) ""
                     write(unito,*) "======================================================="
-                    write(unito,*) "AIOMFAC ERROR 3: Mixture composition related."
-                    write(unito,*) "Composition data for this point is missing or incorrect!"
-                    write(unito,*) "The sum of the mole or mass fractions of all components"
-                    write(unito,*) "has to be equal to 1.0 and individual mole or mass "
-                    write(unito,*) "fractions have to be positive values <= 1.0!"
+                    write(unito,'(A)') "AIOMFAC ERROR 3: Mixture composition related."
+                    write(unito,'(A)') "Composition data for this point is missing or incorrect!"
+                    write(unito,'(A)') "The sum of the mole or mass fractions of all components"
+                    write(unito,'(A)') "has to be equal to 1.0 and individual mole or mass "
+                    write(unito,'(A)') "fractions have to be positive values <= 1.0!"
                     write(unito,*) "Composition point no.: ", pointi
                     write(unito,*) "======================================================="
                     write(unito,*) ""
-                CASE(4,5)
+                case(4,5)
                     write(unito,*) ""
                     write(unito,*) "======================================================="
-                    write(unito,*) "AIOMFAC ERROR 4: Mixture composition related."
-                    write(unito,*) "Composition data for this point is incorrect!"
-                    write(unito,*) "The sum of the mole or mass fractions of all components"
-                    write(unito,*) "has to be equal to 1.0 and individual mole or mass "
-                    write(unito,*) "fractions have to be positive values <= 1.0!"
+                    write(unito,'(A)') "AIOMFAC ERROR 4: Mixture composition related."
+                    write(unito,'(A)') "Composition data for this point is incorrect!"
+                    write(unito,'(A)') "The sum of the mole or mass fractions of all components"
+                    write(unito,'(A)') "has to be equal to 1.0 and individual mole or mass "
+                    write(unito,'(A)') "fractions have to be positive values <= 1.0!"
                     write(unito,*) "Composition point no.: ", pointi
                     write(unito,*) "======================================================="
                     write(unito,*) ""
-                CASE(6,7)
+                case(6,7)
                     write(unito,*) ""
                     write(unito,*) "======================================================="
-                    write(unito,*) "AIOMFAC ERROR 6: Numerical issue."
-                    write(unito,*) "A numerical issue occurred during computation of the"
-                    write(unito,*) "data points flagged in the output tables."
-                    write(unito,*) "This error was possibly caused due to input of very"
-                    write(unito,*) "high electrolyte concentrations."
+                    write(unito,'(A)') "AIOMFAC ERROR 6: Numerical issue."
+                    write(unito,'(A)') "A numerical issue occurred during computation of the"
+                    write(unito,'(A)') "data points flagged in the output tables."
+                    write(unito,'(A)') "This error was possibly caused due to input of very"
+                    write(unito,'(A)') "high electrolyte concentrations."
                     write(unito,*) "Composition point no.: ", pointi
                     write(unito,*) "======================================================="
                     write(unito,*) ""
-                CASE(8)
+                case(8)
                     write(unito,*) ""
                     write(unito,*) "======================================================="
-                    write(unito,*) "AIOMFAC ERROR 8: Mixture composition related."
-                    write(unito,*) "At least one neutral component must be present in the  "
-                    write(unito,*) "system! "
+                    write(unito,'(A)') "AIOMFAC ERROR 8: Mixture composition related."
+                    write(unito,'(A)') "At least one neutral component must be present in the  "
+                    write(unito,'(A)') "system! "
                     write(unito,*) "Composition point no.: ", pointi
                     write(unito,*) "======================================================="
                     write(unito,*) ""
-                CASE(12)
+                case(12)
                     write(unito,*) ""
                     write(unito,*) "======================================================="
-                    write(unito,*) "AIOMFAC ERROR 12: Charge neutrality violated."
-                    write(unito,*) "The mixture violates the electrical charge neutrality  "
-                    write(unito,*) "condition (moles cation*[cation charge] =              "
-                    write(unito,*) "                          moles anion*[anion charge]). "
-                    write(unito,*) "Make sure that selected integer amounts of cation and  "
-                    write(unito,*) "anion 'subgroups' fulfill the charge balance (in the   "
-                    write(unito,*) "inorganic component definition of the input file).     "
+                    write(unito,'(A)') "AIOMFAC ERROR 12: Charge neutrality violated."
+                    write(unito,'(A)') "The mixture violates the electrical charge neutrality  "
+                    write(unito,'(A)') "condition (moles cation*[cation charge] =              "
+                    write(unito,'(A)') "                          moles anion*[anion charge]). "
+                    write(unito,'(A)') "Make sure that selected integer amounts of cation and  "
+                    write(unito,'(A)') "anion 'subgroups' fulfill the charge balance (in the   "
+                    write(unito,'(A)') "inorganic component definition of the input file).     "
                     write(unito,*) "Composition point no.: ", pointi
                     write(unito,*) "======================================================="
                     write(unito,*) ""
-                CASE(17)
+                case(17)
                     write(unito,*) ""
                     write(unito,*) "======================================================="
                     write(unito,'(A)') "AIOMFAC ERROR 17: Issue with ion dissociation &
@@ -1123,7 +1186,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                     write(unito,*) "Composition point no.: ", pointi
                     write(unito,*) "======================================================="
                     write(unito,*) ""
-                CASE(18)
+                case(18)
                     write(unito,*) ""
                     write(unito,*) "======================================================="
                     write(unito,'(A)') "AIOMFAC-VISC WARNING 18: Mixture viscosity issue."
@@ -1133,15 +1196,82 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                     write(unito,*) "Composition point no.: ", pointi
                     write(unito,*) "======================================================="
                     write(unito,*) ""
-                
-                CASE DEFAULT
+                !other errors 
+                case(19)    !error attempting to open pure-component property file
                     write(unito,*) ""
                     write(unito,*) "======================================================="
-                    write(unito,*) "AIOMFAC ERROR XX: an undefined calculation error occurred!"
+                    write(unito,'(A)') "AIOMFAC ERROR 19: File access issue."
+                    write(unito,'(A)') "Could not open Pure_component_smiles_table.csv &
+                        &in Auxiliary folder. Check file permissions."
+                    !write(unito,*) "Composition point no.: "
+                    write(unito,*) "======================================================="
+                    write(unito,*) ""
+                case(20)    !TgML method verification through command line failed - webserver specific
+                    write(unito,*) ""
+                    write(unito,*) "======================================================="
+                    write(unito,'(A)') "AIOMFAC ERROR 20: TgML method unverified."
+                    write(unito,'(A)') "Could not determine whether TgML method is running. &
+                        &Command line may be invalid. Contact admin (Dr. Andreas Zuend) at &
+                        &andreas.zuend@mcgill.ca."
+                    !write(unito,*) "Composition point no.: "
+                    write(unito,*) "======================================================="
+                    write(unito,*) ""
+                case(21)    !TgML method (watchdog) is not running in background - webserver specific
+                    write(unito,*) ""
+                    write(unito,*) "======================================================="
+                    write(unito,'(A)') "AIOMFAC ERROR 21: TgML method not running."
+                    write(unito,'(A)') "Method is not running in background. Defaulted to &
+                        &more time-consuming TgML method call. Contact admin (Dr. Andreas Zuend) at &
+                        &andreas.zuend@mcgill.ca."
+                    !write(unito,*) "Composition point no.: "
+                    write(unito,*) "======================================================="
+                    write(unito,*) ""
+                case(22)    !error attempting to open pure-component property file
+                    write(unito,*) ""
+                    write(unito,*) "======================================================="
+                    write(unito,'(A)') "AIOMFAC ERROR 22: Missing file."
+                    write(unito,'(A)') "Could not access Pure_component_smiles_table.csv &
+                        &in Auxiliary folder. File is missing or probelem with relative path."
+                    !write(unito,*) "Composition point no.: "
+                    write(unito,*) "======================================================="
+                    write(unito,*) ""
+                case(23)    !error attempting to read armeli method output file
+                    write(unito,*) ""
+                    write(unito,*) "======================================================="
+                    write(unito,'(A)') "AIOMFAC ERROR 23: File generation issue."
+                    write(unito,'(A)') "No output file was generated for the SMILES-based &
+                        &Tg machine-learning based method. At least one Tg value could &
+                        &not be determined."
+                    !write(unito,*) "Composition point no.: "
+                    write(unito,*) "======================================================="
+                    write(unito,*) ""
+                case(24)    !invalid SMILES submitted to model
+                    write(unito,*) ""
+                    write(unito,*) "======================================================="
+                    write(unito,'(A)') "AIOMFAC ERROR 24: Invalid SMILES."
+                    write(unito,'(A)') "At least one SMILES input for an organic &
+                        &compound is invalid."
+                    !write(unito,*) "Composition point no.: "
+                    write(unito,*) "======================================================="
+                    write(unito,*) ""
+                case(25)    !smiles input character length exceeds upper limit
+                    write(unito,*) ""
+                    write(unito,*) "======================================================="
+                    write(unito,'(A)') "AIOMFAC ERROR 25: Input issue."
+                    write(unito,*) "At least one SMILES input has length exceeding upper&
+                        &character limit of: ", maxsmileslength
+                    !write(unito,*) "Composition point no.: "
+                    write(unito,*) "======================================================="
+                    write(unito,*) ""
+
+                    case default
+                    write(unito,*) ""
+                    write(unito,*) "======================================================="
+                    write(unito,'(A)') "AIOMFAC ERROR XX: an undefined calculation error occurred!"
                     write(unito,*) "error flag = ", errorflag_list(en)
                     write(unito,*) "======================================================="
                     write(unito,*) ""
-                end SELECT
+                end select
             enddo
             errorind = findloc(errorflag_list(:), VALUE = .true., dim=1)
         endif

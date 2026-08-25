@@ -11,7 +11,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2005                                                            *
-!*   -> latest changes: 2024-07-03                                                      *
+!*   -> latest changes: 2026-08-24                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -50,11 +50,12 @@ use Mod_kind_param, only : wp
 
 implicit none
 
-integer,public,parameter :: Nmaingroups = 76     !total number of SR (UNIFAC) main groups
-integer,public,parameter :: topsubno = 265       !index no. of the last subgroup considered (top boundary of ITAB subgroups)
+integer,public,parameter :: Nmaingroups = 76                                                !total number of SR (UNIFAC) main groups
+integer,public,parameter :: topsubno = 265                                                  !index no. of the last subgroup considered (top boundary of ITAB subgroups)
+integer,public,parameter :: maxsmileslength = 500                                           !maximum character length for smiles strings
 !--
 integer,public :: nd, NGS, NGN, NGI, NG, NKNpNGS, nindcomp, nneutral, nelectrol, ninput, errorflagmix
-integer,public :: Nanion, Ncation                                             !Nanion = number of anions, Ncation = number of cations
+integer,public :: Nanion, Ncation                                                           !Nanion = number of anions, Ncation = number of cations
 integer,public :: idH, idHSO4, idSO4, idHCO3, idCO3, idOH, idCO2, idCa, &
     & idHmalo, idmalo, idHglut, idglut, idHsucc, idsucc, idMeOS, idEtOS, idIsopreneOS       !the index locations of these ions in the cation and anion arrays (e.g., in SMC, and SMA); idH = CatNr(205), idHSO4 = AnNr(248), idSO4 = AnNr(261)
 integer,public :: id_H2Adicarb, id_OSH                                                      !the index locations of neutral components
@@ -62,19 +63,19 @@ integer,dimension(:),allocatable,public :: CompN
 integer,dimension(:,:),allocatable,public :: ElectComps, ElectNues
 integer,dimension(:),allocatable,public :: Ication, Ianion, ElectSubs, SolvSubs, AllSubs
 integer,dimension(:),allocatable,public :: Imaingroup, maingrindexofsubgr
-integer,dimension(201:topsubno),public :: CatNr, AnNr           !CatNr, AnNr: saves present mixture index entry of a certain ion related to Ication or Ianion list (whether it is cation 1, 2, 3,...).
+integer,dimension(201:topsubno),public :: CatNr, AnNr                                       !CatNr, AnNr: saves present mixture index entry of a certain ion related to Ication or Ianion list (whether it is cation 1, 2, 3,...).
 integer,dimension(:,:),allocatable,public :: ITAB, ITABsr, ITABMG, ITAB_dimflip
 !--
-real(wp),parameter,public :: Rgas = 8.314462618_wp              !the universal gas constant in J/(K*mol); according to definition by NIST https://physics.nist.gov/cgi-bin/cuu/Value?r
-real(wp),dimension(:),allocatable,public :: cationZ, anionZ     !cationZ and anionZ are the integer charges of the cations and anions in current mixture ion order (as in Ication, Ianion);
+real(wp),parameter,public :: Rgas = 8.314462618_wp                                          !the universal gas constant in J/(K*mol); according to definition by NIST https://physics.nist.gov/cgi-bin/cuu/Value?r
+real(wp),dimension(:),allocatable,public :: cationZ, anionZ                                 !cationZ and anionZ are the integer charges of the cations and anions in current mixture ion order (as in Ication, Ianion);
 real(wp),dimension(:),allocatable,public :: OtoCratio, HtoCratio, ElectO2Cequiv 
 real(wp),dimension(201:240, 241:topsubno, 1:3),public :: IAPcoeffs
 real(wp),dimension(201:240, 241:topsubno),public :: KVLE_298K
 real(wp),dimension(:),allocatable :: K_el, nuestoich, SubGroupMW
-real(wp),dimension(:),allocatable :: Mmass                    !component molar mass in order of neutrals then electrolytes
+real(wp),dimension(:),allocatable :: Mmass                                                  !component molar mass in order of neutrals then electrolytes
 real(wp) :: wtf_saved
 !--
-character(len=200),dimension(:),allocatable,public :: cpname, compname, compnameTeX  !component names in order of mixture components
+character(len=7+maxsmileslength),dimension(:),allocatable,public :: cpname, compname, compnameTeX  !component names in order of mixture components
 character(len=16),dimension(:),allocatable,public :: ionname, ionnameTeX
 character(len=3000),dimension(:),allocatable,public :: compsubgroups, compsubgroupsTeX, compsubgroupsHTML
 !--
@@ -82,6 +83,7 @@ logical,public :: calcviscosity, elpresent, frominpfile, waterpresent, solvmixre
 logical,public :: bisulfsyst, bicarbsyst, malosyst, glutsyst, succsyst, dicarbsyst
 logical,public :: noCO2input, noH2Ainput, noOSHinput
 logical,public :: incl_bisulfate = .false.
+logical,public :: is_heat_transfer                              !default will be .false. but if true will enable smooth temperature transitions
 logical,public :: isPEGsystem                            !to mark a special case: systems containing a PEG polymer
 logical,dimension(:),allocatable,public :: ElectVolatile
 logical,dimension(50),public :: errorflag_clist
@@ -93,7 +95,7 @@ interface
         logical,intent(in) :: datafromfile
         integer,intent(in) :: ninp
         !optional arguments at call:
-        character(len=200),dimension(:),intent(in), optional :: cpnameinp
+        character(len=7+maxsmileslength),dimension(:),intent(in), optional :: cpnameinp
         integer,dimension(:,:),intent(in), optional :: cpsubginp
     end subroutine SetSystem
     !--
@@ -128,7 +130,7 @@ interface
     !$OMP & Ncation, Mmass, idH, idHSO4, idSO4, CompN, Ication, Ianion, ElectSubs, SolvSubs, AllSubs, &
     !$OMP & Imaingroup, CatNr, AnNr, ITAB, ITAB_dimflip, ITABsr, ITABMG, OtoCratio, HtoCratio, cpname, compname,  &
     !$OMP & compnameTeX, compsubgroups, compsubgroupsTeX, compsubgroupsHTML, ionname, ionnameTeX, solvmixrefnd,  &
-    !$OMP & frominpfile, bisulfsyst, waterpresent, calcviscosity, elpresent, isPEGsystem, maingrindexofsubgr,   &
+    !$OMP & frominpfile, bisulfsyst, waterpresent, calcviscosity, elpresent, is_heat_transfer, isPEGsystem, maingrindexofsubgr,   &
     !$OMP & ElectComps, ElectNues, ElectVolatile, IAPcoeffs, KVLE_298K, K_el, SubGroupMW, ElectO2Cequiv, cationZ,  &
     !$OMP & anionZ, errorflagmix, errorflag_clist, nuestoich, idHCO3, idCO3, idOH, idCO2, idCa, bicarbsyst, &
     !$OMP & noCO2input, noH2Ainput, noOSHinput, malosyst, glutsyst, succsyst, dicarbsyst, &

@@ -5262,7 +5262,7 @@ public :: hybrd1, lmdif1
     !-----------------------------------------------------------
 
     
-    subroutine timestamp ( )
+    subroutine timestamp ()
     !*****************************************************************************80
     !
     !! timestamp prints the current YMDHMS date as a time stamp.
@@ -5335,8 +5335,7 @@ public :: hybrd1, lmdif1
     write ( *, '(a,1x,i2,1x,i4,2x,i2,a1,i2.2,a1,i2.2,a1,i3.3,1x,a)' ) &
         trim ( month(m) ), d, y, h, ':', n, ':', s, '.', mm, trim ( ampm )
 
-    return
-    end
+    end subroutine timestamp
     !-----------------------------------------------------------
 
 end module Mod_MINPACK

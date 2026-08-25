@@ -23,7 +23,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2011                                                            *
-!*   -> latest changes: 2024-04-21                                                      *
+!*   -> latest changes: 2026-08-23                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -48,6 +48,7 @@ use ModCompScaleConversion
 use ModCalcActCoeff, only : AIOMFAC_calc
 use ModFiniteDiffSens, only : DeltaActivities
 use ModSubgroupProp, only : SMWA, SMWC
+use ModPureCompViscos, only : TgScale
 use, intrinsic :: IEEE_ARITHMETIC
 
 implicit none
@@ -74,7 +75,7 @@ real(wp),dimension(nelectrol) :: mixingratio, wtfdry
 real(wp),dimension(nneutral) :: m_neutral
 real(wp),dimension(nindcomp) :: inputconcZ, xinp, dact, dactcoeff, wfrac
 !------------------------------------------------------------------------------------------- 
-      
+
 ! Set initial values of some array variables:
 errorflag_list = .false.  
 warningflag = 0
@@ -100,6 +101,7 @@ mixingratio(NKSinputp1:) = 0.0_wp
 nspecies = NKNpNGS
 xtolviscosity = 0.0_wp
 calcviscosity = .true.
+is_heat_transfer = .false.
 
 if (nneutral < 1) then                      !leave the subroutine and indicate a problem to the calling routine
     errorflag_list(8) = .true.              !there must be at least one neutral component in the mixture!
@@ -128,6 +130,7 @@ call MassFrac2MoleFracMolality(wtf, XrespSalt, mrespSalt)
 
 if (calcviscosity) then
     onlyDeltaVisc = .true.
+    TgScale = 1.0_wp
     xinp(1:nindcomp) = XrespSalt(1:nindcomp)
     call DeltaActivities(xinp, TKelvin, onlyDeltaVisc, dact, dactcoeff)     !will also call AIOMFAC_calc and compute activity coeff.
     w1perturb = 0.02_wp
@@ -250,7 +253,7 @@ endwhere
 
 !check applicable temperature range and state a warning "errorflag" if violated:
 !applicable range for electrolyte-containing mixtures (approx.): 288.0 to 309.0 K (298.15 +- 10 K); (strictly valid range would be 298.15 K only)
-!applicable range for electrlyte-free mixtures (approx.): 280.0 to 400.0 K
+!applicable range for electrolyte-free mixtures (approx.): 280.0 to 400.0 K
 if (NGS > 0) then !electrolyte-containing
     if (TKelvin > 309.0_wp .or. TKelvin < 288.0_wp) then    !set warning flag
         if (warningflag == 0) then                          !do not overwrite an existing warning when non-zero

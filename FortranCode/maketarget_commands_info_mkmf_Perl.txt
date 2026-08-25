@@ -1,9 +1,11 @@
 # Below is the Terminal command line to produce a Makefile using the Perl script 
 # on a Linux machine (when located in the Fortran code folder).
 
-# Also: on CentOS or RedHat (RHEL) (i.e. RedHat-based, but not on Debian-based linux), execute the following command first (e.g. with gfortran/gcc version 12 or newer):
-scl enable gcc-toolset-12 bash
-# this is necessary because otherwise an older gfortran version may be used (often version 4.8.5); 
+# Also: on CentOS or RedHat (RHEL) (i.e. RedHat-based, but not on Debian-based linux), execute the following command first (e.g. with gfortran/gcc version 15 or newer):
+scl enable gcc-toolset-15 bash
+# this is necessary because otherwise an older gfortran version may be used; 
 # with the above command, you get a much more recent gfortran version ( >= 9.x), which is what we need. See also: https://access.redhat.com/documentation/en-us/red_hat_developer_toolset/12/html/user_guide/chap-gcc.
+
+# Note: may subsequently need to copy AIOMFAC-web.out to a different location
 
 perl mkmf.pl -t maketemplate.txt  -p AIOMFAC-web.out

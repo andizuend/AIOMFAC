@@ -573,16 +573,16 @@ subroutine local_min_rc ( a, b, arg, status, value )
 !    that A < B.
 !
 !    Output, real(wp) ARG, the currently considered point.  The user
-!    does not need to initialize this value.  On return with STATUS positive,
+!    does not need to initialize this value.  On return with status positive,
 !    the user is requested to evaluate the function at ARG, and return
-!    the value in VALUE.  On return with STATUS zero, ARG is the routine's
+!    the value in VALUE.  On return with status zero, ARG is the routine's
 !    estimate for the function minimizer.
 !
-!    Input/output, integer STATUS, used to communicate between
-!    the user and the routine.  The user only sets STATUS to zero on the first
-!    call, to indicate that this is a startup call.  The routine returns STATUS
+!    Input/output, integer status, used to communicate between
+!    the user and the routine.  The user only sets status to zero on the first
+!    call, to indicate that this is a startup call.  The routine returns status
 !    positive to request that the function be evaluated at ARG, or returns
-!    STATUS as 0, to indicate that the iteration is complete and that
+!    status as 0, to indicate that the iteration is complete and that
 !    ARG is the estimated minimizer.
 !
 !    Input, real(wp) VALUE, the function value at ARG, as requested
@@ -623,7 +623,7 @@ real(wp) value
 real(wp), save :: w
 real(wp), save :: x
 !
-!  STATUS (INPUT) = 0, startup.
+!  status (INPUT) = 0, startup.
 !
 if ( status == 0 ) then
 
@@ -652,7 +652,7 @@ if ( status == 0 ) then
 
     return
     !
-    !  STATUS (INPUT) = 1, return with initial function value of FX.
+    !  status (INPUT) = 1, return with initial function value of FX.
     !
 else if ( status == 1 ) then
 
@@ -660,7 +660,7 @@ else if ( status == 1 ) then
     fv = fx
     fw = fx
     !
-    !  STATUS (INPUT) = 2 or more, update the data.
+    !  status (INPUT) = 2 or more, update the data.
     !
 else if ( 2 <= status ) then
 
@@ -1090,16 +1090,16 @@ subroutine zero_rc ( a, b, t, arg, status, value )
 !    Input, real(wp) T, a positive error tolerance.
 !
 !    Output, real(wp) ARG, the currently considered point.  The user
-!    does not need to initialize this value.  On return with STATUS positive,
+!    does not need to initialize this value.  On return with status positive,
 !    the user is requested to evaluate the function at ARG, and return
-!    the value in VALUE.  On return with STATUS zero, ARG is the routine's
+!    the value in VALUE.  On return with status zero, ARG is the routine's
 !    estimate for the function's zero.
 !
-!    Input/output, integer STATUS, used to communicate between
-!    the user and the routine.  The user only sets STATUS to zero on the first
-!    call, to indicate that this is a startup call.  The routine returns STATUS
+!    Input/output, integer status, used to communicate between
+!    the user and the routine.  The user only sets status to zero on the first
+!    call, to indicate that this is a startup call.  The routine returns status
 !    positive to request that the function be evaluated at ARG, or returns
-!    STATUS as 0, to indicate that the iteration is complete and that
+!    status as 0, to indicate that the iteration is complete and that
 !    ARG is the estimated zero
 !
 !    Input, real(wp) VALUE, the function value at ARG, as requested
@@ -1131,7 +1131,7 @@ real(wp) t
 real(wp) tol
 real(wp) value
 !
-!  Input STATUS = 0.
+!  Input status = 0.
 !  Initialize, request F(A).
 !
 if ( status == 0 ) then
@@ -1147,7 +1147,7 @@ if ( status == 0 ) then
     arg = a
     return
     !
-    !  Input STATUS = 1.
+    !  Input status = 1.
     !  Receive F(A), request F(B).
     !
 else if ( status == 1 ) then
@@ -1158,7 +1158,7 @@ else if ( status == 1 ) then
     arg = sb
     return
     !
-    !  Input STATUS = 2
+    !  Input status = 2
     !  Receive F(B).
     !
 else if ( status == 2 ) then

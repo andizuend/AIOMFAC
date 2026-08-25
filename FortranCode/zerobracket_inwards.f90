@@ -51,7 +51,7 @@ if (ntry > 0) then
     xbup =  xlower-abs(xlower)-99999.9_wp
     fval = 0.0_wp
     if (geomscal) then !use logarithmic (base-10) interval chopping
-        if (xlower < 0.0_wp .AND. xupper > 0.0_wp) then !cannot use geometric scaling
+        if (xlower < 0.0_wp .and. xupper > 0.0_wp) then !cannot use geometric scaling
             dx = (xupper-xlower)/real(ntry, kind=wp) !step in interval search
         endif
     else

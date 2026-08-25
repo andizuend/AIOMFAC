@@ -36,7 +36,7 @@ module ModComponentNames
 implicit none
 
 !module public vars:
-character(len=60),dimension(:),allocatable,public :: NKname, NKnameTeX
+character(len=60),dimension(:),allocatable,public :: NKname, NKnameTeX, NKsmiles
 
 !========================================================================================================== 
     contains
@@ -63,11 +63,12 @@ character(len=60),dimension(:),allocatable,public :: NKname, NKnameTeX
     implicit none
     !.....................................................
     
-    allocate( NKname(1500), NKnameTeX(1500) )
+    allocate( NKname(1500), NKnameTeX(1500), NKsmiles(1500) )
 
     !list of neutral component names:
     NKname = "not_defined"
     NKnameTeX = "not_defined"
+    NKsmiles = "not_defined"    !not predefined list
 
     !Alkanes
     NKname(1) = "Methane";  NKnameTeX(1) = "Methane";
@@ -127,19 +128,19 @@ character(len=60),dimension(:),allocatable,public :: NKname, NKnameTeX
     !...
     !Alcohols
     NKname(101) = "Methanol";   NKnameTeX(101) = "Methanol";  
-    NKname(102) = "Ethanol";  NKnameTeX(102) = "Ethanol";  
-    NKname(103) = "1-Propanol";  NKnameTeX(103) = "1-Propanol";  
-    NKname(104) = "1-Butanol";  NKnameTeX(104) = "1-Butanol";  
-    NKname(105) = "1-Pentanol";  NKnameTeX(105) = "1-Pentanol";  
-    NKname(106) = "1-Hexanol";  NKnameTeX(106) = "1-Hexanol";  
-    NKname(131) = "2-Propanol";  NKnameTeX(131) = "2-Propanol";  
-    NKname(132) = "2-Butanol";  NKnameTeX(132) = "2-Butanol";  
-    NKname(133) = "Isobutanol";  NKnameTeX(133) = "Isobutanol";  
-    NKname(134) = "tert-Butanol";  NKnameTeX(134) = "$tert$-Butanol";  
-    NKname(135) = "2-Pentanol";  NKnameTeX(135) = "2-Pentanol";  
-    NKname(136) = "3-Pentanol";  NKnameTeX(136) = "3-Pentanol";  
-    NKname(137) = "2-Methyl-2-butanol";  NKnameTeX(137) = "2-Methyl-2-butanol";  
-    NKname(138) = "3-Methyl-1-butanol";  NKnameTeX(138) = "3-Methyl-1-butanol";  
+    NKname(102) = "Ethanol";  NKnameTeX(102) = "Ethanol"; NKsmiles(102) = "CCO";  
+    NKname(103) = "1-Propanol";  NKnameTeX(103) = "1-Propanol"; NKsmiles(103) = "CCCO";
+    NKname(104) = "1-Butanol";  NKnameTeX(104) = "1-Butanol"; NKsmiles(104) = "CCCCO";
+    NKname(105) = "1-Pentanol";  NKnameTeX(105) = "1-Pentanol"; NKsmiles(105) = "CCCCCO";
+    NKname(106) = "1-Hexanol";  NKnameTeX(106) = "1-Hexanol"; NKsmiles(106) = "CCCCCCO";
+    NKname(131) = "2-Propanol";  NKnameTeX(131) = "2-Propanol"; NKsmiles(131) = "CC(C)O";
+    NKname(132) = "2-Butanol";  NKnameTeX(132) = "2-Butanol"; NKsmiles(132) = "CCC(C)O";
+    NKname(133) = "Isobutanol";  NKnameTeX(133) = "Isobutanol"; NKsmiles(133) = "CC(C)CO";
+    NKname(134) = "tert-Butanol";  NKnameTeX(134) = "$tert$-Butanol"; NKsmiles(134) = "CC(C)(C)O";
+    NKname(135) = "2-Pentanol";  NKnameTeX(135) = "2-Pentanol"; NKsmiles(135) = "CCCC(C)O"; 
+    NKname(136) = "3-Pentanol";  NKnameTeX(136) = "3-Pentanol"; NKsmiles(136) = "CCC(CC)O";
+    NKname(137) = "2-Methyl-2-butanol";  NKnameTeX(137) = "2-Methyl-2-butanol"; NKsmiles(137) = "CCC(C)(C)O";
+    NKname(138) = "3-Methyl-1-butanol";  NKnameTeX(138) = "3-Methyl-1-butanol"; NKsmiles(138) = "CC(C)CCO";
     NKname(139) = "Cyclopentanol";  NKnameTeX(139) = "Cyclopentanol";  
     NKname(140) = "2-Hexanol";  NKnameTeX(140) = "2-Hexanol";  
     NKname(141) = "3-Hexanol";  NKnameTeX(141) = "3-Hexanol";  
@@ -148,17 +149,17 @@ character(len=60),dimension(:),allocatable,public :: NKname, NKnameTeX
     !142 = 4-methyl-2-pentanol, 144 = 2-heptanol, 
     !    145 = 3-heptanol, 146 = 4-heptanol, 147 = 2-octanol, 148 = 3-octanol,
     !    149 = 4-octanol, 
-    NKname(150) = "2-Methyl-1-butanol";  NKnameTeX(150) = "2-Methyl-1-butanol";  
+    NKname(150) = "2-Methyl-1-butanol";  NKnameTeX(150) = "2-Methyl-1-butanol"; NKsmiles(150) = "CCC(C)CO";
 
     !...
     !(mono) Carboxylic acids
-    NKname(201) = "Formic_acid";  NKnameTeX(201) = "Formic_acid";  
-    NKname(202) = "Acetic_acid";  NKnameTeX(202) = "Acetic_acid";  
-    NKname(203) = "Propanoic_acid";  NKnameTeX(203) = "Propanoic_acid";    != propionic acid
-    NKname(204) = "Butyric_acid";  NKnameTeX(204) = "Butyric_acid";  
-    NKname(210) = "2-Methylpropanoic_acid";  NKnameTeX(210) = "2-Methylpropanoic_acid";    != isobutyric acid
+    NKname(201) = "Formic_acid";  NKnameTeX(201) = "Formic_acid"; NKsmiles(201) = "C(=O)O"; 
+    NKname(202) = "Acetic_acid";  NKnameTeX(202) = "Acetic_acid"; NKsmiles(202) = "CC(=O)O";
+    NKname(203) = "Propanoic_acid";  NKnameTeX(203) = "Propanoic_acid"; NKsmiles(203) = "CCC(=O)O";  != propionic acid
+    NKname(204) = "Butyric_acid";  NKnameTeX(204) = "Butyric_acid"; NKsmiles(204) = "CCCC(=O)O";
+    NKname(210) = "2-Methylpropanoic_acid";  NKnameTeX(210) = "2-Methylpropanoic_acid"; NKsmiles(210) = "CC(C)C(=O)O";  != isobutyric acid
     NKname(220) = "Pyruvic_acid";  NKnameTeX(220) = "Pyruvic_acid";    !(= 2-oxopropanoic acid)
-    NKname(221) = "Methacrylic_acid";  NKnameTeX(221) = "Methacrylic_acid";    !(= 2-methyl-2-propenoic acid)
+    NKname(221) = "Methacrylic_acid";  NKnameTeX(221) = "Methacrylic_acid"; NKsmiles(221) = "CC(=C)C(=O)O";  !(= 2-methyl-2-propenoic acid)
     NKname(222) = "Palmitic_acid";  NKnameTeX(222) = "Palmitic_acid";    !(= hexadecanoic acid)
     NKname(223) = "Stearic_acid";  NKnameTeX(223) = "Stearic_acid";    !(= Octadecanoic acid)
     NKname(224) = "Oleic_acid";  NKnameTeX(224) = "Oleic_acid";   !(= (9Z)-Octadec-9-enoic acid )
@@ -175,18 +176,18 @@ character(len=60),dimension(:),allocatable,public :: NKname, NKnameTeX
     
     !...
     !Dicarboxylic acids
-    NKname(301) = "Oxalic_acid";  NKnameTeX(301) = "Oxalic_acid";  
-    NKname(302) = "Malonic_acid";  NKnameTeX(302) = "Malonic_acid";  
-    NKname(303) = "Succinic_acid";  NKnameTeX(303) = "Succinic_acid";  
-    NKname(304) = "Glutaric_acid";  NKnameTeX(304) = "Glutaric_acid";  
-    NKname(305) = "Adipic_acid";  NKnameTeX(305) = "Adipic_acid";  
+    NKname(301) = "Oxalic_acid";  NKnameTeX(301) = "Oxalic_acid"; NKsmiles(301) = "O=C(O)C(=O)O";
+    NKname(302) = "Malonic_acid";  NKnameTeX(302) = "Malonic_acid"; NKsmiles(302) = "O=C(O)CC(=O)O";
+    NKname(303) = "Succinic_acid";  NKnameTeX(303) = "Succinic_acid"; NKsmiles(303) = "O=C(O)CCC(=O)O";
+    NKname(304) = "Glutaric_acid";  NKnameTeX(304) = "Glutaric_acid"; NKsmiles(304) = "O=C(O)CCCC(=O)O";
+    NKname(305) = "Adipic_acid";  NKnameTeX(305) = "Adipic_acid"; NKsmiles(305) = "O=C(O)CCCCC(=O)O";
     NKname(306) = "Pimelic_acid";  NKnameTeX(306) = "Pimelic_acid";  
     NKname(307) = "Suberic_acid";  NKnameTeX(307) = "Suberic_acid";  
-    NKname(308) = "Methylsuccinic_acid";  NKnameTeX(308) = "Methylsuccinic_acid";  
+    NKname(308) = "Methylsuccinic_acid";  NKnameTeX(308) = "Methylsuccinic_acid"; NKsmiles(308) = "CC(C(=O)O)CC(=O)O";
     NKname(309) = "Dimethylmalonic_acid";  NKnameTeX(309) = "Dimethylmalonic_acid";  
-    NKname(310) = "2-Methylglutaric_acid";  NKnameTeX(310) = "2-Methylglutaric_acid";  
-    NKname(311) = "3-Methylglutaric_acid";  NKnameTeX(311) = "3-Methylglutaric_acid";  
-    NKname(312) = "2,2-Dimethylsuccinic_acid";  NKnameTeX(312) = "2,2-Dimethylsuccinic_acid";  
+    NKname(310) = "2-Methylglutaric_acid";  NKnameTeX(310) = "2-Methylglutaric_acid"; NKsmiles(310) = "CC(C(=O)O)CCC(=O)O";
+    NKname(311) = "3-Methylglutaric_acid";  NKnameTeX(311) = "3-Methylglutaric_acid"; NKsmiles(311) = "O=C(O)CC(C)CC(=O)O";
+    NKname(312) = "2,2-Dimethylsuccinic_acid";  NKnameTeX(312) = "2,2-Dimethylsuccinic_acid"; NKsmiles(312) = "CC(C)(C(=O)O)CC(=O)O";
     NKname(313) = "3-Methyladipic_acid";  NKnameTeX(313) = "3-Methyladipic_acid";  
     NKname(314) = "3,3-Dimethylglutaric_acid";  NKnameTeX(314) = "3,3-Dimethylglutaric_acid";  
     NKname(315) = "Diethylmalonic_acid";  NKnameTeX(315) = "Diethylmalonic_acid";  
@@ -295,11 +296,11 @@ character(len=60),dimension(:),allocatable,public :: NKname, NKnameTeX
 
     !...
     !Polycarboxylic acids, functionalized aliphatic acids
-    NKname(501) = "Maleic_acid";  NKnameTeX(501) = "Maleic_acid";  
+    NKname(501) = "Maleic_acid";  NKnameTeX(501) = "Maleic_acid"; NKsmiles(501) = "O=C(O)C=CC(=O)O";    !ignore stereoisomerism
     NKname(502) = "Fumaric_acid";  NKnameTeX(502) = "Fumaric_acid";  
-    NKname(503) = "Malic_acid";  NKnameTeX(503) = "Malic_acid";  
+    NKname(503) = "Malic_acid";  NKnameTeX(503) = "Malic_acid"; NKsmiles(503) = "O=C(O)CC(O)C(=O)O";
     NKname(504) = "Tartaric_acid";  NKnameTeX(504) = "Tartaric_acid";  
-    NKname(505) = "Citric_acid";  NKnameTeX(505) = "Citric_acid";  
+    NKname(505) = "Citric_acid";  NKnameTeX(505) = "Citric_acid"; NKsmiles(505) = "O=C(O)CC(O)(CC(=O)O)C(=O)O";
     NKname(506) = "alpha-Ketoglutaric_acid";  NKnameTeX(506) = "$\alpha$-Ketoglutaric_acid";  
     NKname(507) = "Glycolic_acid";  NKnameTeX(507) = "Glycolic_acid";  
     NKname(508) = "Methoxyacetic_acid";  NKnameTeX(508) = "Methoxyacetic_acid";  
@@ -335,31 +336,31 @@ character(len=60),dimension(:),allocatable,public :: NKname, NKnameTeX
     
     !...
     !Diols, Triols, Polyols, Sugars
-    NKname(601) = "1,2-Ethanediol";  NKnameTeX(601) = "1,2-Ethanediol";  
+    NKname(601) = "1,2-Ethanediol";  NKnameTeX(601) = "1,2-Ethanediol"; NKsmiles(601) = "OCCO";
     NKname(602) = "1,2-Propanediol";  NKnameTeX(602) = "1,2-Propanediol";  
     NKname(603) = "1,3-Propanediol";  NKnameTeX(603) = "1,3-Propanediol";  
-    NKname(604) = "Glycerol";  NKnameTeX(604) = "Glycerol";  
-    NKname(605) = "1,2-Butanediol";  NKnameTeX(605) = "1,2-Butanediol";  
-    NKname(606) = "1,3-Butanediol";  NKnameTeX(606) = "1,3-Butanediol";  
-    NKname(607) = "1,4-Butanediol";  NKnameTeX(607) = "1,4-Butanediol";  
+    NKname(604) = "Glycerol";  NKnameTeX(604) = "Glycerol"; NKsmiles(604) = "OCC(O)CO";
+    NKname(605) = "1,2-Butanediol";  NKnameTeX(605) = "1,2-Butanediol"; NKsmiles(605) = "CCC(O)CO";
+    NKname(606) = "1,3-Butanediol";  NKnameTeX(606) = "1,3-Butanediol"; 
+    NKname(607) = "1,4-Butanediol";  NKnameTeX(607) = "1,4-Butanediol"; NKsmiles(607) = "OCCCCO";
     NKname(608) = "2,3-Butanediol";  NKnameTeX(608) = "2,3-Butanediol";  
     NKname(609) = "1,2,3-Butanetriol";  NKnameTeX(609) = "1,2,3-Butanetriol";  
-    NKname(610) = "1,2,4-Butanetriol";  NKnameTeX(610) = "1,2,4-Butanetriol";  
+    NKname(610) = "1,2,4-Butanetriol";  NKnameTeX(610) = "1,2,4-Butanetriol"; NKsmiles(610) = "OCC(O)CCO";
     NKname(611) = "Erythritol";  NKnameTeX(611) = "Erythritol";  
     NKname(612) = "1,2-Pentanediol";  NKnameTeX(612) = "1,2-Pentanediol";  
     NKname(613) = "1,3-Pentanediol";  NKnameTeX(613) = "1,3-Pentanediol";  
     NKname(614) = "1,4-Pentanediol";  NKnameTeX(614) = "1,4-Pentanediol";  
     NKname(615) = "1,5-Pentanediol";  NKnameTeX(615) = "1,5-Pentanediol";  
     NKname(616) = "2,3-Pentanediol";  NKnameTeX(616) = "2,3-Pentanediol";  
-    NKname(617) = "2,4-Pentanediol";  NKnameTeX(617) = "2,4-Pentanediol";  
-    NKname(618) = "1,2-Hexanediol";  NKnameTeX(618) = "1,2-Hexanediol";  
+    NKname(617) = "2,4-Pentanediol";  NKnameTeX(617) = "2,4-Pentanediol"; NKsmiles(617) = "CC(O)CC(O)C";
+    NKname(618) = "1,2-Hexanediol";  NKnameTeX(618) = "1,2-Hexanediol"; NKsmiles(618) = "CCCCC(O)CO";
     NKname(619) = "1,3-Hexanediol";  NKnameTeX(619) = "1,3-Hexanediol";  
     NKname(620) = "1,4-Hexanediol";  NKnameTeX(620) = "1,4-Hexanediol";  
     NKname(621) = "1,5-Hexanediol";  NKnameTeX(621) = "1,5-Hexanediol";  
     NKname(622) = "1,6-Hexanediol";  NKnameTeX(622) = "1,6-Hexanediol";  
     NKname(623) = "2,3-Hexanediol";  NKnameTeX(623) = "2,3-Hexanediol";  
     NKname(624) = "2,4-Hexanediol";  NKnameTeX(624) = "2,4-Hexanediol";  
-    NKname(625) = "2,5-Hexanediol";  NKnameTeX(625) = "2,5-Hexanediol";  
+    NKname(625) = "2,5-Hexanediol";  NKnameTeX(625) = "2,5-Hexanediol"; NKsmiles(625) = "CC(O)CCC(O)C";
     NKname(626) = "1,2,5-Hexanetriol";  NKnameTeX(626) = "1,2,5-Hexanetriol";  
     NKname(627) = "1,2,6-Hexanetriol";  NKnameTeX(627) = "1,2,6-Hexanetriol";  
     NKname(628) = "2,3,4-Hexanetriol";  NKnameTeX(628) = "2,3,4-Hexanetriol";  
@@ -367,20 +368,20 @@ character(len=60),dimension(:),allocatable,public :: NKname, NKnameTeX
     NKname(630) = "Mannitol";  NKnameTeX(630) = "Mannitol";  
     NKname(631) = "1,4-Heptanediol";  NKnameTeX(631) = "1,4-Heptanediol";  
     NKname(632) = "1,5-Heptanediol";  NKnameTeX(632) = "1,5-Heptanediol";  
-    NKname(633) = "1,7-Heptanediol";  NKnameTeX(633) = "1,7-Heptanediol";  
+    NKname(633) = "1,7-Heptanediol";  NKnameTeX(633) = "1,7-Heptanediol"; NKsmiles(633) = "OCCCCCCCO";
     NKname(634) = "2,4-Heptanediol";  NKnameTeX(634) = "2,4-Heptanediol";  
     NKname(635) = "Xylitol";  NKnameTeX(635) = "Xylitol";  
-    NKname(638) = "1,3-Nonanediol";  NKnameTeX(638) = "1,3-Nonanediol";  
-    NKname(639) = "1,4-Dihydroxy-2-butene";  NKnameTeX(639) = "1,4-Dihydroxy-2-butene";   
-    NKname(640) = "Levoglucosan";  NKnameTeX(640) = "Levoglucosan";  
-    NKname(641) = "D-Fructopyranose";  NKnameTeX(641) = "D-Fructopyranose";  
-    NKname(642) = "D-Mannopyranose";  NKnameTeX(642) = "D-Mannopyranose";  
+    NKname(638) = "1,3-Nonanediol";  NKnameTeX(638) = "1,3-Nonanediol"; NKsmiles(638) = "CCCCCCC(O)CCO";
+    NKname(639) = "1,4-Dihydroxy-2-butene";  NKnameTeX(639) = "1,4-Dihydroxy-2-butene"; NKsmiles(639) = "OCC=CCO";
+    NKname(640) = "Levoglucosan";  NKnameTeX(640) = "Levoglucosan"; NKsmiles(640) = "OC1C2COC(O2)C(O)C1O";
+    NKname(641) = "D-Fructopyranose";  NKnameTeX(641) = "D-Fructopyranose"; NKsmiles(641) = "C1C(C(C(C(O1)(CO)O)O)O)O";
+    NKname(642) = "D-Mannopyranose";  NKnameTeX(642) = "D-Mannopyranose"; NKsmiles(642) = "C([CH]1[CH]([CH]([CH]([CH](O1)O)O)O)O)O";
     !.. 
     NKname(643) = "1,2,10-Decanetriol";  NKnameTeX(643) = "1,2,10-Decanetriol";  
     NKname(644) = "1,2,5,8-Octanetetrol";  NKnameTeX(644) = "1,2,5,8-Octanetetrol";  
     NKname(645) = "1,2,7,8-Octanetetrol";  NKnameTeX(645) = "1,2,7,8-Octanetetrol";  
     !...
-    NKname(646) = "D-Ribofuranose";  NKnameTeX(646) = "D-Ribofuranose";  
+    NKname(646) = "D-Ribofuranose";  NKnameTeX(646) = "D-Ribofuranose"; NKsmiles(646) = "C([CH]1[CH]([CH](C(O1)O)O)O)O";
     NKname(647) = "1,2,6-Hexanetriol";  NKnameTeX(647) = "1,2,6-Hexanetriol";  
     NKname(648) = "2-Methylerythritol";  NKnameTeX(648) = "2-Methylerythritol";  
     !...
@@ -406,8 +407,8 @@ character(len=60),dimension(:),allocatable,public :: NKname, NKnameTeX
     NKname(668) = "PEG-3350-n75";  NKnameTeX(668) = "PEG-3350-n75";  
     NKname(669) = "PEG-4000-n89";  NKnameTeX(669) = "PEG-4000-n89";  
     NKname(670) = "PEG-10000-n226";  NKnameTeX(670) = "PEG-10000-n226";  
-    NKname(671) = "PEG-400-n7";  NKnameTeX(671) = "PEG-400-n7";    !(PEG-400 as a mixture of polyethylene glycols with n = number of oxyethylene groups. 1/3 n=7 and 2/3 n=8 for the weight of approx. 400 g/mol) 
-    NKname(672) = "PEG-400-n8";  NKnameTeX(672) = "PEG-400-n8";  
+    NKname(671) = "PEG-400-n7";  NKnameTeX(671) = "PEG-400-n7"; NKsmiles(671) = "OCCOCCOCCOCCOCCOCCOCCOCCO";  !(PEG-400 as a mixture of polyethylene glycols with n = number of oxyethylene groups. 1/3 n=7 and 2/3 n=8 for the weight of approx. 400 g/mol) 
+    NKname(672) = "PEG-400-n8";  NKnameTeX(672) = "PEG-400-n8"; NKsmiles(672) = "OCCOCCOCCOCCOCCOCCOCCOCCOCCO";
     NKname(673) = "PEG-1000-n21";  NKnameTeX(673) = "PEG-1000-n21";  
     NKname(674) = "PEG-1000-n22";  NKnameTeX(674) = "PEG-1000-n22";  
     NKname(675) = "PEG-600-n12";  NKnameTeX(675) = "PEG-600-n12";  
@@ -423,7 +424,7 @@ character(len=60),dimension(:),allocatable,public :: NKname, NKnameTeX
     NKname(684) = "Triton_X-100";  NKnameTeX(684) = "Triton_X-100";  
     !...
     !Polcyclic aromatic hydrocarbons (PAH)
-    NKname(701) = "Benzene";  NKnameTeX(701) = "Benzene";  
+    NKname(701) = "Benzene";  NKnameTeX(701) = "Benzene"; NKsmiles(701) = "c1ccccc1";
     NKname(702) = "Naphthalene";  NKnameTeX(702) = "Naphthalene";  
     NKname(703) = "Anthracene";  NKnameTeX(703) = "Anthracene";  
     NKname(704) = "Phenanthrene";  NKnameTeX(704) = "Phenanthrene";  
@@ -444,18 +445,18 @@ character(len=60),dimension(:),allocatable,public :: NKname, NKnameTeX
     NKname(719) = "BaP-derived_diCOOH";  NKnameTeX(719) = "BaP-derived_diCOOH";   !7-oxo-7H-benzo[de]anthracene-3,4-dicarboxylic acid
     !...
     !Multifunctional aromatic hydrocarbons, phenolic compounds
-    NKname(720) = "Phenol";  NKnameTeX(720) = "Phenol";  
-    NKname(721) = "Protocatechuic_acid";  NKnameTeX(721) = "Protocatechuic_acid";  
-    NKname(722) = "Vanillin";  NKnameTeX(722) = "Vanillin";   !4-Hydroxy-3-methoxybenzaldehyde
-    NKname(723) = "Vanillic_acid";  NKnameTeX(723) = "Vanillic_acid";  
-    NKname(724) = "Gallic_acid";  NKnameTeX(724) = "Gallic_acid";  
-    NKname(725) = "Ferulic_acid";  NKnameTeX(725) = "Ferulic_acid";  
-    NKname(726) = "Syringic_acid";  NKnameTeX(726) = "Syringic_acid";  
-    NKname(727) = "2-Hydroxybenzoic_acid";  NKnameTeX(727) = "2-Hydroxybenzoic_acid";   !(= Salicylic acid)
-    NKname(728) = "3-Hydroxybenzoic_acid";  NKnameTeX(728) = "3-Hydroxybenzoic_acid";  
-    NKname(729) = "4-Hydroxybenzoic_acid";  NKnameTeX(729) = "4-Hydroxybenzoic_acid";  
-    NKname(730) = "Phthalic_acid";  NKnameTeX(730) = "Phthalic_acid";    ! (= benzene-1,2-dicarboxylic acid)
-    NKname(731) = "2,4-Dihydroxybenzaldehyde";  NKnameTeX(731) = "2,4-Dihydroxybenzaldehyde";  
+    NKname(720) = "Phenol";  NKnameTeX(720) = "Phenol"; NKsmiles(720) = "Oc1ccccc1";
+    NKname(721) = "Protocatechuic_acid";  NKnameTeX(721) = "Protocatechuic_acid"; NKsmiles(721) = "O=C(O)c1ccc(O)c(O)c1";
+    NKname(722) = "Vanillin";  NKnameTeX(722) = "Vanillin"; NKsmiles(722) = "O=Cc1ccc(O)c(OC)c1"; !4-Hydroxy-3-methoxybenzaldehyde
+    NKname(723) = "Vanillic_acid";  NKnameTeX(723) = "Vanillic_acid"; NKsmiles(723) = "O=C(O)c1ccc(O)c(OC)c1";
+    NKname(724) = "Gallic_acid";  NKnameTeX(724) = "Gallic_acid"; NKsmiles(724) = "O=C(O)c1cc(O)c(O)c(O)c1";
+    NKname(725) = "Ferulic_acid";  NKnameTeX(725) = "Ferulic_acid"; NKsmiles(725) = "O=C(O)C=Cc1ccc(O)c(OC)c1";
+    NKname(726) = "Syringic_acid";  NKnameTeX(726) = "Syringic_acid"; NKsmiles(726) = "O=C(O)c1cc(OC)c(O)c(OC)c1";
+    NKname(727) = "2-Hydroxybenzoic_acid";  NKnameTeX(727) = "2-Hydroxybenzoic_acid"; NKsmiles(727) = "O=C(O)c1ccccc1O"; !(= Salicylic acid)
+    NKname(728) = "3-Hydroxybenzoic_acid";  NKnameTeX(728) = "3-Hydroxybenzoic_acid"; NKsmiles(728) = "O=C(O)c1cccc(O)c1";
+    NKname(729) = "4-Hydroxybenzoic_acid";  NKnameTeX(729) = "4-Hydroxybenzoic_acid"; NKsmiles(729) = "O=C(O)c1ccc(O)cc1";
+    NKname(730) = "Phthalic_acid";  NKnameTeX(730) = "Phthalic_acid"; NKsmiles(730) = "O=C(O)c1ccccc1C(=O)O";  ! (= benzene-1,2-dicarboxylic acid)
+    NKname(731) = "2,4-Dihydroxybenzaldehyde";  NKnameTeX(731) = "2,4-Dihydroxybenzaldehyde"; NKsmiles(731) = "O=Cc1ccc(O)cc1O";
     NKname(732) = "Vanillylmandelic_acid";  NKnameTeX(732) = "Vanillylmandelic_acid";  
     NKname(733) = "3,5-Dihydroxybenzoic_acid";  NKnameTeX(733) = "3,5-Dihydroxybenzoic_acid";  
     NKname(734) = "Mandelic_acid";  NKnameTeX(734) = "Mandelic_acid";  
@@ -493,14 +494,14 @@ character(len=60),dimension(:),allocatable,public :: NKname, NKnameTeX
     NKname(764) = "C534OOH";  NKnameTeX(764) = "C534OOH";
     !...
     !Carbonyls (Ketones and Aldehydes)
-    NKname(802) = "Acetone";  NKnameTeX(802) = "Acetone";  
-    NKname(803) = "2-Butanone";  NKnameTeX(803) = "2-Butanone";  
-    NKname(804) = "3-Methyl-2-butanone";  NKnameTeX(804) = "3-Methyl-2-butanone";   !Methyl Isopropyl Ketone
-    NKname(805) = "4-Methyl-2-pentanone";  NKnameTeX(805) = "4-Methyl-2-pentanone";  
-    NKname(806) = "2-Pentanone";  NKnameTeX(806) = "2-Pentanone";  
-    NKname(807) = "2-Hexanone";  NKnameTeX(807) = "2-Hexanone";  
-    NKname(808) = "2-Heptanone";  NKnameTeX(808) = "2-Heptanone";  
-    NKname(809) = "3-Heptanone";  NKnameTeX(809) = "3-Heptanone";  
+    NKname(802) = "Acetone";  NKnameTeX(802) = "Acetone"; NKsmiles(802) = "CC(=O)C";
+    NKname(803) = "2-Butanone";  NKnameTeX(803) = "2-Butanone"; NKsmiles(803) = "CCC(=O)C";
+    NKname(804) = "3-Methyl-2-butanone";  NKnameTeX(804) = "3-Methyl-2-butanone"; NKsmiles(804) = "CC(C)C(=O)C"; !Methyl Isopropyl Ketone
+    NKname(805) = "4-Methyl-2-pentanone";  NKnameTeX(805) = "4-Methyl-2-pentanone"; NKsmiles(805) = "CC(C)CC(=O)C";
+    NKname(806) = "2-Pentanone";  NKnameTeX(806) = "2-Pentanone"; NKsmiles(806) = "CCCC(=O)C";
+    NKname(807) = "2-Hexanone";  NKnameTeX(807) = "2-Hexanone"; NKsmiles(807) = "CCCCC(=O)C";
+    NKname(808) = "2-Heptanone";  NKnameTeX(808) = "2-Heptanone"; NKsmiles(808) = "CCCCCC(=O)C";
+    NKname(809) = "3-Heptanone";  NKnameTeX(809) = "3-Heptanone"; NKsmiles(809) = "CCCCC(=O)CC";
     NKname(810) = "3-Pentanone";  NKnameTeX(810) = "3-Pentanone";  
     NKname(811) = "2-Octanone";  NKnameTeX(811) = "2-Octanone";  
     NKname(812) = "4-Heptanone";  NKnameTeX(812) = "4-Heptanone";  
@@ -530,15 +531,15 @@ character(len=60),dimension(:),allocatable,public :: NKname, NKnameTeX
     NKname(838) = "Triacontyl_palmitate";  NKnameTeX(838) = NKname(838);
     NKname(839) = "1-Palmitoyl-2-oleoyl-3-linoleoyl_glycerol";  NKnameTeX(839) = NKname(839);
     NKname(840) = "bis(2-ethylhexyl)_sebacate";  NKnameTeX(840) = "bis(2-ethylhexyl)_sebacate";   !BES
-    NKname(841) = "Methyl_acetate";  NKnameTeX(841) = "Methyl_acetate";  
-    NKname(842) = "Ethyl_acetate";  NKnameTeX(842) = "Ethyl_acetate";  
-    NKname(843) = "1-Propyl_acetate";  NKnameTeX(843) = "1-Propyl_acetate";  
-    NKname(844) = "1-Butyl_acetate";  NKnameTeX(844) = "1-Butyl_acetate";  
-    NKname(845) = "Isobutyl_acetate";  NKnameTeX(845) = "Isobutyl_acetate";  
-    NKname(846) = "2-Butyl_acetate";  NKnameTeX(846) = "2-Butyl_acetate";  
-    NKname(847) = "tert-Butyl_acetate";  NKnameTeX(847) = "tert-Butyl_acetate";   
-    NKname(848) = "1-Pentyl_acetate";  NKnameTeX(848) = "1-Pentyl_acetate";  
-    NKname(849) = "1-Hexyl_acetate";  NKnameTeX(849) = "1-Hexyl_acetate";  
+    NKname(841) = "Methyl_acetate";  NKnameTeX(841) = "Methyl_acetate"; NKsmiles(841) = "CC(=O)OC";
+    NKname(842) = "Ethyl_acetate";  NKnameTeX(842) = "Ethyl_acetate"; NKsmiles(842) = "CC(=O)OCC";
+    NKname(843) = "1-Propyl_acetate";  NKnameTeX(843) = "1-Propyl_acetate"; NKsmiles(843) = "CC(=O)OCCC";
+    NKname(844) = "1-Butyl_acetate";  NKnameTeX(844) = "1-Butyl_acetate"; NKsmiles(844) = "CC(=O)OCCCC";
+    NKname(845) = "Isobutyl_acetate";  NKnameTeX(845) = "Isobutyl_acetate"; NKsmiles(845) = "CC(=O)OCC(C)C";
+    NKname(846) = "2-Butyl_acetate";  NKnameTeX(846) = "2-Butyl_acetate"; NKsmiles(846) = "CC(=O)OC(C)CC";
+    NKname(847) = "tert-Butyl_acetate";  NKnameTeX(847) = "tert-Butyl_acetate"; NKsmiles(847) = "CC(=O)OC(C)(C)C";
+    NKname(848) = "1-Pentyl_acetate";  NKnameTeX(848) = "1-Pentyl_acetate"; NKsmiles(848) = "CC(=O)OCCCCC";
+    NKname(849) = "1-Hexyl_acetate";  NKnameTeX(849) = "1-Hexyl_acetate"; NKsmiles(849) = "CC(=O)OCCCCCC";
     NKname(850) = "2-Ethoxyethyl_acetate";  NKnameTeX(850) = "2-Ethoxyethyl_acetate";  
     NKname(851) = "Octadecanoic_acid_methyl_ester";  NKnameTeX(851) = "Octadecanoic_acid_methyl_ester";   !(= methyl Stearate)
     NKname(852) = "Octadecanoic_acid_ethyl_ester";  NKnameTeX(852) = "Octadecanoic_acid_ethyl_ester";   !(= ethyl Stearate)
@@ -560,18 +561,18 @@ character(len=60),dimension(:),allocatable,public :: NKname, NKnameTeX
 
     !...
     !Ethers
-    NKname(881) = "2-Methoxy-2-methylpropane";  NKnameTeX(881) = "2-Methoxy-2-methylpropane";  
-    NKname(882) = "2-Methoxyethanol";  NKnameTeX(882) = "2-Methoxyethanol";  
-    NKname(883) = "2-Ethoxyethanol";  NKnameTeX(883) = "2-Ethoxyethanol";  
-    NKname(884) = "1-Methoxy-2-propanol";  NKnameTeX(884) = "1-Methoxy-2-propanol";  
-    NKname(885) = "2-Isopropoxyethanol";  NKnameTeX(885) = "2-Isopropoxyethanol";   
-    NKname(886) = "2-Butoxyethanol";  NKnameTeX(886) = "2-Butoxyethanol";   
-    NKname(887) = "2-Methoxypropanol";  NKnameTeX(887) = "2-Methoxypropanol";   
-    NKname(888) = "1-(2-methoxypropoxy)-2-propanol";  NKnameTeX(888) = "1-(2-methoxypropoxy)-2-propanol";   
-    NKname(889) = "2-(2-methoxyethoxy)ethanol";  NKnameTeX(889) = "2-(2-methoxyethoxy)ethanol";   
-    NKname(890) = "2-(2-ethoxyethoxy)ethanol";  NKnameTeX(890) = "2-(2-ethoxyethoxy)ethanol";   
-    NKname(891) = "1,4-Dioxane";  NKnameTeX(891) = "1,4-Dioxane";   
-    NKname(892) = "Tetrahydrofuran";  NKnameTeX(892) = "Tetrahydrofuran";  
+    NKname(881) = "2-Methoxy-2-methylpropane";  NKnameTeX(881) = "2-Methoxy-2-methylpropane"; NKsmiles(881) = "CC(C)(C)OC";
+    NKname(882) = "2-Methoxyethanol";  NKnameTeX(882) = "2-Methoxyethanol"; NKsmiles(882) = "COCCO";
+    NKname(883) = "2-Ethoxyethanol";  NKnameTeX(883) = "2-Ethoxyethanol"; NKsmiles(883) = "CCOCCO";
+    NKname(884) = "1-Methoxy-2-propanol";  NKnameTeX(884) = "1-Methoxy-2-propanol"; NKsmiles(884) = "CC(O)COC";
+    NKname(885) = "2-Isopropoxyethanol";  NKnameTeX(885) = "2-Isopropoxyethanol"; NKsmiles(885) = "CC(C)OCCO";
+    NKname(886) = "2-Butoxyethanol";  NKnameTeX(886) = "2-Butoxyethanol"; NKsmiles(886) = "CCCCOCCO";
+    NKname(887) = "2-Methoxypropanol";  NKnameTeX(887) = "2-Methoxypropanol"; NKsmiles(887) = "CC(CO)OC";
+    NKname(888) = "1-(2-methoxypropoxy)-2-propanol";  NKnameTeX(888) = "1-(2-methoxypropoxy)-2-propanol"; NKsmiles(888) = "CC(O)COC(C)COC";  
+    NKname(889) = "2-(2-methoxyethoxy)ethanol";  NKnameTeX(889) = "2-(2-methoxyethoxy)ethanol"; NKsmiles(889) = "COCCOCCO";
+    NKname(890) = "2-(2-ethoxyethoxy)ethanol";  NKnameTeX(890) = "2-(2-ethoxyethoxy)ethanol"; NKsmiles(890) = "CCOCCOCCO";
+    NKname(891) = "1,4-Dioxane";  NKnameTeX(891) = "1,4-Dioxane"; NKsmiles(891) = "C1COCCO1";
+    NKname(892) = "Tetrahydrofuran";  NKnameTeX(892) = "Tetrahydrofuran"; NKsmiles(892) = "C1CCOC1";
     NKname(893) = "2-Ethoxy-2-methylpropane";  NKnameTeX(893) = "2-Ethoxy-2-methylpropane";  
     NKname(894) = "Diethyl_ether";  NKnameTeX(894) = "Diethyl_ether";  
     !...

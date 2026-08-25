@@ -10,7 +10,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2018 (based on non-module version from 2004)                    *
-!*   -> latest changes: 2024-04-22                                                      *
+!*   -> latest changes: 2026-08-22                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -134,7 +134,7 @@ logical,private :: gcombrefresh
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2018                                                            *
-    !*   -> latest changes: 2021-11-30                                                      *
+    !*   -> latest changes: 2026-08-22                                                      *
     !*                                                                                      *
     !****************************************************************************************
     subroutine SRcalcvisc(NK, X, XN, lnGaSR, XieC, XieR)
@@ -176,15 +176,15 @@ logical,private :: gcombrefresh
         viscosity_mixmode = 2
     endif
     if (ionspresent) then
-        call SRgres(XN, lnGaR_loc, NK, XieR_loc)        !Residual part using XN
-        call SRgcomb(XN, lnGaC_loc, NK, XieC_loc)       !Combinatorial part using XN
+        call SRgres(XN, lnGaR_loc, NK, XieR_loc)                !Residual part using XN
+        call SRgcomb(XN, lnGaC_loc, NK, XieC_loc)               !Combinatorial part using XN
     endif
 
     select case(viscosity_mixmode)
-    case(1)     !"aquelec" org-inorg mixing used (and/or ions present in solution)
+    case(1)                                                     !"aquelec" org--inorg mixing used (and/or ions present in solution)
         if (orgspresent) then
             Xnew = 0.0_wp
-            Xnew(1) = X(1) + sum(X(nneutral+1:NK))  !use Xnew because XieC for aqueous elec solution becomes very small at low water content, counteracting the scaling of XieC by eta_aquelec
+            Xnew(1) = X(1) + sum(X(nneutral+1:NK))              !use Xnew because XieC for aqueous elec solution becomes very small at low water content, counteracting the scaling of XieC by eta_aquelec
             Xnew(2:nneutral) = X(2:nneutral)
             Xnew = Xnew/sum(Xnew)
             RSS = sum(RS*Xnew)  
@@ -201,22 +201,36 @@ logical,private :: gcombrefresh
             XieC_loc(1) = 0.0_wp 
         endif
 
-        lneta_cpn(1:nneutral) = XieC_loc(1:nneutral) + phi(1:nneutral)*(XieR_loc(1:nneutral) - XieRref(1:nneutral))
+        !!component viscosity contributions and mixture viscosity computed via 
+        !!Gervasi et al. (2020) approach using combinatorial activity:
+        !lneta_cpn(1:nneutral) = XieC_loc(1:nneutral) + phi(1:nneutral)*(XieR_loc(1:nneutral) - XieRref(1:nneutral))
+        !lneta_cpn(nneutral+1:) = 0.0_wp
+        !ln_etamix = sum(lneta_cpn(1:nneutral))
+        
+        !---- modified version of viscosity calculation using simpler mole-fraction-weighted mixing rule, 
+        !     but with electrolyte effects accounted for via water "pure" viscosity
+        Xnew = 0.0_wp
+        Xnew(1) = X(1) + sum(X(nneutral+1:NK))                  !Xnew is the normalized mole fraction, accounting for electrolytes
+        Xnew(2:nneutral) = X(2:nneutral)
+        Xnew = Xnew/sum(Xnew)
+        lneta_cpn(1) = Xnew(1)*ln_eta_aquelec
+        lneta_cpn(2:nneutral) = Xnew(2:nneutral)*ln_eta0(2:nneutral)
         lneta_cpn(nneutral+1:) = 0.0_wp
         ln_etamix = sum(lneta_cpn(1:nneutral))
+        !----
         
         !save these values (XieC_loc, phi, XieR_loc for aqueous electrolyte solution)
         aquelecVar_save = 0.0_wp
         aquelecVar_save(1) = XieC_loc(1)
         aquelecVar_save(3) = XN(1)
-        if (nneutral > 1) then !data for debugging and diagnostics
+        if (nneutral > 1) then                                  !data for debugging and diagnostics
             aquelecVar_save(2) = XieC_loc(2)
             aquelecVar_save(4) = XN(2)
         endif
         
     case(2)     !"aquorg" org-inorg mixing is used (or ion-free mixture)          
         !Calculate the viscosity of the (electrolyte-free) aqueous organic mixture
-        RSS = sum(RS(:)*XN(:))              !calculating phi over neutrals only because the ion contributions are only impacting ln_eta0(1)
+        RSS = sum(RS(:)*XN(:))                                  !calculating phi over neutrals only because the ion contributions are only impacting ln_eta0(1)
         phi = XN*RS/RSS      
         if (ionspresent) then
             lnGaSR_loc(1:NK) = lnGaC_loc(1:NK) + lnGaR_loc(1:NK) - lnGaRref(1:NK)
@@ -225,23 +239,34 @@ logical,private :: gcombrefresh
             endif
             lneta_cpn(1:nneutral) = XieC_loc(1:nneutral) + phi(1:nneutral)*(XieR_loc(1:nneutral) - XieRref(1:nneutral))
         else
-            lnGaSR_loc = lnGaSR                          !in this case, use the calculated values from SRunifac directly
+            lnGaSR_loc = lnGaSR                                 !in this case, use the calculated values from SRunifac directly
             lneta_cpn(1:nneutral) = XieC(1:nneutral) + phi(1:nneutral)*(XieR(1:nneutral) - XieRref(1:nneutral))
         endif
+        !lneta_cpn(nneutral+1:) = 0.0_wp
+        !ln_etamix = sum(lneta_cpn(1:nneutral))
+        
+        !---- modified version of viscosity calculation using simpler mole-fraction-weighted mixing rule, 
+        !     but with electrolyte effects accounted for via water "pure" viscosity        
+        Xnew = 0.0_wp
+        Xnew(1) = X(1) + sum(X(nneutral+1:NK))                  !Xnew is the normalized mole fraction, accounting for electrolytes
+        Xnew(2:nneutral) = X(2:nneutral)
+        Xnew = Xnew/sum(Xnew)
+        lneta_cpn(1:nneutral) = Xnew(1:nneutral)*ln_eta0(1:nneutral)
         lneta_cpn(nneutral+1:) = 0.0_wp
         ln_etamix = sum(lneta_cpn(1:nneutral))
+        !----
         
-        if (ionspresent) then                           !the call to AqueousElecViscosity is only necessary in presence of ions
-            ln_etaw = ln_etamix                         !assign the ln_etamix value from the electrolyte-free aqueous organic mixture as the "pure-water" value in this mode.
+        if (ionspresent) then                                   !the call to AqueousElecViscosity is only necessary in presence of ions
+            ln_etaw = ln_etamix                                 !assign the ln_etamix value from the electrolyte-free aqueous organic mixture as the "pure-water" value in this mode.
             if (orgspresent) then
-                call WaterMolefracCorrection(X, Xnew)   !adds mass of neutrals to water mass, then converts to mole fractions Xnew
+                call WaterMolefracCorrection(X, Xnew)           !adds mass of neutrals to water mass, then converts to mole fractions Xnew
             else
                 Xnew = X
             endif
             call AqueousElecViscosity(Xnew, lnGaSR_loc, RS, ln_etaw, ln_etamix, delGstar_save)
             !the returned ln_etamix will account for ion effects...
         else
-            ln_eta_aquelec = ln_eta0(1)                 !save pure water value for use in LLEetamix																		   
+            ln_eta_aquelec = ln_eta0(1)                         !save pure water value for use in LLEetamix																		   
         endif
     end select
     
@@ -278,22 +303,22 @@ logical,private :: gcombrefresh
     real(wp),dimension(:),intent(out) :: lnGaRrefer, XieRrefer
     !local variables:
     integer :: I, iflag, K
-    real(wp),parameter :: T0 = 298.15_wp  !room temperature as the reference temperature for the calculation of the PsiT array
+    real(wp),parameter :: T0 = 298.15_wp                        !room temperature as the reference temperature for the calculation of the PsiT array
     real(wp),dimension(NK) :: Xrefsp, lnGaRX, XieX
-    real(wp) :: lneta, Tglass, D         !pure component viscosity, glass transition temperature, fragility
+    real(wp) :: lneta, Tglass, D                                !pure-component viscosity, glass transition temperature, fragility
     !...................................................
 
     !Check / set temperature-dependent parameters:
-    if (grefresh) then !detected a change in temperature => PsiT needs to be updated
+    if (grefresh) then                                          !detected a change in temperature => PsiT needs to be updated
         select case(nd)
-        case(500:800, 2000:2434)    !(500:800,2000:2500)  2000:2434
+        case(500:800, 2000:2434)
             !new equation for UNIFAC/AIOMFAC 3-parameter version for larger temperature range; see Ganbavale et al. (2015, ACP, doi:10.5194/acp-15-447-2015)
-            PsiT = exp( -(parA/T_K) + parB*(1.0_wp/T0 -1.0_wp/T_K) + parC*( ((T0 - T_K)/T_K) +log(T_K/T0) ) ) 
+            PsiT = exp( -(parA/T_K) + parB*(1.0_wp/T0 -1.0_wp/T_K) + parC*( ((T0 - T_K)/T_K) + log(T_K/T0) ) ) 
         case default
-            PsiT = exp(-parA/T_K)  !{original UNIFAC ("good" near room temperature: PsiT = exp(-parA/T_K)} parameterization
+            PsiT = exp(-parA/T_K)                               !{original UNIFAC ("good" near room temperature: PsiT = exp(-parA/T_K)} parameterization
         end select
         do I = 1,NG
-            PsiT_dimflip(I,:) = PsiT(:,I) !store the PsiT data (in PsiT_dimflip) with the first dimension being the second and vice-versa.
+            PsiT_dimflip(I,:) = PsiT(:,I)                       !store the PsiT data (in PsiT_dimflip) with the first dimension being the second and vice-versa.
         enddo
         !------
         !loop over neutral components and calculate the residual reference contributions from the different subgroups
@@ -304,13 +329,13 @@ logical,private :: gcombrefresh
         XieRrefer = 0.0_wp
         do I = 1,nneutral
             !check if number of subgroups in component is greater than 1:
-            K = sum(SRNY_dimflip(1:NGN,I)) !sum(SRNY(I,1:NGN))
-            if (K > 1) then !more than one subgroup
+            K = sum(SRNY_dimflip(1:NGN,I))
+            if (K > 1) then                                     !more than one subgroup
                 grefcallID = I
                 Xrefsp(1:nneutral) = 0.0_wp
-                Xrefsp(I) = 1.0_wp !set all other mole fractions but this (I) to 0.0. Thus reference state conditions of x(i) = 1
+                Xrefsp(I) = 1.0_wp                              !set all other mole fractions but this (I) to 0.0. Thus reference state conditions of x(i) = 1
                 call SRgres(Xrefsp, lnGaRX, NK, XieX)
-                lnGaRrefer(I) = lnGaRX(I) !this line is necessary since the other values (not only I) get overwritten in call to SRgres!
+                lnGaRrefer(I) = lnGaRX(I)                       !this line is necessary since the other values (not only I) get overwritten in call to SRgres!
                 XieRrefer(I) = XieX(I)
                 grefcallID = 0
             endif
@@ -318,27 +343,27 @@ logical,private :: gcombrefresh
     endif
 
     !Check for solvent mixture reference state and potentially calculate the reference of the residual part for ions in solvent mixture reference state.
-    if (solvmixrefnd) then  !solvent mixture as reference
+    if (solvmixrefnd) then                                      !solvent mixture as reference
         grefcallID = 0
         do I = nneutral+1,NK
-            Xrefsp(1:nneutral) = XN(1:nneutral) !solvent
-            Xrefsp(nneutral+1:) = 0.0_wp !ions
+            Xrefsp(1:nneutral) = XN(1:nneutral)
+            Xrefsp(nneutral+1:) = 0.0_wp                        !ions
             call SRgres(Xrefsp, lnGaRX, NK, XieX)
-            lnGaRrefer(I) = lnGaRX(I) !this line is necessary since the other values (not only I) get overwritten in call to SRgres!
+            lnGaRrefer(I) = lnGaRX(I)                           !this line is necessary since the other values (not only I) get overwritten in call to SRgres!
             XieRrefer(I) = XieX(I)
         enddo
     endif
 
-    !---- calculate pure component viscosity of non-electrolytes at given temperature
+    !---- calculate pure-component viscosity of non-electrolytes at given temperature
     if (calcviscosity) then
         do I = 1,nneutral
-            call PureCompViscosity(I, T_K, lneta, iflag, Tglass, D)   !calculate pure component dynamic viscosity eta
+            call PureCompViscosity(I, T_K, lneta, iflag, Tglass, D)   !calculate pure-component dynamic viscosity eta
             if (iflag == 0) then
                 Tglass0(I) = Tglass
                 fragil(I) = D
-                ln_eta0(I) = lneta !eta in SI units of [Pa s]
+                ln_eta0(I) = lneta                              !eta in SI units of [Pa s]
             else
-                ln_eta0(I) = -7777.7_wp  !to indicate a problem
+                ln_eta0(I) = -7777.7_wp                         !to indicate a problem
                 Tglass0(I) = -1.0_wp
                 fragil(I) = -1.0_wp
                 select case(nd)
@@ -356,10 +381,10 @@ logical,private :: gcombrefresh
         enddo
         if (NK > nneutral) then !calculate viscosity of (hypothetical) individual ions
             !ions / electrolyte components:
-            ln_eta0(nneutral+1:NK) = -3.0_wp     !initialization
+            ln_eta0(nneutral+1:NK) = -3.0_wp                    !initialization
         endif
     else
-        ln_eta0(1:NK) = -9999.9_wp !a tiny value to indicate uninitialized ln_eta0
+        ln_eta0(1:NK) = -9999.9_wp                              !a tiny value to indicate uninitialized ln_eta0
     endif
 
     end subroutine SRgref
@@ -379,10 +404,12 @@ logical,private :: gcombrefresh
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2004                                                            *
-    !*   -> latest changes: 2018/05/18                                                      *
+    !*   -> latest changes: 2026-08-23                                                      *
     !*                                                                                      *
     !****************************************************************************************
     pure subroutine SRgres(Xr, lnGaR, NK, XieR)
+    
+    use ModSystemProp, only : isPEGsystem, nneutral, ITAB
 
     implicit none
     !interface variables:
@@ -394,17 +421,19 @@ logical,private :: gcombrefresh
     real(wp) :: S2, S3
     real(wp),dimension(NG) :: TH, GAML, S1, XG, S4, THbyS4, Xiek
     real(wp),dimension(NG,NG) :: THmn
+    logical,dimension(NK) :: is_PEG_molec
     !...................................................
 
-    if (grefcallID > 0) then !this is only the case when called from SRgref
+    if (grefcallID > 0) then                                    !this is only the case when called from SRgref
         do I = 1,NG
-            S1(I) = SRNY(grefcallID,I) !only this because all Xr other than that of grefcallID are zero in this reference case
+            S1(I) = SRNY(grefcallID,I)                          !only this because all Xr other than that of grefcallID are zero in this reference case
         enddo
-    else !typical case
+    else                                                        !typical case
         do I = 1,NG
             S1(I) = sum(SRNY(1:NK,I)*Xr(1:NK))
         enddo
     endif
+    
     S2 = sum(S1)
     XG = S1/S2
     S3 = sum(Q(1:NG)*XG)
@@ -414,9 +443,10 @@ logical,private :: gcombrefresh
     enddo
     THbyS4 = TH/S4
     do I = 1,NG
-        GAML(I) = Q(I)*( 1.0_wp-log(S4(I)) -sum(THbyS4*PsiT_dimflip(1:NG,I)) )
+        GAML(I) = Q(I)*( 1.0_wp - log(S4(I)) - sum(THbyS4*PsiT_dimflip(1:NG,I)) )
     enddo
-    if (grefcallID > 0) then !this is only the case when called from SRgref
+    
+    if (grefcallID > 0) then                                    !this is only the case when called from SRgref
         lnGaR(grefcallID) = sum(SRNY_dimflip(1:NG,grefcallID)*GAML(1:NG))
     else
         do I = 1,NK
@@ -427,35 +457,49 @@ logical,private :: gcombrefresh
     !--------------------------------------------------------
     !Viscosity of mixture calculation; residual part.
     if (calcviscosity .or. grefcallID > 0) then
+        
+        !special treatment for systems containing PEG oligomers; 
+        !not an ideal approach but a feasible one for now;
+        is_PEG_molec = .false.                                  !default
+        if (isPEGsystem) then 
+            do i = 1,nneutral
+                if (ITAB(i,154) > 1) then                       !molecules with more than one oxyethylene group are flagged for special treatment below
+                    is_PEG_molec(i) = .true.
+                endif
+            enddo
+        endif
+        
         do k = 1,NG !k
             do I = 1,NG !m
                 S4(I) = sum(TH(1:NG)*PsiT(1:NG,I))
                 THmn(k,I) = TH(k)*PsiT_dimflip(I,k)/S4(I)
             enddo
         enddo
+        
         !sum up the number of subgroups and their contributions to XieR in compound I:
-        if (grefcallID > 0) then    !this is only the case when called from SRgref
+        if (grefcallID > 0) then                                !this is only the case when called from SRgref
             do k = 1,NG
-                Xiek(k) = (Q(k)/R(k))*Nvis(k,grefcallID)*sum(THmn(1:NG,k)*log(PsiT(1:NG,k))) !Natalie mod 4
+                Xiek(k) = (Q(k)/R(k))*Nvis(k,grefcallID)*sum(THmn(1:NG,k)*log(PsiT(1:NG,k)))
+                !Xiek(k) = 0.0_wp                               !AZ mod 5; better especially for large molecules and oligomers
             enddo
             XieR(grefcallID) = sum(SRNY_dimflip(1:NG,grefcallID)*Xiek(1:NG))
-            if (isPEGsystem) then  !presently special treatment for systems containing PEG oligomers (ignore residual contribution)
+            if (is_PEG_molec(grefcallID)) then                  !this component is a PEG molecule, use a special treatment: ignore residual contribution
                 XieR(grefcallID) = 0.0_wp
             endif
         else
             do I = 1,NK
                 !calculate viscosity contributions by individual subgroups:
                 do k = 1,NG
-                    Xiek(k) = (Q(k)/R(k))*Nvis(k,I)*sum(THmn(1:NG,k)*log(PsiT(1:NG,k))) !Natalie mod 4
-                    !Xiek(k) = 0.0_wp    !AZ mod 5; better especially for large molecules and oligomers
+                    Xiek(k) = (Q(k)/R(k))*Nvis(k,I)*sum(THmn(1:NG,k)*log(PsiT(1:NG,k)))
+                    !Xiek(k) = 0.0_wp                           !AZ mod 5; better especially for large molecules and oligomers
                 enddo
                 XieR(I) = sum(SRNY_dimflip(1:NG,I)*Xiek(1:NG))
-                if (isPEGsystem) then  !presently special treatment for systems containing PEG oligomers (ignore residual contribution)
+                if (is_PEG_molec(I)) then                       !this component is a PEG molecule, use a special treatment: ignore residual contribution
                     XieR(I) = 0.0_wp
                 endif
             enddo
         endif
-    else !a default value indicating "NO viscosity calc."
+    else                                                        !a default value indicating "NO viscosity calc."
         XieR = 0.0_wp
     endif
     !--------------------------------------------------------
@@ -476,10 +520,12 @@ logical,private :: gcombrefresh
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2004                                                            *
-    !*   -> latest changes: 2018-05-18                                                      *
+    !*   -> latest changes: 2025-09-17                                                      *
     !*                                                                                      *
     !****************************************************************************************
     subroutine SRgcomb(X, lnGaC, NK, XieC)
+    
+    use ModSystemProp, only : nneutral, ITAB
 
     implicit none
     !interface variables:
@@ -487,34 +533,36 @@ logical,private :: gcombrefresh
     real(wp),dimension(:),intent(in) :: X
     real(wp),dimension(:),intent(out) :: lnGaC, XieC
     !local variables:
-    integer :: nnp1  
+    integer :: nnp1, i
     real(wp) :: QSSref, RSSref, QSS, RSS, Xsolvtot, XLSref
     real(wp),dimension(NK) :: B, Xsolv, ViV, phi, phiQ, QIQ, VQR !!, Xnew
     !.................................................................................
     nnp1 = nneutral+1
     QSS = sum(QS(:)*X(:))
     RSS = sum(RS(:)*X(:))
-    ViV(:) = RS(:)/RSS ! the van der Waals volume of molecule to average volume ratio of (1:NK) molecules
+    ViV(:) = RS(:)/RSS                                          !the van der Waals volume of molecule to average volume ratio of (1:NK) molecules
 
     !orig. UNIFAC-equivalent formulation as described by Voutsas and Tassios (1997), Ind. Eng. Chem. Res. 1997, 36, 4965-4972
     VQR(:) = ViV(:)*QSS/QS(:)
-    lnGaC(:) = log(ViV(:)) +1.0_wp -ViV(:) -5.0_wp*QS(:)*(log(VQR(:)) +1.0_wp -VQR(:))
+    lnGaC(:) = log(ViV(:)) + 1.0_wp -ViV(:) - 5.0_wp*QS(:)*(log(VQR(:)) + 1.0_wp -VQR(:))
     
-    !Calculation of "lnGaC infinite" for the ions. Water is taken as the reference solvent (usually):
-    !decide whether water or the solvent mixture is the reference solvent:
-    if (solvmixrefnd) then  !solvent mixture as reference for solutes (ions)
+    !Calculation of "lnGaC infinite" for the ions. 
+    !Water is taken as the reference solvent (usually).
+    !Decide whether water or the solvent mixture is the reference solvent:
+    if (solvmixrefnd) then                                      !solvent mixture as reference for solutes (ions)
         lnGaCinf = 0.0_wp
         Xsolvtot = sum(X(1:nneutral))
         Xsolv(1:nneutral) = X(1:nneutral)/Xsolvtot
         QSSref = sum(QS(1:nneutral)*Xsolv(1:nneutral))
         RSSref = sum(RS(1:nneutral)*Xsolv(1:nneutral))
         XLSref = sum(XL(1:nneutral)*Xsolv(1:nneutral))
-        B(nnp1:NK) = 5.0_wp*QS(nnp1:NK)*log(QS(nnp1:NK)/QSSref*RSSref/RS(nnp1:NK)) +XL(nnp1:NK) -RS(nnp1:NK)/RSSref*XLSref
+        B(nnp1:NK) = 5.0_wp*QS(nnp1:NK)*log(QS(nnp1:NK)/QSSref*RSSref/RS(nnp1:NK)) + XL(nnp1:NK) - RS(nnp1:NK)/RSSref*XLSref
         lnGaCinf(nnp1:NK) = log(RS(nnp1:NK)/RSSref) +B(nnp1:NK)
-    else if (gcombrefresh) then     !water is the reference solvent for solutes (ions); 
-                                    !GAMCinf is a constant for the ions of the system and needs to be calculated only at the first call.
+        
+    else if (gcombrefresh) then                                 !water is the reference solvent for solutes (ions); 
+                                                                !GAMCinf is a constant for the ions of the system and needs to be calculated only at the first call.
         lnGaCinf = 0.0_wp
-        B(nnp1:NK) = 5.0_wp*QS(nnp1:NK)*log(QS(nnp1:NK)/1.40_wp*0.92_wp/RS(nnp1:NK)) +XL(nnp1:NK) -RS(nnp1:NK)/0.92_wp*(-2.32_wp)
+        B(nnp1:NK) = 5.0_wp*QS(nnp1:NK)*log(QS(nnp1:NK)/1.40_wp*0.92_wp/RS(nnp1:NK)) + XL(nnp1:NK) - RS(nnp1:NK)/0.92_wp*(-2.32_wp)
         lnGaCinf(nnp1:NK) = log(RS(nnp1:NK)/0.92_wp) +B(nnp1:NK)
         gcombrefresh = .false.
     endif
@@ -525,17 +573,22 @@ logical,private :: gcombrefresh
         phi = X*ViV !volume based component fraction
         QiQ = QS(1:NK)/QSS
         phiQ = X*QiQ
+        
         !undefined ln_eta0 would contain negative values of large magnitude
-        if (all(ln_eta0(1:nneutral) > -7777.0_wp)) then  !pure-component values available (replaced NK with nneutral (JL november 6)
+        if (all(ln_eta0(1:nneutral) > -7777.0_wp)) then         !pure-component values available
             XieC(1:nneutral) = (exp(lnGaC(1:nneutral))*X(1:nneutral))*ln_eta0(1:nneutral)     
             if (isPEGsystem) then 
-                !with PEG, limit combinatorial activity coeff. to between 0 and 100 for viscosity contribution:
-                XieC(1:nneutral) = min(exp(lnGaC(1:nneutral)), 1.0E2_wp)*X(1:nneutral)*ln_eta0(1:nneutral)
+                do i = 1,nneutral
+                    if (ITAB(i,154) > 1) then                   !molecules with more than one oxyethylene group are flagged for special treatment
+                        XieC(i) = min(exp(lnGaC(i))*X(i), 1.0E0_wp)*ln_eta0(i)  !for oxyethylene-containing components, limit combinatorial activity to between 0 and 1 for viscosity contribution
+                    endif
+                enddo
             endif
         else
             XieC = -55555.5_wp
         endif
-    else !a default value indicating "NO viscosity calc."
+        
+    else                                                        !a default value indicating "NO viscosity calc."
         XieC = -99999.9_wp
     endif
     !--------------------------------------------------------
@@ -569,8 +622,9 @@ logical,private :: gcombrefresh
     integer,intent(in) :: NK
     integer :: J, JJ, I, J1, L, L1 !, unitm
     real(wp),parameter :: deps = epsilon(1.0_wp)
+    real(wp),parameter :: arr_checkval = -8.88888E+05
     real(wp) :: Roxyethylene
-    !.....................end of variable declarations.............................
+    !...........................
 
     if (allocated(parA)) then
         deallocate(parA, parB, parC, PsiT, PsiT_dimflip, SRNY, SRNY_dimflip, Nvis, R, Q, XL, RS, QS, lnGaCinf, lnGaRref, XieRref)
@@ -584,13 +638,13 @@ logical,private :: gcombrefresh
     R = 0.0_wp
     Q = 0.0_wp
     XL = 0.0_wp
-    RS = 0.0_wp  ! sum of the Van der Waals group volumes --> component molar volume
-    QS = 0.0_wp  ! sum of the Van der Waals group surface area --> component molar surface area
+    RS = 0.0_wp                                                 !sum of the Van der Waals group volumes --> component molar volume
+    QS = 0.0_wp                                                 !sum of the Van der Waals group surface area --> component molar surface area
     SRNY = 0
     SRNY_dimflip = 0
     Nvis = 0.0_wp
     lastTK = 0.0_wp
-    gcombrefresh = .true. !if .true., the infinite dilution reference value for the SR combinatorial part of ions will be calculated in SRgcomb and saved for subsequent use.
+    gcombrefresh = .true.                                       !if .true., the infinite dilution reference value for the SR combinatorial part of ions will be calculated in SRgcomb and saved for subsequent use.
 
     !populate array SRNY for SR part
     do J = 1,NG
@@ -598,23 +652,23 @@ logical,private :: gcombrefresh
         R(J) = SR_RR(JJ)
         Q(J) = SR_QQ(JJ)
         SRNY(:,J) = ITABsr(:,JJ)
-        if (JJ == 154) then !special PEG-group present in the mixture, so it is a "PEG system"
+        if (JJ == 154) then                                     !special PEG-group present in the mixture, so it is a "PEG system"
             Roxyethylene = SR_RR(JJ)
         endif
-        SRNY_dimflip(J,:) = SRNY(:,J) !same data but in flipped-dimension storage order for use with better memory alignment in certain equations
+        SRNY_dimflip(J,:) = SRNY(:,J)                           !same data but in (transpose) flipped-dimension storage order for use with better memory alignment in certain equations
     enddo
 
     !assign interaction parameters between different subgroups from  main group interaction parameter matrix.
     !loop only over non-electrolyte (neutral solvent) groups as the interactions of neutral groups with ions is defined to be always 0.0_wp in SR-part.
     do J = 1,NGN
-        J1 = Imaingroup(maingrindexofsubgr(J)) !this maingrindexofsubgr array assigns the index of the main group (of the current mixture) associated with neutral subgroup index j
+        J1 = Imaingroup(maingrindexofsubgr(J))                  !this maingrindexofsubgr array assigns the index of the main group (of the current mixture) associated with neutral subgroup index j
         do L = 1,NGN
             L1 = Imaingroup(maingrindexofsubgr(L))
             parA(L,J) = ARR(L1,J1)
             parB(L,J) = BRR(L1,J1)
             parC(L,J) = CRR(L1,J1)
             !Apply check to avoid using SR inteaction parameters that are not assigned correctly or were not estimated yet:
-            if (ARR(L1,J1) < -888887.0_wp) then  !this parameter has not yet been estimated nor is a fitparameter set, so don't use it!!
+            if (ARR(L1,J1) < arr_checkval) then                 !this parameter has not yet been estimated nor is a fitparameter set, so don't use it!!
                 !$OMP critical
                 errorflagmix = 14
                 write(*,*) ""
@@ -626,7 +680,7 @@ logical,private :: gcombrefresh
                 write(*,*) "L1, J1, ARR(L1,J1): ", L1, J1, ARR(L1,J1)
                 write(*,*) "======================================================="
                 write(*,*) ""
-                read(*,*)               !to read(*,*) and wait for user interaction
+                read(*,*)                                       !to read(*,*) and wait for user interaction
                 !$OMP end critical
             endif
             if (L1 == J1 .and. abs(ARR(L1,J1)) > deps) then     !self-interactions among main groups should always be set to 0.0_wp
@@ -641,12 +695,12 @@ logical,private :: gcombrefresh
                 write(*,*) "L1, J1, ARR(L1,J1): ", L1, J1, ARR(L1,J1)
                 write(*,*) "======================================================="
                 write(*,*) ""
-                read(*,*)               !to read(*,*) and wait for user interaction
+                read(*,*)                                       !to read(*,*) and wait for user interaction
                 !$OMP end critical
             endif
             select case(nd)
-            case(500:800, 2000:2500)     !potentially used for 3-parameter AIOMFAC (UNIFAC) part for non-electrolyte systems
-                if (BRR(L1,J1) < -888887.0_wp .or. CRR(L1,J1) < -888887.0_wp) then    !this parameter has not yet been estimated nor is a fitparameter set, so don't use it!!
+            case(500:800, 2000:2500)                            !potentially used for 3-parameter AIOMFAC (UNIFAC) part for non-electrolyte systems
+                if (BRR(L1,J1) < arr_checkval .or. CRR(L1,J1) < arr_checkval) then    !this parameter has not yet been estimated nor is a fitparameter set, so don't use it!!
                     !$OMP critical
                     errorflagmix = 15
                     write(*,*) ""
@@ -659,7 +713,7 @@ logical,private :: gcombrefresh
                     write(*,*) "BRR(L1,J1), CRR(L1,J1): ", BRR(L1,J1), CRR(L1,J1)
                     write(*,*) "======================================================="
                     write(*,*) ""
-                    read(*,*) !to read(*,*) and wait for user interaction
+                    read(*,*)                                   !to read(*,*) and wait for user interaction
                     !$OMP end critical
                 endif
             end select
@@ -668,28 +722,28 @@ logical,private :: gcombrefresh
 
     do I = 1,NK
         do J = 1,NG
-            RS(I) = RS(I) +SRNY_dimflip(J,I)*R(J) !RS(I) +SRNY(I,J)*R(J)
-            QS(I) = QS(I) +SRNY_dimflip(J,I)*Q(J) !QS(I) +SRNY(I,J)*Q(J)
-            if (isPEGsystem) then !PEG-polymer solution; use special subgroups and some scaled parameters
+            RS(I) = RS(I) +SRNY_dimflip(J,I)*R(J)               
+            QS(I) = QS(I) +SRNY_dimflip(J,I)*Q(J)
+            if (isPEGsystem) then                               !PEG-polymer solution; use special subgroups and some scaled parameters
                 if (AllSubs(J) == 154 .and. SRNY_dimflip(J,I) > 0) then  !oxyethylene group in PEG polymer, so use a special parametrisation for RS(I) in those cases (idea adapted from Ninni et al., (1999), but implemented in different form, basically to fit RS(I)/QS(I) of oxyethylene group rather than taking fixed Bondi (1964) values.):
-                    RS(I) = RS(I) -SRNY_dimflip(J,I)*R(J) !reset above set value for this group.
-                    R(J) = 1.381433_wp   !fitSRparam(211)    
+                    RS(I) = RS(I) -SRNY_dimflip(J,I)*R(J)       !reset above set value for this group.
+                    R(J) = 1.381433_wp                          !fitSRparam(211)    
                     RS(I) = RS(I) + SRNY_dimflip(J,I)*R(J)
                     !adjust Q(CH2OCH2) value according to the relation between z, RS(I) and QS(I) described in Vera et al. (1977) for straight chain molecules. The expression below for Q(CH2OCH2) is dependent on the overall chain length of the PEG polymer.
-                    QS(I) = QS(I) -SRNY_dimflip(J,I)*Q(J) !reset above set value for this group.
-                    Q(J) = 3.0_wp        !fitSRparam(212) !as a test with limiting ratio of Q(J)/R(J) for a large number of monomer units
-                    QS(I) = QS(I) + SRNY_dimflip(J,I)*Q(J)  !CH2OCH2[PEG]
+                    QS(I) = QS(I) -SRNY_dimflip(J,I)*Q(J)       !reset above set value for this group.
+                    Q(J) = 3.0_wp                               !fitSRparam(212)   !as a test with limiting ratio of Q(J)/R(J) for a large number of monomer units
+                    QS(I) = QS(I) + SRNY_dimflip(J,I)*Q(J)      !CH2OCH2[PEG]
                 endif
             endif
         enddo
-        XL(I) = 5.0_wp*(RS(I)-QS(I)) -RS(I) + 1.0_wp  !corresponds to l(i) eq. (3) in UNIFAC Fredenslund et al. (1975) paper
+        XL(I) = 5.0_wp*(RS(I) - QS(I)) - RS(I) + 1.0_wp         !corresponds to l(i) eq. (3) in UNIFAC Fredenslund et al. (1975) paper
         !...
         !calculate Nvis for viscosity calculations according to Cao et al. (1993), Ind. Eng. Chem. Res., 32, 2088--2092.
         do J = 1,NG
-            Nvis(J,I) = Q(J)*(0.5_wp*(QS(I)-RS(I))-0.1_wp*(1.0_wp-RS(I)))
+            Nvis(J,I) = Q(J)*(0.5_wp*(QS(I) - RS(I)) - 0.1_wp*(1.0_wp - RS(I)))
         enddo
     enddo
-    
+
     end subroutine SRsystm
 !==========================================================================================================================
 

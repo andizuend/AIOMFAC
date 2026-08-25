@@ -94,10 +94,10 @@ real(wp),dimension(201:topsubno),parameter,private :: lambdaIN = real([ &
     subroutine LR_MR_activity()
 
     use ModSystemProp, only : anionZ, cationZ, Imaingroup, ITAB, ITABMG, maingrindexofsubgr, Mmass, &
-        & nd, nelectrol, NGI, NGN, nneutral, solvmixrefnd, SolvSubs, SubGroupMW, errorflag_clist
+        & nelectrol, NGI, NGN, nneutral, solvmixrefnd, SolvSubs, SubGroupMW, errorflag_clist
     use ModAIOMFACvar, only : DebyeHrefresh, galrln, gamrln, gclrln, gcmrln, gnlrln, gnmrln, &
         & Ionicstrength, meanSolventMW, SumIonMolalities, SMA, SMC, solvmixcorrMRa, solvmixcorrMRc, &
-        & T_K, Tmolal, TmolalSolvmix, wtf, XN
+        & T_K, Tmolal, TmolalSolvmix, XN
 
     implicit none
     !Local Variables
@@ -1303,25 +1303,26 @@ real(wp),dimension(201:topsubno),parameter,private :: lambdaIN = real([ &
     omega2TAB(21,3) = 0.762961E0_wp
     TABhighestwtf(21,3) = 0.54E0_wp
 
-    !Ca++ <-> I- 
+    !Ca++ <-> I-
     bTABAC(21,4) = 7.5976411109783837E-01_wp
-    cTABAC(21,4) = 1.1031941621629198E0_wp  
+    cTABAC(21,4) = 1.1031941621629198E0_wp
     cn1TABAC(21,4) = 0.0E0_wp
     cn2TABAC(21,4) = -6.7243764463453726E-01_wp
     omega2TAB(21,4) = 1.5180445738268933E0_wp
 
-    !Ca++ <-> NO3-        4P MAR 2006
-    bTABAC(21,5) = 0.163281976992298E0_wp 
-    cTABAC(21,5) = 0.203681108454362E0_wp  
+    !Ca++ <-> NO3-        5P DEC 2025
+    bTABAC(21,5) = 5.34675E-02_wp
+    cTABAC(21,5) = 4.19890E-01_wp
+    omegaTAB(21,5) = 9.85723E-01_wp
     cn1TABAC(21,5) = 0.0E0_wp
-    cn2TABAC(21,5) = -7.545167774717340E-02_wp
-    omega2TAB(21,5) = 1.21090585828713E0_wp
-    TABhighestwtf(21,5) = 0.50E0_wp 
-    TABKsp(21,5) = 2100.0E0_wp ![molal basis]  
+    cn2TABAC(21,5) = 2.27190E-02_wp
+    omega2TAB(21,5) = 3.93328E-01_wp
+    TABhighestwtf(21,5) = 0.77_wp
+    TABKsp(21,5) = 2100.0_wp    ![molal basis]  (Apelblat and Korin state the aqueous solubility limit at 298 K as 8.675 molal)
 
     !Ca++ <-> IO3-        estimated by Ca++ <-> NO3-
     bTABAC(21,6) = bTABAC(21,5)
-    cTABAC(21,6) = cTABAC(21,5) 
+    cTABAC(21,6) = cTABAC(21,5)
     cn1TABAC(21,6) = cn1TABAC(21,5)
     cn2TABAC(21,6) = cn2TABAC(21,5)
     omega2TAB(21,6) = omega2TAB(21,5)

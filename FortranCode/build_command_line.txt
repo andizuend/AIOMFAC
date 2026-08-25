@@ -1,18 +1,18 @@
 #instead of using the makefile (make), the following command lines should work with AIOMFAC-web 3.10
 
-# Also: on CentOS or RedHat (RHEL) (i.e. RedHat-based, but not on Debian-based linux), execute the following command first:  
-or e.g. with version 12 or newer:
-scl enable gcc-toolset-12 bash
+# Also: on CentOS or RedHat (RHEL) (i.e. RedHat-based, but not on Debian-based linux), execute the following command first to use a recent gfortran version (e.g. 15) or newer:
+scl enable gcc-toolset-15 bash
 
 
 ## using gfortran in a Linux terminal.
 ## 1.) navigate to the local AIOMFAC Fortran source code directory
 ## 2.) execute the below command line
+## 3.) may need to copy AIOMFAC-web.out to a different location
 
-gfortran -o AIOMFAC-web.out -O3 -ffree-line-length-none  Mod_kind_param.f90 zerobracket_inwards.f90 brent.f90 ModStringFunctions.f90 ModSystemProp.f90 Mod_MINPACK.f90 ModAIOMFACvar.f90 ModSubgroupProp.f90 ModMRpart.f90 ModCompScaleConversion.f90 ModNumericalTransformations.f90 Mod_InputOutput.f90 ModComponentNames.f90 ModPureViscosPar.f90 ModSRparam.f90 ModViscEyring.f90 ModSRunifac.f90 ModCalcActCoeff.f90 SubModDefSystem.f90 ModZSRvisc.f90 ModFiniteDiffSens.f90 SubModDissociationEquil.f90 Main_IO_driver.f90 AIOMFAC_inout.f90
+gfortran -o AIOMFAC-web.out -O3 -ffree-line-length-none -fstack-protector-strong -fbounds-check Mod_kind_param.f90  ModStringFunctions.f90 ModSystemProp.f90 Mod_MINPACK.f90 ModSubgroupProp.f90 ModCompScaleConversion.f90 ModSRparam.f90 ModAIOMFACvar.f90 ModMRpart.f90 ModOScommands.f90 ModPureCompProp.f90 ModComponentNames.f90 ModNumericalTransformations.f90 Mod_InputOutput.f90 ModViscEyring.f90 ModPureViscosPar.f90 ModSRunifac.f90 SubModDefSystem.f90 ModCalcActCoeff.f90 ModZSRvisc.f90 SubModDissociationEquil.f90 ModFiniteDiffSens.f90 zerobracket_inwards.f90 brent.f90 AIOMFAC_inout.f90 Main_IO_driver.f90
 
 ## for debugging with gfortran, use e.g.:
-gfortran -o AIOMFAC-web.out -O0 -ffree-line-length-none -Wall -fcheck=all  Mod_kind_param.f90 zerobracket_inwards.f90 brent.f90 ModStringFunctions.f90 ModSystemProp.f90 Mod_MINPACK.f90 ModAIOMFACvar.f90 ModSubgroupProp.f90 ModMRpart.f90 ModCompScaleConversion.f90 ModNumericalTransformations.f90 Mod_InputOutput.f90 ModComponentNames.f90 ModPureViscosPar.f90 ModSRparam.f90 ModViscEyring.f90 ModSRunifac.f90 ModCalcActCoeff.f90 SubModDefSystem.f90 ModZSRvisc.f90 ModFiniteDiffSens.f90 SubModDissociationEquil.f90 Main_IO_driver.f90 AIOMFAC_inout.f90
+gfortran -o AIOMFAC-web.out -O0 -ffree-line-length-none -Wall -fcheck=all -fstack-protector-strong  Mod_kind_param.f90 ModStringFunctions.f90 ModSystemProp.f90 Mod_MINPACK.f90 ModSubgroupProp.f90 ModCompScaleConversion.f90 ModSRparam.f90 ModAIOMFACvar.f90 ModMRpart.f90 ModOScommands.f90 ModPureCompProp.f90 ModComponentNames.f90 ModNumericalTransformations.f90 Mod_InputOutput.f90 ModViscEyring.f90 ModPureViscosPar.f90 ModSRunifac.f90 SubModDefSystem.f90 ModCalcActCoeff.f90 ModZSRvisc.f90 SubModDissociationEquil.f90 ModFiniteDiffSens.f90 zerobracket_inwards.f90 brent.f90 AIOMFAC_inout.f90 Main_IO_driver.f90
 
 
 
@@ -22,4 +22,4 @@ gfortran -o AIOMFAC-web.out -O0 -ffree-line-length-none -Wall -fcheck=all  Mod_k
 ## 2.) navigate to your local AIOMFAC Fortran source code directory
 ## 3.) execute the below command line
 
-ifx /o AIOMFAC-web.exe /O3  Mod_kind_param.f90 zerobracket_inwards.f90 brent.f90 ModStringFunctions.f90 ModSystemProp.f90 Mod_MINPACK.f90 ModAIOMFACvar.f90 ModSubgroupProp.f90 ModMRpart.f90 ModCompScaleConversion.f90 ModNumericalTransformations.f90 Mod_InputOutput.f90 ModComponentNames.f90 ModPureViscosPar.f90 ModSRparam.f90 ModViscEyring.f90 ModSRunifac.f90 ModCalcActCoeff.f90 SubModDefSystem.f90 ModZSRvisc.f90 ModFiniteDiffSens.f90 SubModDissociationEquil.f90 Main_IO_driver.f90 AIOMFAC_inout.f90
+ifx /o AIOMFAC-web.exe /O3 /gen-interfaces  Mod_kind_param.f90 ModStringFunctions.f90 ModSystemProp.f90 Mod_MINPACK.f90 ModSubgroupProp.f90 ModCompScaleConversion.f90 ModSRparam.f90 ModAIOMFACvar.f90 ModMRpart.f90 ModOScommands.f90 ModPureCompProp.f90 ModComponentNames.f90 ModNumericalTransformations.f90 Mod_InputOutput.f90 ModViscEyring.f90 ModPureViscosPar.f90 ModSRunifac.f90 SubModDefSystem.f90 ModCalcActCoeff.f90 ModZSRvisc.f90 SubModDissociationEquil.f90 ModFiniteDiffSens.f90 zerobracket_inwards.f90 brent.f90 AIOMFAC_inout.f90 Main_IO_driver.f90

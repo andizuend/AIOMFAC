@@ -28,7 +28,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
 !*                                                                                      *
 !*   -> created:        2011  (this file)                                               *
-!*   -> latest changes: 2025-08-22                                                      *
+!*   -> latest changes: 2026-08-24                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -48,11 +48,16 @@ program Main_IO_driver
 
 !module variables:
 use Mod_kind_param, only : wp
-use ModSystemProp, only : errorflag_clist, errorflagmix, idCO2, nindcomp, NKNpNGS, SetSystem, topsubno, waterpresent
+use ModSystemProp, only : errorflag_clist, errorflagmix, idCO2, maxsmileslength, nindcomp, &
+    & NKNpNGS, SetSystem, topsubno, waterpresent
 use ModSubgroupProp, only : SubgroupAtoms, SubgroupNames
 use ModMRpart, only : MRdata
 use ModSRparam, only : SRdata
-use Mod_InputOutput, only : Output_TXT, Output_HTML, RepErrorWarning, ReadInputFile
+use Mod_InputOutput, only : Output_TXT, Output_HTML, RepErrorWarning, ReadInputFile, armeliON, &
+    & cpsmiles
+use ModPureCompProp, only : load_purecomp_table
+use ModComponentNames, only : nametab
+use ModOScommands, only : isWindowsOS, isWindowsPlatform
 
 implicit none
 !set preliminary input-related parameters:
@@ -62,8 +67,8 @@ integer,parameter :: ninpmax = 51                           !set the maximum num
 character(len=4) :: VersionNo
 character(len=200) :: filename
 character(len=3000) :: filepath, folderpathout, fname, txtfilein  
-character(len=200),dimension(:),allocatable :: cpnameinp    !list of assigned component names (from input file)
-character(len=200),dimension(:),allocatable :: outnames
+character(len=7+maxsmileslength),dimension(:),allocatable :: cpnameinp    !list of assigned component names (from input file)
+character(len=7+maxsmileslength),dimension(:),allocatable :: outnames
 integer :: allocstat, errorind, i, nc, ncp, npoints, nspecies, nspecmax, pointi, &
     & unito, warningflag, warningind, watercompno
 integer,dimension(ninpmax) :: px
@@ -80,7 +85,7 @@ logical,dimension(size(errorflag_clist)) :: errflag_list
 !
 !==== INITIALIZATION section =======================================================
 !
-VersionNo = "3.13"      !AIOMFAC-web version number (change here if minor or major changes require a version number change)
+VersionNo = "3.14"      !AIOMFAC-web version number (change here if minor or major changes require a version number change)
 verbose = .true.        !if true, some debugging information will be printed to the unit "unito" (errorlog file)
 nspecmax = 0
 errorind = 0            !0 means no error found
@@ -90,14 +95,16 @@ warningind = 0          !0 means no warnings found
 !
 !read command line for text-file name (which contains the input parameters to run the AIOMFAC progam):
 call get_command_argument(1, txtfilein)
-if (len_trim(txtfilein) < 4) then               !no command line argument; use specific input file for tests;
-    txtfilein = './Inputfiles/input_0003.txt'   !just use this for debugging with a specific input file, otherwise comment out;
+if (len_trim(txtfilein) < 4) then               !no command line argument; so, use specific input file for tests
+    txtfilein = './Inputfiles/input_0001.txt'   !just use this for debugging with a specific input file, otherwise comment out
 endif
 filepath = adjustl(trim(txtfilein))
 write(*,*) ""
 write(*,'(A,A)') "MESSAGE from AIOMFAC-web: program started, command line argument 1 = ", trim(filepath)
 write(*,*) ""
 allocate(cpsubg(ninpmax,topsubno), cpnameinp(ninpmax), composition(maxpoints,ninpmax), T_K(maxpoints), STAT=allocstat)
+!--
+call nametab()  !initialize component names matched to SMILES equivalents
 !--
 call ReadInputFile(filepath, folderpathout, filename, ninpmax, maxpoints, unito, verbose, ncp, npoints, &
     & warningind, errorind, filevalid, cpnameinp, cpsubg, T_K, composition, xinputtype)
@@ -110,13 +117,24 @@ if (filevalid) then
         write(unito,*) ""
         write(unito,'(A)') "MESSAGE from AIOMFAC: input file read, starting AIOMFAC mixture definitions and initialization... "
         write(unito,*) ""
+        write(unito,'(A,A)') "MESSAGE from AIOMFAC: input filepath is: ", trim(filepath)
+        write(unito,*) ""
     endif
+    
     !load the MR and SR interaction parameter data:
     call MRdata()         !initialize the MR data for the interaction coeff. calculations
     call SRdata()         !initialize data for the SR part coefficient calculations
     call SubgroupNames()  !initialize the subgroup names for the construction of component subgroup strings
     call SubgroupAtoms()
-    !--
+    
+    !load the pure-component properties table:
+    if (armeliON) then
+        call load_purecomp_table()          !initialize pure component data for SMILES-PC matching    
+        isWindowsOS = isWindowsPlatform()   !determine whether we are on Windows or Linux (likely)
+    endif
+    !reallocate smiles array to actual number of components:
+    cpsmiles = [cpsmiles(1:ncp)]
+    
     !set mixture system properties (composition-independent properties) based on the data from the input file:
     call SetSystem(1, .true., ncp, cpnameinp(1:ncp), cpsubg(1:ncp,1:topsubno) )
 
@@ -212,12 +230,13 @@ if (filevalid) then
         i = len_trim(filename)
         filename = filename(1:i-3)//"html"
         fname = trim(folderpathout)//trim(filename)
-        call Output_HTML(fname, VersionNo, nspecmax, npoints, watercompno, cpnameinp(1:nspecmax), T_K(1:npoints), &
-            & px(1:nspecmax), out_data, out_viscdata)
+        call Output_HTML(fname, VersionNo, nspecmax, npoints, watercompno, T_K(1:npoints), px(1:nspecmax), &
+            & out_data, out_viscdata)
         !
         !==== TERMINATION section ==========================================================
         !
-        deallocate(inputconc, outputvars, outputviscvars, outnames, out_data, out_viscdata, T_K, cpnameinp, STAT=allocstat)
+        deallocate(inputconc, outputvars, outputviscvars, outnames, out_data, out_viscdata, T_K, &
+            & cpnameinp, cpsmiles, STAT=allocstat)
         if (allocated(compos2)) then
             deallocate(compos2, STAT=allocstat)
         endif
@@ -233,6 +252,7 @@ write(unito,*) "########"
 write(unito,'(A)') "Final error indicator (an entry '00' means no errors found):"
 write(unito,'(I2.2)') errorind
 write(unito,*) "########"
+wait(unito)
 close(unito)    !close the error log-file
 
 write(*,*) ""
@@ -242,3 +262,4 @@ write(*,'(A,I0,/)') "MESSAGE from AIOMFAC: end of program; final error indicator
 !==== the end ======================================================================
 !
 end program Main_IO_driver
+    

@@ -3,7 +3,6 @@ LD = gfortran
 CPPFLAGS = -macro_expand
 #FFLAGS = -O0 -g -gen-interfaces -warn interfaces -traceback -check bounds -c  ##for intel ifx debugging
 #FFLAGS =  -c -O3 -gen-interfaces  ##for release run, intel ifx compiler
-FFLAGS = -c  -O3 -fbounds-check -ffree-line-length-none -Wconversion  ##for use with gfortran compiler
+FFLAGS = -c  -O3 -fbounds-check -ffree-line-length-none -Wconversion -fstack-protector-strong ##for use with gfortran compiler
 LDFLAGS = $(LIBS)
 LIST = -listing
-
