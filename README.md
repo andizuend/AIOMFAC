@@ -44,6 +44,7 @@ AIOMFAC
     ├───OutputFiles
     └───pickle
 ```
+To run the AIOMFAC-web executable program later, the executable file (AIOMFAC-web.out or AIOMFAC-web.exe) will best be copied into the main "AIOMFAC" folder and program execution started relative to that location.
 
 -More info to be added...
 
