@@ -1,6 +1,10 @@
 # AIOMFAC-web, Public Model Code Repository
 
-This public repository provides the AIOMFAC model Fortran code (AIOMFAC-web, version 2.20 or newer) and additional information about building and running the model on your own system. May it be of use to you.
+This public repository provides the AIOMFAC model Fortran code (AIOMFAC-web, version 2.20 and newer) and additional information about building and running the model on your own system. May it be of use to you.
+
+----
+> [!TIP]
+> Click on the <a href="#"><img src="./img/outline_icon.jpg" alt="outline" style="width:3ex"/></a> icon at the top right of this readme file to show the *table of contents* of this file with links to specific sections.
 
 ### License
 All files presented here are covered under the GNU GPL license v3.0. For more information, please read the license file. A brief overview of the viable permissions can be found here: http://choosealicense.com/licenses/.
