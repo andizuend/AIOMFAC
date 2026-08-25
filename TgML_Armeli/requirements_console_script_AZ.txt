@@ -1,0 +1,37 @@
+install the following Python packages, e.g. via "pip install ...".
+for compatibility reasons with the Python pickle code used, one needs to install the specific versions listed below
+------------------------------------------------------------------
+
+AZ notes: 
+- the folders InputFiles and OutputFiles need to exist with permission settings to be able to write files in them temporarily. During normal operation of the program, files will be placed in those folders temporarily and deleted a moment after. That's why they will look empty, but are needed.
+- use with the older Python 3.9, e.g. specific version 3.9.13, for compatibility (best in combination with a venv for this program)
+- first: install Python 3.9 if not already done on the system (consult a guide for your OS if unclear how to do this correctly).
+ 
+- in a command prompt: 
+	[Windows] 	py --list  
+or 
+	[Linux] 	compgen -c python | grep -E '^python[0-9.]+$'
+to see the python versions already installed on the sytem
+	
+- create a virtual environment inside the TgML_Armeli folder; execute command:  
+	[Windows]  		py -3.9 -m venv .venv  
+	[or, on Linux]  python3.9 -m venv .venv
+	
+- activate the virtual environment in the command prompt:  
+[Windows]	.\.venv\Scripts\activate.bat  
+[Linux]		source .venv/bin/activate
+
+- with the activated Python environment, install the specific package versions listed below:
+
+	pip install numpy==1.22.4
+	pip install deepchem==2.5.0
+	pip install rdkit-pypi==2022.3.2.1
+	pip install rdkit==2022.9.1
+	pip install scikit-learn==1.1.1
+	pip install tensorflow-cpu==2.9.0
+
+
+- to run the server version with a watchdog monitoring component, install:
+	pip install watchdog
+
+- Notes (for internal use): for setting up a watchdog process running in the background on a webserver, see the requirements_for_webserver_AZ.txt file;
