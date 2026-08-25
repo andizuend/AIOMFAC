@@ -1,0 +1,35 @@
+Input file for AIOMFAC-web model
+ 
+mixture components:
+----
+component no.:	01
+component name:	'Water'
+subgroup no., qty:	016, 01
+----
+component no.:	02
+component name:	'CO2(aq)'
+subgroup no., qty:	173,	01
+----
+component no.:	03
+component name:	'KOH'
+subgroup no., qty:	203,	01
+subgroup no., qty:	247,	01
+----
+component no.:	04
+component name:	'KHCO3'
+subgroup no., qty:	203,	01
+subgroup no., qty:	250,	01
+----
+component no.:	05
+component name:	'K2CO3'
+subgroup no., qty:	203,	02
+subgroup no., qty:	262,	01
+----
+++++
+mixture composition and temperature:
+mass fraction?	0
+mole fraction?	1
+----
+point,	T_K,	cp02,	cp03,	cp04,	cp05
+01	298,	0.0,	0.018,	0.00000001,	0
+====
