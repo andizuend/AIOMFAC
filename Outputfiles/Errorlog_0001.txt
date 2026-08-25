@@ -1,0 +1,97 @@
+ 
+MESSAGE from AIOMFAC: input file exists.
+ 
+MESSAGE from AIOMFAC: input file has passed the first line text validation and will be read.
+ 
+MESSAGE from AIOMFAC: reading component data from input file.
+ 
+MESSAGE from AIOMFAC: found component [Water] at cpno = 1
+ 
+MESSAGE from AIOMFAC: found component [2-Butanol] at cpno = 2
+ 
+MESSAGE from AIOMFAC: identified smiles = CCC(C)O at component cpno = 2
+ 
+MESSAGE from AIOMFAC: found component [1-Hexanol] at cpno = 3
+ 
+MESSAGE from AIOMFAC: identified smiles = CCCCCCO at component cpno = 3
+ 
+MESSAGE from AIOMFAC: found component [2-Pentanol] at cpno = 4
+ 
+MESSAGE from AIOMFAC: identified smiles = CCCC(C)O at component cpno = 4
+ 
+MESSAGE from AIOMFAC: found component [smiles CC(C)CCOCCO] at cpno = 5
+ 
+MESSAGE from AIOMFAC: identified smiles = CC(C)CCOCCO at component cpno = 5
+ 
+MESSAGE from AIOMFAC: found component [NaCl] at cpno = 6
+ 
+MESSAGE from AIOMFAC: component data read.
+MESSAGE from AIOMFAC: number of components: 6
+ 
+MESSAGE from AIOMFAC: composition points read.
+MESSAGE from AIOMFAC: number of points: 12
+ 
+MESSAGE from AIOMFAC: input file read, starting AIOMFAC mixture definitions and initialization... 
+ 
+MESSAGE from AIOMFAC: input filepath is: .\Inputfiles\input_0001.txt
+ 
+ 
+MESSAGE from AIOMFAC: mixture defined, calculating composition points... 
+ 
+ 
+ =======================================================
+AIOMFAC WARNING 10: Temperature range related.
+At least one data point has a set temperature outside of
+the recommended range for model calculations of 
+electrolyte-containing mixtures. This may be intended, 
+but caution is advised as AIOMFAC is not designed to  
+perform well at this temperature.
+ Data point no.:            9
+ =======================================================
+ 
+ 
+ =======================================================
+AIOMFAC WARNING 10: Temperature range related.
+At least one data point has a set temperature outside of
+the recommended range for model calculations of 
+electrolyte-containing mixtures. This may be intended, 
+but caution is advised as AIOMFAC is not designed to  
+perform well at this temperature.
+ Data point no.:           10
+ =======================================================
+ 
+ 
+ =======================================================
+AIOMFAC WARNING 10: Temperature range related.
+At least one data point has a set temperature outside of
+the recommended range for model calculations of 
+electrolyte-containing mixtures. This may be intended, 
+but caution is advised as AIOMFAC is not designed to  
+perform well at this temperature.
+ Data point no.:           11
+ =======================================================
+ 
+ 
+ =======================================================
+AIOMFAC WARNING 10: Temperature range related.
+At least one data point has a set temperature outside of
+the recommended range for model calculations of 
+electrolyte-containing mixtures. This may be intended, 
+but caution is advised as AIOMFAC is not designed to  
+perform well at this temperature.
+ Data point no.:           12
+ =======================================================
+ 
+................................................................................
+MESSAGE from AIOMFAC: computations successfully performed.
+Output file, AIOMFAC_output_0001.txt created at path: .\Outputfiles/
+................................................................................
+ +-+-+-+-+
+Final warning indicator (an entry '00' means no warnings found):
+10
+ +-+-+-+-+
+ 
+ ########
+Final error indicator (an entry '00' means no errors found):
+00
+ ########
