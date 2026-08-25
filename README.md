@@ -25,9 +25,30 @@ All files presented here are covered under the GNU GPL license v3.0. For more in
 > [!NOTE] 
 > The following steps are first outlined for a Windows 64-bit installation (denoted by steps tagged as [Windows]). Equivalent steps are also shown for installation on a Linux machine (denoted by tag [Linux]). The Linux steps were tested with RHEL v8.1; the details for other Linux distributions may differ slightly.
 
-### (1) Relative folder structure required
-To be added...
+### (1) Relative folder structure
+Copy/source the AIOMFAC folders and contained files from this repository to your local project.
+On Linux, the main folder structure should look as illustrated below (not showing all subfolders of the .venv directory). On Windows the structure is the same but the folders inside .venv differ. The .venv content will get generated automatically; see step (2) below.
+
+```mermaid
+graph TD
+    AIOMFAC[AIOMFAC] --> Auxiliary;
+    AIOMFAC --> Fortran_code;
+    AIOMFAC --> Inputfiles;
+    AIOMFAC --> Outputfiles;
+    AIOMFAC --> TgML_Armeli[TgML_Armeli];
+    TgML_Armeli --> .venv[.venv];
+    .venv --> bin;
+    .venv --> lib;
+    .venv --> include;
+    TgML_Armeli --> InputFiles;
+    TgML_Armeli --> OutputFiles;
+    TgML_Armeli --> pickle;
+```
+
+-To be added...
 
 ----
 ## Quick guide to running AIOMFAC from a command prompt
 If all you wish to do is to run the AIOMFAC program for your own system of components, this is a relatively straightforward task. The following inputs need to be provided.
+
+-To be added...
