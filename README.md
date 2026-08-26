@@ -18,8 +18,8 @@ If you use any of our AIOMFAC code in your own projects / code, following the GN
 All files presented here are covered under the GNU GPL license v3.0. For more information, please read the license file. A brief overview of the viable permissions can be found here: http://choosealicense.com/licenses/.
 
 ## Dependencies
-- Starting with AIOMFAC-web v3.14, which supports pure-component viscosity predictions via a machine learning method implemented in Python, there are several specific Python packages that will need to be installed in a dedicated virtual environment (see installation instructions below).
-- The Fortran code is dependency-free, except for requiring a compiler supporting the Fortran 2008 standard (or newer). For example, gfortran v9 and newer or the Intel oneAPI ifx compiler.
+- Starting with AIOMFAC-web v3.14, which supports pure-component viscosity predictions via a machine learning method implemented in Python, there are several specific Python packages that will need to be installed alongside the Fortran program using a dedicated virtual environment (see installation instructions below).
+- The Fortran code itself is dependency-free. It requires a compiler supporting the Fortran 2008 standard (or newer). For example, gfortran v9 and newer or the Intel oneAPI ifx compiler.
 
 ## Installation instructions
 > [!NOTE] 
