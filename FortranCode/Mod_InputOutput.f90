@@ -76,7 +76,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     subroutine ReadInputFile(filepath, folderpathout, filename, ninpmax, maxpoints, unito, verbose, &
         & ncp, npoints, warningind, errorind, filevalid, cpnameinp, cpsubg, T_K, composition, xinputtype)
 
-    use ModSystemProp, only : topsubno, errorflag_clist
+    use ModSystemProp, only : topsubno
     use ModComponentNames, only : NKname, NKsmiles
 
     implicit none
@@ -90,17 +90,18 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     integer,intent(out) :: ncp, npoints
     integer,intent(inout) :: warningind, errorind
     logical,intent(out) :: filevalid
-    character(len=7+maxsmileslength),dimension(:),intent(out) :: cpnameinp    !list of assigned component names (from input file)
-    integer,dimension(:,:),intent(out) :: cpsubg                !list of input component subgroups and corresponding subgroup quantities
-    real(wp),dimension(:),intent(out) :: T_K                    !temperature of data points in Kelvin
-    real(wp),dimension(:,:),intent(out) :: composition          !array of mixture composition points for which calculations should be run
+    character(len=maxsmileslength +7),dimension(:),intent(out) :: cpnameinp  !list of assigned component names (from input file)
+    integer,dimension(:,:),intent(out) :: cpsubg                        !list of input component subgroups and corresponding subgroup quantities
+    real(wp),dimension(:),intent(out) :: T_K                            !temperature of data points in Kelvin
+    real(wp),dimension(:,:),intent(out) :: composition                  !array of mixture composition points for which calculations should be run
     logical,intent(out) :: xinputtype
     !--
     !local variables:
-    character(len=:),allocatable :: cn                          !this assumes a maximum four-digit component number in the system (max. 9999); to be adjusted otherwise.
+    character(len=:),allocatable :: cn                                  !this assumes a maximum four-digit component number in the system (max. 9999); to be adjusted otherwise.
     character(len=4) :: dashes, equalsigns, pluses, atsigns
     character(len=20) :: dummy, cnformat
     character(len=50) :: txtcheck, inpfolder, outpfolder
+    character(len=maxsmileslength +50) :: cp_inp_name
     character(len=3000) :: errlogfile, fname
     character(len=20),dimension(ninpmax) :: txtarray
     integer :: cpno, i, inpfilesize, istat, k, kinpf, qty, subg, unitx, ind
@@ -112,15 +113,15 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     cpsubg = 0
     cpnameinp = "none"
     composition = 0.0_wp
-    T_K = 298.15_wp             !default temperature in [K]
+    T_K = 298.15_wp                 !default temperature in [K]
     dashes = "----"
     equalsigns = "===="
     pluses = "++++"
     atsigns = "@@@@"
     fileexists = .false.
     filevalid = .false.
-    armeliON = .true.           !default = True
-    newfileformat = .true.      !default = True
+    armeliON = .true.           
+    newfileformat = .true.
     if (.not. allocated(cpsmiles)) allocate(cpsmiles(size(cpnameinp)))
     cpsmiles = ""
 
@@ -137,18 +138,18 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
         stop
     endif
 
-    i = index(filepath, "/input_", BACK = .true.)  !find index position of input file, assuming that all input files start with "input_"
-    if (i < k .and. i > 0) then !found a direcory path in UNIX file path style
+    i = index(filepath, "/input_", BACK = .true.)                       !find index position of input file, assuming that all input files start with "input_"
+    if (i < k .and. i > 0) then                                         !found a direcory path in UNIX file path style
         filename = trim(filepath(i+1:k))
         filepath = trim(filepath(1:k))
-        kinpf = index(filepath(1:i-1), "/", BACK = .true.)  !find folder length of folder containing the input file
+        kinpf = index(filepath(1:i-1), "/", BACK = .true.)              !find folder length of folder containing the input file
     else
         kinpf = 0
         i = index(filepath, "\input_", BACK = .true.) 
-        if (i > 0 .and. i < k) then !found a direcory path in WINDOWS file path style
+        if (i > 0 .and. i < k) then                                     !found a direcory path in WINDOWS file path style
             filename = trim(filepath(i+1:k))
             filepath = trim(filepath(1:k))
-            kinpf = index(filepath(1:i-1), "\", BACK = .true.)  !find folder length of folder containing the input file
+            kinpf = index(filepath(1:i-1), "\", BACK = .true.)          !find folder length of folder containing the input file
         endif
     endif
     if (kinpf > i-1) then
@@ -171,25 +172,26 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     folderpathout = trim(filepath(1:i-(kinpf+1)))//trim(outpfolder)
 
     !use the name of the input file to create a corresponding output file name:
-    i = index(filename, ".txt") !returns starting position of string input within string filename
+    i = index(filename, ".txt")                                         !returns starting position of string input within string filename
     !create an error-logfile associated with the input file name:
     errlogfile = "Errorlog_"//filename(i-4:)
     fname = trim(folderpathout)//trim(errlogfile)
-    open (newunit = unito, file = fname, status ='unknown') !unito is the error / logfile unit
+    open (newunit = unito, file = fname, status ='unknown')             !unito is the error / logfile unit
     !-----
+    
     !check if file exists and read its content if true:
     fname = trim(filepath)
-    inquire(file = fname, EXIST = fileexists, size = inpfilesize) !inpfilesize is the file size in [bytes]
-    !Delete very large files that can only mean uploaded spam content and not actual input:
+    inquire(file = fname, EXIST = fileexists, size = inpfilesize)       !inpfilesize is the file size in [bytes]
+    !delete very large files that can only mean uploaded spam content and not actual input:
     if (fileexists) then
         if (real(inpfilesize, kind=wp) > 50.0_wp*(ninpmax +ninpmax*maxpoints) ) then !likely not a valid input file
             fname = trim(filepath)
             open (newunit = unitx, file = fname, iostat=istat, action='read', status='old')
             read(unitx,*) dummy, dummy, dummy, txtcheck
             close(unitx)
-            if (.not. (txtcheck(1:11) == "AIOMFAC-web")) then !invalid file (likely spam)
+            if (.not. (txtcheck(1:11) == "AIOMFAC-web")) then           !invalid file (likely spam)
                 open (newunit = unitx, file = fname, status='old')
-                close(unitx, status='delete')  !close and delete the file
+                close(unitx, status='delete')                           !close and delete the file
                 fileexists = .false.
             endif
         endif
@@ -197,16 +199,19 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
 
     !attempt to read a supposedly valid input file:
     if (fileexists) then
+        
         if (verbose) then
             write(unito,*) ""
             write(unito,'(A)') "MESSAGE from AIOMFAC: input file exists."
         endif
+        
         fname = trim(filepath)
         open (newunit = unitx, file = fname, iostat=istat, action='read', status='old')
-        if (istat /= 0) then ! an error occurred
+        if (istat /= 0) then                                            ! an error occurred
             write(unito,*) ""
             write(unito,'(A, I0.1)') "MESSAGE from AIOMFAC: an error occurred while trying to open the file! iostat: ", istat
         endif
+        
         !validate file as a correct input text-file (no spam):
         read(unitx,*) dummy, dummy, dummy, txtcheck
         if (txtcheck(1:11) == "AIOMFAC-web") then
@@ -216,65 +221,76 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                 write(unito,'(A)') "MESSAGE from AIOMFAC: input file has passed the first line text validation and will be read."
             endif
             !read input data from file:
-            backspace unitx !jump back to beginning of record (to the beginning of the line)
-            read(unitx,*) dummy, dummy, dummy, dummy, dummy !read first line
-            read(unitx,*)               !read empty line 2
-            read(unitx,*) dummy, dummy  !read line 3
-            read(unitx,*) dummy         !read line 4
-        else !file not valid. It will be closed and deleted below
+            backspace unitx                                             !jump back to beginning of record (to the beginning of the line)
+            read(unitx,*) dummy, dummy, dummy, dummy, dummy             !read first line
+            read(unitx,*)                                               !read empty line 2
+            read(unitx,*) dummy, dummy                                  !read line 3
+            read(unitx,*) dummy                                         !read line 4
+        else                                                            !file not valid. It will be closed and deleted below
             filevalid = .false.
             if (verbose) then
                 write(unito,*) ""
                 write(unito,'(A)') "MESSAGE from AIOMFAC: input file does not pass first line text validation and will be deleted."
             endif
         endif
+        
         !loop over mixture components with variable numbers of subgroups to read (using inner loop):
         if (filevalid) then
             if (verbose) then
                 write(unito,*) ""
                 write(unito,'(A)') "MESSAGE from AIOMFAC: reading component data from input file."
             endif
-            k = max(2, ceiling(log10(real(ninpmax))) ) !determine order of magnitude digits
+            k = max(2, ceiling(log10(real(ninpmax))) )                  !determine order of magnitude digits
             write(dummy,'(I0)') k
-            cnformat = "(I"//trim(dummy)//"."//trim(dummy)//")" !variable format specifier
+            cnformat = "(I"//trim(dummy)//"."//trim(dummy)//")"         !variable format specifier
             allocate(character(len=k) :: cn)
+            
             do ncp = 1,ninpmax
                 if (verbose .and. istat /= 0) then
                     write(unito,*) ""
                     write(unito,'(A, I0.1)') "MESSAGE from AIOMFAC: file end found in input file at ncp = ", ncp
                 endif
-                read(unitx,*,iostat=istat) txtcheck !read only first argument on this line for subsequent check
+                read(unitx,*,iostat=istat) txtcheck                     !read only first argument on this line for subsequent check
                 if (txtcheck(1:4) == pluses .or. txtcheck(1:4) == atsigns .or. istat /= 0) then !"++++" indicates end of this components definition part
                     if (txtcheck(1:4) == atsigns) then
-                        newfileformat = .true.      !"@@@@" indicates new file format
+                        newfileformat = .true.                          !"@@@@" indicates new file format
                     else
-                        newfileformat = .false.     !"++++" indicates file format is outdated
+                        newfileformat = .false.                         !"++++" indicates file format is outdated
                     endif
-                    exit !exit ncp do-loop
-                else !in this case, argument 3 of txtcheck is the component no.:
-                    backspace unitx !jump back to beginning of record (to the beginning of the line)
-                    read(unitx,*) dummy, dummy, cpno !read line with component's number
+                    exit                                                !exit ncp do-loop
+                else                                                    !in this case, argument 3 of txtcheck is the component no.:
+                    backspace unitx                                     !jump back to beginning of record (to the beginning of the line)
+                    read(unitx,*) dummy, dummy, cpno                    !read line with component's number
                 endif
-                read(unitx,*) dummy, dummy, cpnameinp(cpno) !read line with component's name
-                if (len_trim(cpnameinp(cpno)) < 1) then !no component name was assigned, generate a default name
+                read(unitx,*) dummy, dummy, cp_inp_name                 !read line with component's name
+                if (len_trim(cp_inp_name) < 1) then                     !no component name was assigned, generate a default name
                     write(cn,cnformat) cpno
-                    cpnameinp(cpno) = "cp_"//cn
+                    cp_inp_name = "cp_"//cn
                 endif
                 if (verbose) then
                     write(unito,*) ""
-                    write(unito,'(A, A, A, I0.1)') "MESSAGE from AIOMFAC: found component [", trim(cpnameinp(cpno)), "] at cpno = ", cpno
+                    write(unito,'(A, A, A, I0.1)') "MESSAGE from AIOMFAC: found component [", trim(cp_inp_name), "] at cpno = ", cpno
                 endif
-                if (index(cpnameinp(cpno), "smiles") == 1) then !identify smiles components
-                    cpsmiles(cpno) = trim(cpnameinp(cpno)(8:))  !collect smiles string after "smiles "
-                    if (len(cpsmiles(cpno)) > maxsmileslength) then !check that smiles length is < 500 characters
-                        errorflag_clist(25) = .true.            !throw error
+                if (index(cp_inp_name, "smiles") == 1) then             !identify smiles components
+                    if (len_trim(cp_inp_name) > maxsmileslength + 7) then !check that smiles length is < 500 characters
+                        errorind = 25
+                        cpnameinp(cpno) = 'SMILES string too long!'
+                        cpsmiles(cpno) = 'SMILES string long!'
+                        if (verbose) then
+                            write(unito,*) ""
+                            write(unito,'(A, I0.1, A)') "MESSAGE from AIOMFAC: ERROR 25, SMILES string of component cpno = ", cpno, " exceeds allowed maximum length!"
+                        endif
+                    else
+                        cpnameinp(cpno) = trim(cp_inp_name)
+                        cpsmiles(cpno) = trim(cpnameinp(cpno)(8:))      !collect smiles string after "smiles "
+                        if (verbose) then
+                            write(unito,*) ""
+                            write(unito,'(A, A, A, I0.1)') "MESSAGE from AIOMFAC: identified smiles = ", trim(cpsmiles(cpno)), " at component cpno = ", cpno
+                        endif
                     endif
-                    if (verbose) then
-                        write(unito,*) ""
-                        write(unito,'(A, A, A, I0.1)') "MESSAGE from AIOMFAC: identified smiles = ", trim(cpsmiles(cpno)), " at component cpno = ", cpno
-                    endif
-                elseif (any(NKname == trim(cpnameinp(cpno)))) then
-                    ind = findloc(NKname, trim(cpnameinp(cpno)), dim=1) !extract index
+                elseif (any(NKname == trim(cp_inp_name))) then
+                    ind = findloc(NKname, trim(cp_inp_name), dim=1)     !extract index
+                    cpnameinp(cpno) = trim(cp_inp_name)
                     if (NKsmiles(ind) /= "not_defined") then
                         cpsmiles(cpno) = trim(NKsmiles(ind))            !extract SMILES definition of component
                         if (verbose) then
@@ -285,26 +301,29 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                 else
                     !cpsmiles(cpno) = "" by default (via initialization)
                 endif
+                
                 do !until exit
-                    read(unitx,*,iostat=istat) txtcheck !read only first argument on this line
+                    read(unitx,*,iostat=istat) txtcheck                 !read only first argument on this line
                     !check whether another subgroup is present or not
-                    if (txtcheck(1:4) == dashes .or. istat /= 0) then !"----" indicates no more subgroups of this component
-                        exit !leave the inner do-loop
-                    else !else continue reading the next subgroup
+                    if (txtcheck(1:4) == dashes .or. istat /= 0) then   !"----" indicates no more subgroups of this component
+                        exit                                            !leave the inner do-loop
+                    else                                                !else continue reading the next subgroup
                         backspace unitx
-                        read(unitx,*) dummy, dummy, dummy, subg, qty  !continue reading line with subgroup no. and corresp. quantity
+                        read(unitx,*) dummy, dummy, dummy, subg, qty    !continue reading line with subgroup no. and corresp. quantity
                         cpsubg(cpno,subg) = cpsubg(cpno,subg)+qty
                     endif
                 enddo
             enddo
-            ncp = ncp-1 !ncp-1 is the number of different components in this mixture
+            
+            ncp = ncp-1                                                 !ncp-1 is the number of different components in this mixture
             if (verbose) then
                 write(unito,*) ""
                 write(unito,'(A)') "MESSAGE from AIOMFAC: component data read."
                 write(unito,'(A, I0.1)') "MESSAGE from AIOMFAC: number of components: ", ncp
             endif
+            
             if (ncp == ninpmax) then
-                read(unitx,*,iostat=istat) txtcheck !read only first argument on this line for subsequent check
+                read(unitx,*,iostat=istat) txtcheck                     !read only first argument on this line for subsequent check
                 if (txtcheck(1:4) /= pluses .or. txtcheck(1:4) /= atsigns) then
                     errorind = 34
                     filevalid = .false.
@@ -314,77 +333,83 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                     write(unito,'(A)') "AIOMFAC ERROR 34: maximum number of input components reached while reading input file."
                 endif
             endif
+            
             if (filevalid) then
                 if (newfileformat) then
-                    read(unitx,*) dummy, dummy  !read calculation options: line
-                    read(unitx,*) dummy, dummy, dummy, i    !read smiles-based pure-component method? line
-                    if (i == 1) then            !use Armeli Tg method
+                    read(unitx,*) dummy, dummy                          !read calculation options: line
+                    read(unitx,*) dummy, dummy, dummy, i                !read smiles-based pure-component method? line
+                    if (i == 1) then                                    !use Armeli Tg method
                         armeliON = .true.
                     else
                         armeliON = .false.
                     endif
-                    read(unitx,*) dummy         !read dashes line
-                    read(unitx,*) dummy         !read "++++" line
+                    read(unitx,*) dummy                                 !read dashes line
+                    read(unitx,*) dummy                                 !read "++++" line
                 else
                     !no calculation options present
                 endif
-                read(unitx,*) dummy, dummy      !read mixture composition line
-                read(unitx,*) dummy, dummy, i   !read mass fraction? line
-                if (i == 1) then !composition in mass fractions
+                read(unitx,*) dummy, dummy                              !read mixture composition line
+                read(unitx,*) dummy, dummy, i                           !read mass fraction? line
+                if (i == 1) then                                        !composition in mass fractions
                     xinputtype = .false.
-                else !composition in mole fractions
+                else                                                    !composition in mole fractions
                     xinputtype = .true.
                 endif
-                read(unitx,*) dummy, dummy, i !read mole fraction? line
-                read(unitx,*) dummy !read dashes line
+                read(unitx,*) dummy, dummy, i                           !read mole fraction? line
+                read(unitx,*) dummy                                     !read dashes line
+                
                 !now read the lines with the mixture composition points:
-                read(unitx,*) txtarray(1:ncp) !read header line of composition table
-                do npoints = 1,maxpoints !or until exit
-                    read(unitx,*,iostat=istat) txtcheck !read only the first argument on this line
-                    if (txtcheck(1:4) == equalsigns .or. istat /= 0) then !"====" indicates no more composition points (and last line of input file)
+                read(unitx,*) txtarray(1:ncp)                           !read header line of composition table
+                do npoints = 1,maxpoints                                !or until exit
+                    read(unitx,*,iostat=istat) txtcheck                 !read only the first argument on this line
+                    if (txtcheck(1:4) == equalsigns .or. istat /= 0) then   !"====" indicates no more composition points (and last line of input file)
                         exit !leave the do-loop (normal exit point)
-                    else if (iachar(txtcheck(1:1)) > 47 .and. iachar(txtcheck(1:1)) < 58) then !validate that the data is actual intended input and not some sort of text field spam).
+                    else if (iachar(txtcheck(1:1)) > 47 .and. iachar(txtcheck(1:1)) < 58) then  !validate that the data is actual intended input and not some sort of text field spam).
                         backspace unitx
-                        read(unitx,*) txtcheck, dummy !read only the first two arguments on this line
+                        read(unitx,*) txtcheck, dummy                   !read only the first two arguments on this line
                         if (iachar(dummy(1:1)) > 47 .and. iachar(dummy(1:1)) < 58) then !it is a number
                             backspace unitx
-                            read(unitx,*) i, T_K(npoints), composition(npoints,2:ncp) !read the temperature in [K] and composition values of the components [2:ncp] into the array
+                            read(unitx,*) i, T_K(npoints), composition(npoints,2:ncp)   !read the temperature in [K] and composition values of the components [2:ncp] into the array
                         else
                             if (npoints == 1) then
-                                filevalid = .false. !file is not valid due to incorrect input in text field
+                                filevalid = .false.                     !file is not valid due to incorrect input in text field
                                 exit
                             else
                                 warningind = 31
-                                exit !abnormal exit point of loop due to non-number entries at a certain line in the text field
+                                exit                                    !abnormal exit point of loop due to non-number entries at a certain line in the text field
                             endif
                         endif
                     else
                         if (npoints == 1) then
-                            filevalid = .false. !file is not valid due to incorrect input in text field
+                            filevalid = .false.                         !file is not valid due to incorrect input in text field
                             exit
                         else
                             warningind = 31
-                            exit !abnormal exit point of loop due to non-number entries at a certain line in the text field
+                            exit                                        !abnormal exit point of loop due to non-number entries at a certain line in the text field
                         endif
                     endif
                 enddo
-                npoints = npoints-1 !the number of composition points
+                npoints = npoints-1                                     !the number of composition points
+                
                 if (verbose) then
                     write(unito,*) ""
                     write(unito,'(A)') "MESSAGE from AIOMFAC: composition points read."
                     write(unito,'(A, I0.1)') "MESSAGE from AIOMFAC: number of points: ", npoints
                 endif
+                
                 if (.not. filevalid) then
                     !close and delete file from server:
                     close(unitx, status = 'delete')
                 else
                     close(unitx)
                 endif
+                
                 !assign component 01 its composition values based on the rest of the component's data:
                 do i = 1,npoints
                     composition(i,1) = 1.0_wp - sum(composition(i,2:ncp))
                 enddo
             endif !filevalid2
+            
         endif !filevalid1
     else
         write(unito,*) ""
@@ -393,14 +418,14 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     endif !fileexists
 
     if (fileexists) then
-        if (.not. filevalid) then !input file contains errors or is completely invalid (submitted spam etc.)
+        if (.not. filevalid) then                                       !input file contains errors or is completely invalid (submitted spam etc.)
             if (verbose) then
                 write(unito,*) ""
                 write(unito,'(A)') "MESSAGE from AIOMFAC: input file did not pass full validation and may be a spam file."
                 write(unito,'(A)') "MESSAGE from AIOMFAC: the input file will be deleted to prevent spam files and malicious code from occupying the server."
                 write(unito,*) ""
             endif
-            inquire(file = fname, OPENED = fileopened)
+            inquire(file = fname, opened = fileopened)
             if (errorind == 0) then
                 errorind = 32
                 !close and delete file from server:
@@ -414,8 +439,8 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
             endif
         else
             !check for any valid points for calculations before initializing AIOMFAC:
-            if (npoints < 1) then !no points input for calculations
-                errorind = 33 !no input in text field..
+            if (npoints < 1) then                                       !no points input for calculations
+                errorind = 33                                           !no input in text field..
                 if (verbose) then
                     write(unito,*) ""
                     write(unito,'(A)') "MESSAGE from AIOMFAC: no composition points have been entered in the text field. There is nothing to calculate."
@@ -479,7 +504,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     character(len=5) :: tlen
     character(len=50) :: subntxt, Iformat
     character(len=150) :: cnformat, horizline, tablehead
-    character(len=7+maxsmileslength) :: txtn
+    character(len=50+2*maxsmileslength) :: txtn
     character(len=3000) :: txtsubs, mixturestring
     integer ::  i, k, kms, pointi, qty, unitx
     real(wp) :: RH
@@ -536,9 +561,10 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     write(unitx,'(A)') 'T [K]            : absolute temperature;                                                            '
     write(unitx,'(A)') 'RH [%]           : relative humidity in equilibrium with the liquid mixture (bulk conditions);      '
     write(unitx,'(A)') 'w(j) [-]         : weight fraction (mass fraction) of species "j";                                  '
-    write(unitx,'(A)') 'x_i(j) [-]       : mole fraction of species "j", calculated on the basis of completely              '
+    write(unitx,'(A)') 'x_i(j) [-]       : mole fraction of species "j", calculated on the basis of assuming completely     '
     write(unitx,'(A)') '                   dissociated inorganic ions; exception: the partial dissociation of bisulfate     '
-    write(unitx,'(A)') '                   (HSO4- <--> H+ + SO4--) is explicitly considered when present in the mixture;    '
+    write(unitx,'(A)') '                   (HSO4- <--> H+ + SO4--) and bicarbonate (HCO3- <--> H+ + CO3--) is explicitly    ' 
+    write(unitx,'(A)') '                   considered when these species are present in the mixture;                        '
     write(unitx,'(A)') 'm_i(j) [mol/kg]  : molality of species "j" [mol(j)/(kg solvent mixture)], where "solvent mixture"   '
     write(unitx,'(A)') '                   refers to the electrolyte-free mixture (water + organics);                       '
     write(unitx,'(A)') 'a_coeff_x(j) [-] : activity coefficient of "j", defined on mole fraction basis (used for non-ionic  '
@@ -685,7 +711,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
     !*                                                                                      *
     !*   -> created:        2011                                                            *
-    !*   -> latest changes: 2026-08-24                                                      *
+    !*   -> latest changes: 2026-09-01                                                      *
     !*                                                                                      *
     !*   :: License ::                                                                      *
     !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -723,7 +749,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     character(len=5) :: tlen
     character(len=50) :: subntxt, Iformat
     character(len=150) :: cnformat, tformat
-    character(len=50+maxsmileslength) :: txtn
+    character(len=50+2*maxsmileslength) :: txtn
     character(len=400) :: outtxtleft
     character(len=3000) :: txtsubs, mixturestring
     integer ::  i, k, kms, pointi, qty, unitx
@@ -760,7 +786,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
         endif
     enddo
     mixturestring = trim(mixturestring)
-    write(unitx, '(A,A)') "<p>Mixture name: &nbsp;", adjustl(mixturestring)
+    write(unitx, '(A,A)') "<p style='text-align: left;'>Mixture name: &nbsp;", adjustl(mixturestring)
     write(unitx, '(A,I0.2)') "<br> Number of independent input components: ", ninput
     write(unitx, '(A,I0.2)') "<br> Number of different neutral components: ", nneutral
     write(unitx, '(A,I0.2)') "<br> Number of different inorganic ions    : ", NGS
@@ -774,9 +800,10 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     write(unitx,'(A)') adjustl('<tr><td>T [K]</td><td>: </td><td> absolute temperature;</td></tr>')
     write(unitx,'(A)') adjustl('<tr><td>RH [%]</td><td>: </td><td> relative humidity in equilibrium with the liquid mixture (bulk conditions);</td></tr>')
     write(unitx,'(A)') adjustl('<tr><td>w(j) [-]</td><td>: </td><td> weight fraction (mass fraction) of species "j";</td></tr>')
-    write(unitx,'(A)') adjustl('<tr><td>x_i(j) [-]</td><td>: </td><td> mole fraction of species "j", calculated on the basis of completely dissociated &
+    write(unitx,'(A)') adjustl('<tr><td>x_i(j) [-]</td><td>: </td><td> mole fraction of species "j", calculated on the basis of assuming completely dissociated &
         & inorganic ions; exception: the partial dissociation of bisulfate (<span class="chemf">HSO<sub>4</sub><sup>-</sup> &#8596; &
-        & H<sup>+</sup> + SO<sub>4</sub><sup>2-</sup></span>) is explicitly considered when present in the mixture; </td></tr>')
+        & H<sup>+</sup> + SO<sub>4</sub><sup>2-</sup></span>) and bicarbonate (<span class="chemf">HCO<sub>3</sub><sup>-</sup> &#8596; &
+        & H<sup>+</sup> + CO<sub>3</sub><sup>2-</sup></span>) is explicitly considered when these species are present in the mixture; </td></tr>')
     write(unitx,'(A)') adjustl('<tr><td>m_i(j) [mol/kg]</td><td>: </td><td> molality of species "j" [mol(j)/(kg solvent mixture)], where "solvent mixture" &
         & refers to the electrolyte-free mixture (water + organics); </td></tr>')
     write(unitx,'(A)') adjustl('<tr><td>a_coeff_x(j) [-]</td><td>: </td><td> activity coefficient of "j", defined on mole fraction basis (used for &
@@ -846,11 +873,11 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
             write(unitx,'(A,I0.2,A)') "<tr><td> Mixture's component, #  </td> <td> &nbsp; : &nbsp; ", i ,"</td></tr>"
             txtn = trim(adjustl(compname(i)))
             txtn = trim(txtn)//"</td></tr>"
-            write(unitx, '(A,A)') "<tr><td> Component's name </td> <td> &nbsp; : &nbsp; ", adjustl(txtn)
+            write(unitx, '(A,A)') "<tr><td> Component's name </td> <td style='text-align: left;'> &nbsp; : &nbsp; ", adjustl(txtn)
             if (watercompno > 0 .and. i > 1) then   !skip first component if water present in system
                 txtn = trim(adjustl(cpsmiles(i)))
                 txtn = trim(txtn)//"</td></tr>"
-                write(unitx, '(A,A)') "<tr><td> Component's SMILES </td> <td> &nbsp; : &nbsp; ", adjustl(txtn)
+                write(unitx, '(A,A)') "<tr><td style='text-align: left;'> Component's SMILES </td> <td> &nbsp; : &nbsp; ", adjustl(txtn)
             endif
             txtsubs = '<span class="chemf">'//trim(compsubgroupsHTML(i))//"</span></td></tr>"
             write(unitx, '(A,A)') "<tr><td> Component's subgroups </td> <td> &nbsp; : &nbsp; ", adjustl(txtsubs)

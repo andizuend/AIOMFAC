@@ -28,7 +28,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
 !*                                                                                      *
 !*   -> created:        2011  (this file)                                               *
-!*   -> latest changes: 2026-08-24                                                      *
+!*   -> latest changes: 2026-09-01                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -67,8 +67,8 @@ integer,parameter :: ninpmax = 51                           !set the maximum num
 character(len=4) :: VersionNo
 character(len=200) :: filename
 character(len=3000) :: filepath, folderpathout, fname, txtfilein  
-character(len=7+maxsmileslength),dimension(:),allocatable :: cpnameinp    !list of assigned component names (from input file)
-character(len=7+maxsmileslength),dimension(:),allocatable :: outnames
+character(len=maxsmileslength +7),dimension(:),allocatable :: cpnameinp    !list of assigned component names (from input file)
+character(len=maxsmileslength +7),dimension(:),allocatable :: outnames
 integer :: allocstat, errorind, i, nc, ncp, npoints, nspecies, nspecmax, pointi, &
     & unito, warningflag, warningind, watercompno
 integer,dimension(ninpmax) :: px
