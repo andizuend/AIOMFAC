@@ -32,7 +32,7 @@ On Linux, the main folder structure should look as illustrated below (not showin
 ```
 AIOMFAC
 ├───Auxiliary
-├───Fortran_code
+├───FortranCode
 ├───Inputfiles
 ├───Outputfiles
 └───TgML_Armeli
