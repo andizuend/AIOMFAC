@@ -14,7 +14,7 @@ SET _input=.\Inputfiles\input_0001.txt
 
 :: run the executable with the chosen input file:
 
-.\AIOMFAC-web.exe %_input%
+.\FortranCode\AIOMFAC-web.exe %_input%
 
 ::------------------------------ The End ------------------------------------------------
 
