@@ -15,18 +15,18 @@ Information associated with specific model versions, including comments on major
 If you use any of our AIOMFAC code in your own projects / code, following the GNU license restrictions, we would appreciate hearing about it. In scientific or other publications, we also request that you reference the main peer-reviewed publications which describe the theoretical underpinning of the AIOMFAC model and its parameterizations, as described in more detail on the AIOMFAC website: https://aiomfac.lab.mcgill.ca/citation.html.
 
 ### License
-All files presented here are covered under the GNU GPL license v3.0. For more information, please read the license file. A brief overview of the viable permissions can be found here: http://choosealicense.com/licenses/.
+All files presented here are covered under the GNU GPL license v3.0. For more information, please read the license file. A brief overview of the viable permissions can be found here: https://choosealicense.com/licenses/.
 
 ## Dependencies
-- Starting with AIOMFAC-web v3.14, which supports pure-component viscosity predictions via a machine learning method implemented in Python, there are several specific Python packages that will need to be installed alongside the Fortran program using a dedicated virtual environment (see installation instructions below).
-- The Fortran code itself is dependency-free. It requires a compiler supporting the Fortran 2008 standard (or newer). For example, gfortran v9 and newer or the Intel oneAPI ifx compiler.
+- Starting with AIOMFAC-web v3.14, which introduced the support of pure-component viscosity predictions via a machine learning method implemented in Python, there are several specific Python packages that will need to be installed alongside the Fortran program using a dedicated virtual environment (see installation instructions below).
+- The Fortran code itself is dependency-free. It requires a compiler supporting the Fortran 2008 standard (or newer). For example, the gfortran v9 and newer (v12, v15) and the Intel oneAPI ifx compilers have been tested and work as expected for our code, but any other recent Fortran compiler should be able to compile the Fortran sources.
 
 ## Installation instructions
 > [!NOTE] 
 > The following steps are first outlined for a Windows 64-bit installation (denoted by steps tagged as [Windows]). Equivalent steps are also shown for installation on a Linux machine (denoted by tag [Linux]). The Linux steps were tested with RHEL v8.1; the details for other Linux distributions may differ slightly.
 
 ### (1) Relative folder structure
-Copy/source the AIOMFAC folders and contained files from this repository to your local project.
+Copy/clone the AIOMFAC folders and contained files from this repository to your local project.
 On Linux, the main folder structure should look as illustrated below (not showing all subfolders of the .venv directory). On Windows the structure is the same but the folders inside .venv differ. The .venv content will get generated automatically; see step (2) below.
 
 ```
