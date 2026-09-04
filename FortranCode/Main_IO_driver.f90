@@ -57,7 +57,7 @@ use Mod_InputOutput, only : Output_TXT, Output_HTML, RepErrorWarning, ReadInputF
     & cpsmiles
 use ModPureCompProp, only : load_purecomp_table
 use ModComponentNames, only : nametab
-use ModOScommands, only : isWindowsOS, isWindowsPlatform
+use ModOScommands, only : f_query_OS, isWindowsOS 
 
 implicit none
 !set preliminary input-related parameters:
@@ -85,23 +85,26 @@ logical,dimension(size(errorflag_clist)) :: errflag_list
 !
 !==== INITIALIZATION section =======================================================
 !
-VersionNo = "3.14"      !AIOMFAC-web version number (change here if minor or major changes require a version number change)
+VersionNo = "3.14"      !AIOMFAC-web version number (change here if minor or major changes warrant a version number change)
 verbose = .true.        !if true, some debugging information will be printed to the unit "unito" (errorlog file)
 nspecmax = 0
-errorind = 0            !0 means no error found
+errorind = 0            !0 means no errors found
 warningind = 0          !0 means no warnings found
 !
 !==== INPUT data section ===========================================================
 !
 !read command line for text-file name (which contains the input parameters to run the AIOMFAC progam):
 call get_command_argument(1, txtfilein)
-if (len_trim(txtfilein) < 4) then               !no command line argument; so, use specific input file for tests
-    txtfilein = './Inputfiles/input_0001.txt'   !just use this for debugging with a specific input file, otherwise comment out
+
+if (len_trim(txtfilein) < 4) then                   !no command line argument; so, use specific input file for tests
+    txtfilein = './Inputfiles/input_0001.txt'       !just use this for debugging with a specific input file
 endif
+
 filepath = adjustl(trim(txtfilein))
 write(*,*) ""
 write(*,'(A,A)') "MESSAGE from AIOMFAC-web: program started, command line argument 1 = ", trim(filepath)
 write(*,*) ""
+
 allocate(cpsubg(ninpmax,topsubno), cpnameinp(ninpmax), composition(maxpoints,ninpmax), T_K(maxpoints), STAT=allocstat)
 !--
 call nametab()  !initialize component names matched to SMILES equivalents
@@ -130,7 +133,7 @@ if (filevalid) then
     !load the pure-component properties table:
     if (armeliON) then
         call load_purecomp_table()          !initialize pure component data for SMILES-PC matching    
-        isWindowsOS = isWindowsPlatform()   !determine whether we are on Windows or Linux (likely)
+        isWindowsOS = f_query_OS()          !determine whether we are on Windows or Linux (likely)
     endif
     !reallocate smiles array to actual number of components:
     cpsmiles = [cpsmiles(1:ncp)]
@@ -244,12 +247,12 @@ if (filevalid) then
 endif !file valid
 
 write(unito,*) "+-+-+-+-+"
-write(unito,'(A)') "Final warning indicator (an entry '00' means no warnings found):"
+write(unito,'(A)') "Final AIOMFAC warning indicator (an entry '00' means no warnings found):"
 write(unito,'(I2.2)') warningind
 write(unito,*) "+-+-+-+-+"
 write(unito,*) ""
 write(unito,*) "########"
-write(unito,'(A)') "Final error indicator (an entry '00' means no errors found):"
+write(unito,'(A)') "Final AIOMFAC error indicator (an entry '00' means no errors found):"
 write(unito,'(I2.2)') errorind
 write(unito,*) "########"
 wait(unito)

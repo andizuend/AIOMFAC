@@ -114,7 +114,7 @@ private :: VogelTemp, DeRieux_Tno_Est, Tg_ML_Armeli
     !***********************************************************************************************
     subroutine Tg_ML_Armeli(SMILESfname, outfilename)
     
-    use ModOScommands, only : isWindowsOS, Replace_Text
+    use ModOScommands, only : isWindowsOS, f_replace_text
     use ModPureCompProp, only : RelPathModel
     use ModSystemProp, only : errorflagmix
     
@@ -135,9 +135,9 @@ private :: VogelTemp, DeRieux_Tno_Est, Tg_ML_Armeli
         & //trim(pathTools)//'OutputFiles/'//trim(outfilename)
     
     if (isWindowsOS) then
-        command2 = Replace_Text(command, '/', '\')                                          !replace forward by backslashes for Windows commands
+        command2 = f_replace_text(command, '/', '\')                                          !replace forward by backslashes for Windows commands
     else !Linux, MacOS, ...
-        command2 = Replace_Text(command, '.venv/Scripts/python.exe', '.venv/bin/python')    !no need for executable file's extension on Linux
+        command2 = f_replace_text(command, '.venv/Scripts/python.exe', '.venv/bin/python')    !no need for executable file's extension on Linux
     endif
     
     call execute_command_line(trim(command2), exitstat=Estat, cmdstat=Cstat)
@@ -213,7 +213,7 @@ private :: VogelTemp, DeRieux_Tno_Est, Tg_ML_Armeli
     use ModSystemProp, only : CompN, ITAB, nindcomp, waterpresent, errorflag_clist, maxsmileslength
     use Mod_InputOutput, only : cpsmiles, armeliON
     use ModPureCompProp, only : lookup_Tg, append_purecomp_entry, RelPathModel
-    use ModOScommands, only : isWindowsOS, Replace_Text
+    use ModOScommands, only : isWindowsOS, f_replace_text
 
     implicit none
     !..................................
@@ -360,8 +360,8 @@ private :: VogelTemp, DeRieux_Tno_Est, Tg_ML_Armeli
                         SMILES_input_file = "input_"//casenumber//"_SMILES.txt"
                         TgML_output_file = "output_"//casenumber//"_SMILES.txt"
                         inp_file = RelPathModel//"TgML_Armeli/InputFiles/"//trim(SMILES_input_file)
-                        tmp_file = Replace_Text(inp_file, ".txt", ".tmp")           !also make a temporary file so that watchdog cannot process it before it is completed and sized.
-                        tmp_file = Replace_Text(tmp_file, "InputFiles", "OutputFiles") 
+                        tmp_file = f_replace_text(inp_file, ".txt", ".tmp")           !also make a temporary file so that watchdog cannot process it before it is completed and sized.
+                        tmp_file = f_replace_text(tmp_file, "InputFiles", "OutputFiles") 
                         open (newunit = unsmiles, file = trim(tmp_file), status = "new", action = "readwrite", iostat = istat)   !write a temporary SMILES input file
                         if (istat /= 0) write(*,*) "@PureCompViscosity: issue when opening temporary SMILES_input_file"
                         do i = 1, size(cpsmiles)                                    !batch all SMILES from this system
@@ -384,8 +384,8 @@ private :: VogelTemp, DeRieux_Tno_Est, Tg_ML_Armeli
                             call execute_command_line(trim(cmd_line), exitstat = exstat, cmdstat = cmdstat)
                             if (cmdstat /= 0) write(*,*) "ERROR in PureCompViscosity, moving file: cmdstat = ", cmdstat
                         else
-                            inp2 = Replace_Text(inp_file, "/", "\")
-                            tmp2 = Replace_Text(tmp_file, "/", "\")
+                            inp2 = f_replace_text(inp_file, "/", "\")
+                            tmp2 = f_replace_text(tmp_file, "/", "\")
                             cmd_line = 'icacls '//trim(tmp_file)//' /grant Users:F > NUL & move /y '//trim(tmp2)//' '//trim(inp2)//' > NUL'
                             call execute_command_line(trim(cmd_line), exitstat = exstat, cmdstat = cmdstat) 
                             if (cmdstat /= 0) write(*,*) "ERROR in PureCompViscosity, moving file: cmdstat = ", cmdstat

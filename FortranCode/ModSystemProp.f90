@@ -134,6 +134,6 @@ interface
     !$OMP & ElectComps, ElectNues, ElectVolatile, IAPcoeffs, KVLE_298K, K_el, SubGroupMW, ElectO2Cequiv, cationZ,  &
     !$OMP & anionZ, errorflagmix, errorflag_clist, nuestoich, idHCO3, idCO3, idOH, idCO2, idCa, bicarbsyst, &
     !$OMP & noCO2input, noH2Ainput, noOSHinput, malosyst, glutsyst, succsyst, dicarbsyst, &
-    !$OMP &  idHmalo, idmalo, idHglut, idglut, idHsucc, idsucc,  idMeOS, idEtOS, idIsopreneOS, incl_bisulfate, id_H2Adicarb, id_OSH)
+    !$OMP & idHmalo, idmalo, idHglut, idglut, idHsucc, idsucc,  idMeOS, idEtOS, idIsopreneOS, incl_bisulfate, id_H2Adicarb, id_OSH)
     
 end module ModSystemProp

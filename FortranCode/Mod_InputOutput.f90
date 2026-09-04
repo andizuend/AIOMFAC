@@ -8,7 +8,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2021-07-26                                                      *
-!*   -> latest changes: 2024-04-21                                                      *
+!*   -> latest changes: 2026-09-04                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -44,10 +44,12 @@ logical,public :: armeliON                                                      
 
 public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
 
+
 !============================================================================================
     contains
 !============================================================================================
 
+    
     !****************************************************************************************
     !*   :: Purpose ::                                                                      *
     !*   Read an input text file with information about the subgroups of each system        *
@@ -58,7 +60,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
     !*                                                                                      *
     !*   -> created:        2011                                                            *
-    !*   -> latest changes: 2026-08-24                                                      *
+    !*   -> latest changes: 2026-09-04                                                      *
     !*                                                                                      *
     !*   :: License ::                                                                      *
     !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -207,7 +209,8 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
         
         fname = trim(filepath)
         open (newunit = unitx, file = fname, iostat=istat, action='read', status='old')
-        if (istat /= 0) then                                            ! an error occurred
+        if (istat /= 0) then                                            !an error occurred
+            errorind = 51
             write(unito,*) ""
             write(unito,'(A, I0.1)') "MESSAGE from AIOMFAC: an error occurred while trying to open the file! iostat: ", istat
         endif
@@ -226,8 +229,9 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
             read(unitx,*)                                               !read empty line 2
             read(unitx,*) dummy, dummy                                  !read line 3
             read(unitx,*) dummy                                         !read line 4
-        else                                                            !file not valid. It will be closed and deleted below
+        else                                                            !else file not valid; it will be closed and deleted below
             filevalid = .false.
+            errorind = 51
             if (verbose) then
                 write(unito,*) ""
                 write(unito,'(A)') "MESSAGE from AIOMFAC: input file does not pass first line text validation and will be deleted."
@@ -260,7 +264,10 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                     exit                                                !exit ncp do-loop
                 else                                                    !in this case, argument 3 of txtcheck is the component no.:
                     backspace unitx                                     !jump back to beginning of record (to the beginning of the line)
-                    read(unitx,*) dummy, dummy, cpno                    !read line with component's number
+                    read(unitx,*,iostat=istat) dummy, dummy, cpno       !read line with component's number
+                    if (istat /= 0) then
+                        errorind = 51
+                    endif
                 endif
                 read(unitx,*) dummy, dummy, cp_inp_name                 !read line with component's name
                 if (len_trim(cp_inp_name) < 1) then                     !no component name was assigned, generate a default name
@@ -275,7 +282,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                     if (len_trim(cp_inp_name) > maxsmileslength + 7) then !check that smiles length is < 500 characters
                         errorind = 25
                         cpnameinp(cpno) = 'SMILES string too long!'
-                        cpsmiles(cpno) = 'SMILES string long!'
+                        cpsmiles(cpno) = 'SMILES string too long!'
                         if (verbose) then
                             write(unito,*) ""
                             write(unito,'(A, I0.1, A)') "MESSAGE from AIOMFAC: ERROR 25, SMILES string of component cpno = ", cpno, " exceeds allowed maximum length!"
@@ -309,8 +316,17 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                         exit                                            !leave the inner do-loop
                     else                                                !else continue reading the next subgroup
                         backspace unitx
-                        read(unitx,*) dummy, dummy, dummy, subg, qty    !continue reading line with subgroup no. and corresp. quantity
-                        cpsubg(cpno,subg) = cpsubg(cpno,subg)+qty
+                        read(unitx,*,iostat=istat) dummy, dummy, dummy, subg, qty    !continue reading line with subgroup no. and corresp. quantity
+                        if (istat == 0) then
+                            cpsubg(cpno,subg) = cpsubg(cpno,subg) + qty
+                        else
+                            errorind = 27
+                            filevalid = .false.
+                            write(unito,*) ""
+                            write(unito,'(A)') "AIOMFAC ERROR 27: Incorrect input file information. &
+                                &The input file contains incorrect subgroup no. or quantity information; &
+                                &make sure the quantity is a non-zero integer."
+                        endif
                     endif
                 enddo
             enddo
@@ -337,11 +353,16 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
             if (filevalid) then
                 if (newfileformat) then
                     read(unitx,*) dummy, dummy                          !read calculation options: line
-                    read(unitx,*) dummy, dummy, dummy, i                !read smiles-based pure-component method? line
-                    if (i == 1) then                                    !use Armeli Tg method
-                        armeliON = .true.
+                    read(unitx,*,iostat=istat) dummy, dummy, dummy, i   !read smiles-based pure-component method? line
+                    if (istat == 0) then
+                        if (i == 1) then                                !use Armeli Tg method
+                            armeliON = .true.
+                        else
+                            armeliON = .false.
+                        endif
                     else
-                        armeliON = .false.
+                        errorind = 51
+                        filevalid = .false.
                     endif
                     read(unitx,*) dummy                                 !read dashes line
                     read(unitx,*) dummy                                 !read "++++" line
@@ -349,11 +370,16 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                     !no calculation options present
                 endif
                 read(unitx,*) dummy, dummy                              !read mixture composition line
-                read(unitx,*) dummy, dummy, i                           !read mass fraction? line
-                if (i == 1) then                                        !composition in mass fractions
-                    xinputtype = .false.
-                else                                                    !composition in mole fractions
-                    xinputtype = .true.
+                read(unitx,*,iostat=istat) dummy, dummy, i              !read mass fraction? line
+                if (istat == 0) then
+                    if (i == 1) then                                    !composition in mass fractions
+                        xinputtype = .false.
+                    else                                                !composition in mole fractions
+                        xinputtype = .true.
+                    endif
+                else
+                    errorind = 51
+                    filevalid = .false.
                 endif
                 read(unitx,*) dummy, dummy, i                           !read mole fraction? line
                 read(unitx,*) dummy                                     !read dashes line
@@ -382,6 +408,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                     else
                         if (npoints == 1) then
                             filevalid = .false.                         !file is not valid due to incorrect input in text field
+                            errorind = 51
                             exit
                         else
                             warningind = 31
@@ -453,6 +480,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
 
     end subroutine ReadInputFile
     !========================================================================================
+    
     
         
     !****************************************************************************************
@@ -699,6 +727,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     end subroutine Output_TXT
     !========================================================================================
         
+    
     
     !****************************************************************************************
     !*   :: Purpose ::                                                                      *
@@ -980,6 +1009,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     !========================================================================================
     
     
+    
     !****************************************************************************************
     !*   :: Purpose ::                                                                      *
     !*   Report error and warning messages to the error logfile from a list of defined      *
@@ -990,7 +1020,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
     !*                                                                                      *
     !*   -> created:        2011                                                            *
-    !*   -> latest changes: 2026-08-24                                                      *
+    !*   -> latest changes: 2026-09-04                                                      *
     !*                                                                                      *
     !*   :: License ::                                                                      *
     !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -1018,7 +1048,8 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     integer :: en, n
     !...................................................................................
 
-    if (errorflagmix /= 0) then !some mixture related error occurred:
+    if (errorflagmix /= 0) then 
+        !some error occurred related to either mixture data or the input file:
         select case(errorflagmix)
         case(1)
             write(unito,*) ""
@@ -1086,7 +1117,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
         case default
             write(unito,*) ""
             write(unito,*) "======================================================="
-            write(unito,'(A)') "AIOMFAC ERROR XX: an undefined mixture error occurred!"
+            write(unito,'(A)') "AIOMFAC ERROR XX: an undefined error occurred!"
             write(unito,*) "errorflagmix = ", errorflagmix
             write(unito,*) "======================================================="
             write(unito,*) ""
@@ -1141,6 +1172,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
             end select
             warningind = warningflag
         endif !warningflag
+        
         if ( any(errorflag_list) ) then
             en = 0
             do n = 1,COUNT(errorflag_list)
@@ -1223,6 +1255,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                     write(unito,*) "Composition point no.: ", pointi
                     write(unito,*) "======================================================="
                     write(unito,*) ""
+                
                 !other errors 
                 case(19)    !error attempting to open pure-component property file
                     write(unito,*) ""
@@ -1230,7 +1263,6 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                     write(unito,'(A)') "AIOMFAC ERROR 19: File access issue."
                     write(unito,'(A)') "Could not open Pure_component_smiles_table.csv &
                         &in Auxiliary folder. Check file permissions."
-                    !write(unito,*) "Composition point no.: "
                     write(unito,*) "======================================================="
                     write(unito,*) ""
                 case(20)    !TgML method verification through command line failed - webserver specific
@@ -1238,7 +1270,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                     write(unito,*) "======================================================="
                     write(unito,'(A)') "AIOMFAC ERROR 20: TgML method unverified."
                     write(unito,'(A)') "Could not determine whether TgML method is running. &
-                        &Command line may be invalid. Contact admin (Dr. Andreas Zuend) at &
+                        &Command line may be invalid. Contact admin (Andreas Zuend) at &
                         &andreas.zuend@mcgill.ca."
                     !write(unito,*) "Composition point no.: "
                     write(unito,*) "======================================================="
@@ -1248,9 +1280,8 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                     write(unito,*) "======================================================="
                     write(unito,'(A)') "AIOMFAC ERROR 21: TgML method not running."
                     write(unito,'(A)') "Method is not running in background. Defaulted to &
-                        &more time-consuming TgML method call. Contact admin (Dr. Andreas Zuend) at &
+                        &more time-consuming TgML method call. Contact admin (Andreas Zuend) at &
                         &andreas.zuend@mcgill.ca."
-                    !write(unito,*) "Composition point no.: "
                     write(unito,*) "======================================================="
                     write(unito,*) ""
                 case(22)    !error attempting to open pure-component property file
@@ -1258,8 +1289,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                     write(unito,*) "======================================================="
                     write(unito,'(A)') "AIOMFAC ERROR 22: Missing file."
                     write(unito,'(A)') "Could not access Pure_component_smiles_table.csv &
-                        &in Auxiliary folder. File is missing or probelem with relative path."
-                    !write(unito,*) "Composition point no.: "
+                        &in Auxiliary folder. File is missing or problem with relative path."
                     write(unito,*) "======================================================="
                     write(unito,*) ""
                 case(23)    !error attempting to read armeli method output file
@@ -1269,7 +1299,6 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                     write(unito,'(A)') "No output file was generated for the SMILES-based &
                         &Tg machine-learning based method. At least one Tg value could &
                         &not be determined."
-                    !write(unito,*) "Composition point no.: "
                     write(unito,*) "======================================================="
                     write(unito,*) ""
                 case(24)    !invalid SMILES submitted to model
@@ -1278,7 +1307,6 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                     write(unito,'(A)') "AIOMFAC ERROR 24: Invalid SMILES."
                     write(unito,'(A)') "At least one SMILES input for an organic &
                         &compound is invalid."
-                    !write(unito,*) "Composition point no.: "
                     write(unito,*) "======================================================="
                     write(unito,*) ""
                 case(25)    !smiles input character length exceeds upper limit
@@ -1287,11 +1315,29 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                     write(unito,'(A)') "AIOMFAC ERROR 25: Input issue."
                     write(unito,*) "At least one SMILES input has length exceeding upper&
                         &character limit of: ", maxsmileslength
-                    !write(unito,*) "Composition point no.: "
+                    write(unito,*) "======================================================="
+                    write(unito,*) ""
+                case(26)    !Python script access issue
+                    write(unito,*) ""
+                    write(unito,*) "======================================================="
+                    write(unito,'(A)') "AIOMFAC ERROR 26: Script access issue."
+                    write(unito,'(A)') "Unsuccessful in running the TgML_SMILES.py script &
+                        &inside subfolder TgML_Armeli. Ensure that the folder is present &
+                        &and that a virtual Python environment named .venv is present as a &
+                        &(hidden) subfolder. See also information in &
+                        &requirements_console_script_AZ.txt."
+                    write(unito,*) "======================================================="
+                    write(unito,*) ""
+                case(27)    !incorrect subgroup info in input
+                    write(unito,*) ""
+                    write(unito,*) "======================================================="
+                    write(unito,'(A)') "AIOMFAC ERROR 27: Incorrect input file information."
+                    write(unito,'(A)') "The input file contains incorrect subgroup no. or &
+                        &quantity information; make sure the quantity is a non-zero integer."
                     write(unito,*) "======================================================="
                     write(unito,*) ""
 
-                    case default
+                case default
                     write(unito,*) ""
                     write(unito,*) "======================================================="
                     write(unito,'(A)') "AIOMFAC ERROR XX: an undefined calculation error occurred!"
@@ -1300,7 +1346,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                     write(unito,*) ""
                 end select
             enddo
-            errorind = findloc(errorflag_list(:), VALUE = .true., dim=1)
+            errorind = findloc(errorflag_list(:), value = .true., dim=1)
         endif
     endif !errorflagmix
         
