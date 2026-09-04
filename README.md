@@ -26,8 +26,8 @@ All files presented here are covered under the GNU GPL license v3.0. For more in
 > The following steps are first outlined for a Windows 64-bit installation (denoted by steps tagged as [Windows]). Equivalent steps are also shown for installation on a Linux machine (denoted by tag [Linux]). The Linux steps were tested with RHEL v8.1; the details for other Linux distributions may differ slightly.
 
 ### (1) Relative folder structure
-Copy/clone the AIOMFAC folders and contained files from this repository to your local project.
-On Linux, the main folder structure should look as illustrated below (not showing all subfolders of the .venv directory). On Windows the structure is the same but the folders inside .venv differ. The .venv content will get generated automatically; see step (2) below.
+Copy/clone the AIOMFAC folders and contained files from this repository to your local project (e.g. from command terminal when in your desired parent directory enter `git clone https://github.com/andizuend/AIOMFAC.git`).
+On Linux, the main folder structure should look as illustrated below (not showing all subfolders of the .venv directory). On Windows the structure is the same but the subfolders inside .venv differ. The .venv content will get generated automatically; see step (2) below.
 
 ```
 AIOMFAC
