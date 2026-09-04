@@ -44,9 +44,20 @@ AIOMFAC
     ├───OutputFiles
     └───pickle
 ```
-To run the AIOMFAC-web executable program later, the executable file (AIOMFAC-web.out or AIOMFAC-web.exe) will best be copied into the main "AIOMFAC" folder and program execution started relative to that location.
 
--More info to be added...
+> [!NOTE] 
+> This readme file is under development. More info to be added soon for the below steps...
+
+### (2) Generate a (virtual) Python environment
+- details to be added...
+
+### (3) Test the TgML_Armeli Python code execution
+
+### (4) Compile and link the AIOMFAC Fortran program
+
+### (5) Test the Fortran program from command line
+
+
 
 ----
 ## Quick guide to running AIOMFAC from a command prompt
