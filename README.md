@@ -46,7 +46,7 @@ AIOMFAC
 ```
 
 > [!NOTE] 
-> Within folder `TgML_Armeli`, the subfolders `InputFiles` and `OutputFiles` need to exist (with read and write permissions set for the current user). During normal operation of the AIOMFAC program with use of the glass transition temperature prediction based on the machine learning method by [Armeli et al. (2023)](https://dx.doi.org/10.1021/acsomega.2c08146), temporary files may be created in those folders and deleted a moment later. That's why they will look empty, but are needed for the proper functioning of the setup.
+> Within folder `TgML_Armeli`, the subfolders `InputFiles` and `OutputFiles` need to exist (with read and write permissions set for the current user). During normal operation of the AIOMFAC program with use of the glass transition temperature prediction based on the machine learning method by [Armeli et al. (2023)](https://dx.doi.org/10.1021/acsomega.2c08146), temporary files may be created in those folders and deleted a moment later. That's why they will look unused, but are needed for the proper functioning of the setup.
 
 ### (2) Generate a (virtual) Python environment
 For reasons of compatibility with the machine learning methods run in the background (called from the AIOMFAC Fortran program), it is necessary to install Python v3.9, e.g. specific version 3.9.13, in a virtual environment together with the specific Python packages outlined in the following steps:
@@ -74,7 +74,7 @@ For reasons of compatibility with the machine learning methods run in the backgr
 
 ### (4) Compile and link the AIOMFAC Fortran program
 
-### (5) Test the Fortran program from command line
+### (5) Test the Fortran program
 
 
 
