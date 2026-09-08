@@ -11,7 +11,7 @@ AZ notes:
 	[Windows] 	py --list  
 or 
 	[Linux] 	compgen -c python | grep -E '^python[0-9.]+$'
-to see the python versions already installed on the sytem
+to see the Python versions already installed on the sytem
 	
 - create a virtual environment inside the TgML_Armeli folder; execute command:  
 	[Windows]  		py -3.9 -m venv .venv  
