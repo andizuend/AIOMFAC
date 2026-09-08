@@ -27,7 +27,7 @@ All files presented here are covered under the GNU GPL license v3.0. For more in
 
 ### (1) Relative folder structure
 Copy/clone the AIOMFAC folders and contained files from this repository to your local project (e.g. from command terminal when in your desired parent directory enter `git clone https://github.com/andizuend/AIOMFAC.git`).
-On Linux, the main folder structure should look as illustrated below (not showing all subfolders of the .venv directory). On Windows the structure is the same but the subfolders inside .venv differ. The .venv content will get generated automatically; see step (2) below.
+On Linux, the main folder structure should look as illustrated below (not showing all subfolders of the `.venv` directory). On Windows the structure is the same but the subfolders inside `.venv` differ. The `.venv` content will get generated automatically; see step (2) below.
 
 ```
 AIOMFAC
@@ -46,10 +46,25 @@ AIOMFAC
 ```
 
 > [!NOTE] 
-> This readme file is under development. More info to be added soon for the below steps...
+> Within folder `TgML_Armeli`, the subfolders `InputFiles` and `OutputFiles` need to exist (with read and write permissions set for the current user). During normal operation of the AIOMFAC program with use of the glass transition temperature prediction based on the machine learning method by [Armeli et al. (2023)](https://dx.doi.org/10.1021/acsomega.2c08146), temporary files may be created in those folders and deleted a moment later. That's why they will look empty, but are needed for the proper functioning of the setup.
 
 ### (2) Generate a (virtual) Python environment
-- details to be added...
+For reasons of compatibility with the machine learning methods run in the background (called from the AIOMFAC Fortran program), it is necessary to install Python v3.9, e.g. specific version 3.9.13, in a virtual environment together with the specific Python packages outlined in the following steps:
+- In a command prompt run on [Windows]  `py --list` or on [Linux]  `compgen -c python | grep -E '^python[0-9.]+$' ` to see the Python versions already installed on the system. 
+- If Python 3.9 if not among them, install it on the system (consult a guide for your operating system if it is unclear to you how to do this correctly).
+- Create a virtual environment inside the `TgML_Armeli` folder. In a command prompt (terminal), navigate to the `TgML_Armeli` folder and execute the command:
+    - [Windows]    `py -3.9 -m venv .venv`
+    - [Linux]    `python3.9 -m venv .venv`
+- Activate the virtual environment using the command:
+    - [Windows]    `.\.venv\Scripts\activate.bat`
+    - [Linux]    `source .venv/bin/activate`
+- Given the activated Python environment in the command prompt, use pip to install the specific package versions listed in the following:
+    -  `pip install numpy==1.22.4`
+	-  `pip install deepchem==2.5.0`
+	-  `pip install rdkit-pypi==2022.3.2.1`
+	-  `pip install rdkit==2022.9.1`
+	-  `pip install scikit-learn==1.1.1`
+	-  `pip install tensorflow-cpu==2.9.0`
 
 ### (3) Test the TgML_Armeli Python code execution
 
