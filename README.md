@@ -52,7 +52,7 @@ AIOMFAC
 For reasons of compatibility with the machine learning methods run in the background (called from the AIOMFAC Fortran program), it is necessary to install Python v3.9, e.g. specific version 3.9.13, in a virtual environment together with the specific Python packages outlined in the following steps:
 - In a command prompt run on [Windows]  `py --list` or on [Linux]  `compgen -c python | grep -E '^python[0-9.]+$' ` to see the Python versions already installed on the system. 
 - If Python 3.9 if not among them, install it on the system (consult a guide for your operating system if it is unclear to you how to do this correctly).
-- Create a virtual environment inside the `TgML_Armeli` folder. In a command prompt (terminal), navigate to the `TgML_Armeli` folder and execute the command:
+- Create a virtual environment inside the `TgML_Armeli` folder. In a command prompt (or terminal), navigate to the `TgML_Armeli` folder and execute the command:
     - [Windows]    `py -3.9 -m venv .venv`
     - [Linux]    `python3.9 -m venv .venv`
 - Activate the virtual environment using the command:
@@ -67,6 +67,10 @@ For reasons of compatibility with the machine learning methods run in the backgr
 	-  `pip install tensorflow-cpu==2.9.0`
 
 ### (3) Test the TgML_Armeli Python code execution
+- From a command prompt when navigated to the `TgML_Armeli` folder, execute the command:
+	- [Windows] 	`.venv\Scripts\python.exe TgML_SMILES.py` 
+	- [Linux] 	`.venv/bin/python TgML_SMILES.py`
+- Running the above may take a few seconds since large Python packages are first imported. If the test was successful you should see a message in the terminal stating "done with processing 1 SMILES..." and "Note: all SMILES were confirmed to be valid.". Further, in folder `\OutputFiles`, you will find a new file `output_1000_Tg.txt`. If this test was unsuccessful, check the error message issued and investigate whether all the above listed Python packages were installed successfully into the `.venv`.
 
 ### (4) Compile and link the AIOMFAC Fortran program
 
