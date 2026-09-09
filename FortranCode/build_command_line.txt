@@ -7,7 +7,7 @@ scl enable gcc-toolset-15 bash
 ## using gfortran in a Linux terminal.
 ## 1.) navigate to the local AIOMFAC Fortran source code directory
 ## 2.) execute the below command line
-## 3.) may need to copy AIOMFAC-web.out to a different location
+## 3.) you may want to copy AIOMFAC-web.out to a different location afterwards
 
 gfortran -o AIOMFAC-web.out -O3 -ffree-line-length-none -fstack-protector-strong -fbounds-check Mod_kind_param.f90  ModStringFunctions.f90 ModSystemProp.f90 Mod_MINPACK.f90 ModSubgroupProp.f90 ModCompScaleConversion.f90 ModSRparam.f90 ModAIOMFACvar.f90 ModMRpart.f90 ModOScommands.f90 ModPureCompProp.f90 ModComponentNames.f90 ModNumericalTransformations.f90 Mod_InputOutput.f90 ModViscEyring.f90 ModPureViscosPar.f90 ModSRunifac.f90 SubModDefSystem.f90 ModCalcActCoeff.f90 ModZSRvisc.f90 SubModDissociationEquil.f90 ModFiniteDiffSens.f90 zerobracket_inwards.f90 brent.f90 AIOMFAC_inout.f90 Main_IO_driver.f90
 
