@@ -1,4 +1,4 @@
-#instead of using the makefile (make), the following command lines should work with AIOMFAC-web 3.10
+#instead of using the makefile (make), the following command lines should work with AIOMFAC-web 3.14 (and more recent versions)
 
 # Also: on CentOS or RedHat (RHEL) (i.e. RedHat-based, but not on Debian-based linux), execute the following command first to use a recent gfortran version (e.g. 15) or newer:
 scl enable gcc-toolset-15 bash
