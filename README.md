@@ -73,19 +73,37 @@ For reasons of compatibility with the machine learning methods run in the backgr
 - Running the above may take a few seconds since large Python packages are first imported. If the test was successful you should see a message in the terminal stating "done with processing 1 SMILES..." and "Note: all SMILES were confirmed to be valid.". Further, in folder `\OutputFiles`, you will find a new file `output_1000_Tg.txt`. If this test was unsuccessful, check the error message issued and investigate whether all the above listed Python packages were installed successfully into the `.venv`.
 
 ### (4) Compile and link the AIOMFAC Fortran program
-Building the AIOMFAC program from the Fortran source code can be done in a few distinct ways outlined below. If all you wish to do is to generate the executable AIOMFAC program on your system and then to run that one for a range of input files / systems, it is recommended to build the program using the instructions provided in the file `build_command_line.txt` included under `FortranCode`. We recommend using either [GNU's `gfortran`](https://gcc.gnu.org/fortran/) or [Intel's oneAPI `ifx`](https://www.intel.com/content/www/us/en/developer/tools/oneapi/fortran-compiler.html) compiler, both of which have been used successfully to compile the Fortran source files. Other modern Fortran compilers should work as well (untested). 
-- Briefly, for command line compilation, the following steps need to be completed (examples described below apply to AIOMFAC-web v3.14 and later):
-	- 1 
+Building the AIOMFAC program from the Fortran source code can be done in a few distinct ways outlined in the following. If all you wish to do is to generate the executable AIOMFAC program on your system to subsequently  run your customized input files / cases, it is recommended to build the program using the instructions provided in the file `build_command_line.txt` included in folder `FortranCode`. We recommend using either [GNU's `gfortran`](https://gcc.gnu.org/fortran/) or [Intel's oneAPI `ifx`](https://www.intel.com/content/www/us/en/developer/tools/oneapi/fortran-compiler.html) compiler, both of which have been confirmed to successfully compile the Fortran source files. Other modern Fortran compilers should work as well (untested). 
+Briefly, for command line compilation, the following steps need to be completed (examples described below apply to AIOMFAC-web v3.14 and later):
+- On [Windows]:
+	- open a dedicated Intel oneAPI terminal (which provides the necessary environment variable settings) or, alternatively, use the Windows subsystem for Linux (WSL) from a regular terminal -- in that case follow the instructions for building the program as described for Linux;
+	- navigate to your local AIOMFAC Fortran source code directory;
+	- copy & paste, then execute the following command line (for compilation with /O3 optimization set using ifx, example works for AIOMFAC-web v3.14 and later):
+	```
+	ifx /o AIOMFAC-web.exe /O3 Mod_kind_param.f90 ModStringFunctions.f90 ModSystemProp.f90 Mod_MINPACK.f90 ModSubgroupProp.f90 ModCompScaleConversion.f90 ModSRparam.f90 ModAIOMFACvar.f90 ModMRpart.f90 ModOScommands.f90 ModPureCompProp.f90 ModComponentNames.f90 ModNumericalTransformations.f90 Mod_InputOutput.f90 ModViscEyring.f90 ModPureViscosPar.f90 ModSRunifac.f90 SubModDefSystem.f90 ModCalcActCoeff.f90 ModZSRvisc.f90 SubModDissociationEquil.f90 ModFiniteDiffSens.f90 zerobracket_inwards.f90 brent.f90 AIOMFAC_inout.f90 Main_IO_driver.f90
+	```
+ 	- the generated executable file named `AIOMFAC-web.exe` will be placed into the Fortran code folder.
 
-- Alternatively, on [Linux], e.g. with gfortran, one can use the included makefile to build the code (on command line, navigate to the FortranCode folder and enter `make`). You could also generate a new makefile using the attached Perl script `mkmf.pl` (developed by V. Balaji, v.balaji@noaa.gov). I slightly modified an older version of the `mkmf` application to enable Fortran submodules to help establishing the correct dependencies of modules, submodules and subroutines/functions; see also [information here](https://github.com/NOAA-GFDL/mkmf/blob/main/docs/Makefile) and read the `maketarget_commands_info_mkmf_Perl.txt` file included under `FortranCode`.  
-- On [Windows], for more in-depth code editing and debugging purposes, I recommend using either (i) MS Visual Studio Community and Intel's oneAPI Fortran compiler integration or (ii) an Intel oneAPI command prompt for direct compilation from the terminal or (iii) the use of Windows subsystem for Linux (WSL) -- in the latter case susequently follow the instructions for building the program as described for a Linux OS.
+- On [Linux]:
+	- open a terminal and make sure that a recent version of gfortran is available (check with `gfortran --version`);
+ 	- navigate to your local AIOMFAC Fortran source code directory;
+	- copy & paste, then execute the following command line (for compilation with -O3 optimization set when using gfortran, example works for AIOMFAC-web v3.14 and later):
+   	```
+	gfortran -o AIOMFAC-web.out -O3 -ffree-line-length-none -fstack-protector-strong -fbounds-check Mod_kind_param.f90  ModStringFunctions.f90 ModSystemProp.f90 Mod_MINPACK.f90 ModSubgroupProp.f90 ModCompScaleConversion.f90 ModSRparam.f90 ModAIOMFACvar.f90 ModMRpart.f90 ModOScommands.f90 ModPureCompProp.f90 ModComponentNames.f90 ModNumericalTransformations.f90 Mod_InputOutput.f90 ModViscEyring.f90 ModPureViscosPar.f90 ModSRunifac.f90 SubModDefSystem.f90 ModCalcActCoeff.f90 ModZSRvisc.f90 SubModDissociationEquil.f90 ModFiniteDiffSens.f90 zerobracket_inwards.f90 brent.f90 AIOMFAC_inout.f90 Main_IO_driver.f90
+	```
+    - the generated executable file named AIOMFAC-web.out will be placed into the Fortran code folder.
+    - The `build_command_line.txt` file includes alternative command lines for debug-mode compilation as well as how to activate a recent gfortran version on RedHat and CentOS Linux.
+
+- Alternatively, on [Linux] one can use the included makefile to build the code (on command line, navigate to the FortranCode folder and enter `make`). You could also re-generate a makefile by running the attached Perl script `mkmf.pl` (developed by V. Balaji, v.balaji@noaa.gov); that requires Perl to be installed and available from command line. I slightly modified an older version of the make make `mkmf` application to enable Fortran submodules to help establishing the correct dependencies of modules, submodules and subroutines/functions; see also [information here](https://github.com/NOAA-GFDL/mkmf/tree/main) and read the instructions provided in the `maketarget_commands_info_mkmf_Perl.txt` file included under `FortranCode`.
+   
+- Moreover, for in-depth code editing, debugging and development purposes, on [Windows] I recommend using MS Visual Studio Community with Intel's oneAPI Fortran compiler integration.
 
 ### (5) Test the Fortran program
-
+-To be added...
 
 
 ----
 ## Quick guide to running AIOMFAC from a command prompt
-If all you wish to do is to run the AIOMFAC program for your own system of components, this is a relatively straightforward task. The following inputs need to be provided.
+To run the AIOMFAC program for your own system of components, this is a relatively straightforward task. The following inputs need to be provided.
 
 -To be added...
