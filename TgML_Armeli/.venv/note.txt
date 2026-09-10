@@ -1,3 +1,3 @@
-Note you need to create a virtual Python environment from inside the TgML_Armeli folder; execute command (see installation instructions):  
+Note: you need to create a virtual Python environment from inside the TgML_Armeli folder; install Python v3.9 if not already present and execute command (see installation instructions):  
 	[Windows]  		py -3.9 -m venv .venv  
 	[or, on Linux]  python3.9 -m venv .venv
