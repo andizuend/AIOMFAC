@@ -96,7 +96,7 @@ Briefly, for command line compilation, the following steps need to be completed 
 
 - Alternatively, on [Linux] one can use the included makefile to build the code (on command line, navigate to the FortranCode folder and enter `make`). You could also re-generate a makefile by running the attached Perl script `mkmf.pl` (developed by V. Balaji, v.balaji@noaa.gov); that requires Perl to be installed and available from command line. I slightly modified an older version of the "make make" `mkmf` application to enable Fortran submodules to help establishing the correct dependencies of modules, submodules and subroutines/functions; see also [information here](https://github.com/NOAA-GFDL/mkmf/tree/main) and read the instructions provided in the `maketarget_commands_info_mkmf_Perl.txt` file included under `FortranCode`.
    
-- Moreover, for in-depth code editing, debugging and development purposes, on [Windows] I recommend using MS Visual Studio Community with Intel's oneAPI Fortran compiler integration.
+- Moreover, for in-depth code editing, debugging and development purposes, on [Windows] I recommend using [MS Visual Studio (VS) Community](https://visualstudio.microsoft.com/vs/community/) with Intel's oneAPI Fortran compiler integration. In that case, one can skip the above compilation steps and instead create a new Intel Fortran solution/project in Visual Studio. Once the new solution is created, add the existing Fortran .f90 files to the "source" folder of the VS project. Building the project or solution will then use `ifx` to compile the Fortran code, figure out procedure dependencies and link into an executable.
 
 ### (5) Test the Fortran program
 -To be added...
