@@ -102,13 +102,13 @@ Briefly, for command line compilation, the following steps need to be completed 
 After step (4) is completed, you can verify that the AIOMFAC-web executable works as intended by running it with one of the provided example input files.
 - On [Windows] (from command prompt):
 	- change directory to the program's parent `AIOMFAC` folder, then run
-   	```
-	.\FortranCode\AIOMFAC-web.exe .\Inputfiles\input_0001.txt
-   	```
+   	``` 
+	.\FortranCode\AIOMFAC-web.exe .\Inputfiles\input_0001.txt 
+	```
 - On [Linux] (bash terminal):
 	- change directory to the parent `AIOMFAC` folder, then run
-	```
-	./FortranCode/AIOMFAC-web.out ./Inputfiles/input_0001.txt
+	``` 
+	./FortranCode/AIOMFAC-web.out ./Inputfiles/input_0001.txt 
 	```
 - The above command lines indicate as first argument the relative path to the executable file and as second argument the relative path to an input file.
 - If the test run was successful, you should see a message in the terminal indicating "MESSAGE from AIOMFAC: end of program; final error indicator: 0". In the `Outputfiles` folder, you will find a few generated files, including a `AIOMFAC_output_0001.txt` and an `Errorlog_0001.txt` file. You can inspect the contents of these text files using any text editor (on Windows, [Notepad++](https://notepad-plus-plus.org) is an excellent option for this).
