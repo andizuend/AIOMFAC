@@ -82,7 +82,7 @@ Briefly, for command line compilation, the following steps need to be completed 
 	```
 	ifx /o AIOMFAC-web.exe /O3 Mod_kind_param.f90 ModStringFunctions.f90 ModSystemProp.f90 Mod_MINPACK.f90 ModSubgroupProp.f90 ModCompScaleConversion.f90 ModSRparam.f90 ModAIOMFACvar.f90 ModMRpart.f90 ModOScommands.f90 ModPureCompProp.f90 ModComponentNames.f90 ModNumericalTransformations.f90 Mod_InputOutput.f90 ModViscEyring.f90 ModPureViscosPar.f90 ModSRunifac.f90 SubModDefSystem.f90 ModCalcActCoeff.f90 ModZSRvisc.f90 SubModDissociationEquil.f90 ModFiniteDiffSens.f90 zerobracket_inwards.f90 brent.f90 AIOMFAC_inout.f90 Main_IO_driver.f90
 	```
- 	- the generated executable file named `AIOMFAC-web.exe` will be placed into the Fortran code folder.
+ 	- the generated executable file named `AIOMFAC-web.exe` will be generated in the Fortran code folder.
 
 - On [Linux]:
 	- open a terminal and make sure that a recent version of gfortran is available (check with `gfortran --version`);
@@ -91,15 +91,27 @@ Briefly, for command line compilation, the following steps need to be completed 
    	```
 	gfortran -o AIOMFAC-web.out -O3 -ffree-line-length-none -fstack-protector-strong -fbounds-check Mod_kind_param.f90  ModStringFunctions.f90 ModSystemProp.f90 Mod_MINPACK.f90 ModSubgroupProp.f90 ModCompScaleConversion.f90 ModSRparam.f90 ModAIOMFACvar.f90 ModMRpart.f90 ModOScommands.f90 ModPureCompProp.f90 ModComponentNames.f90 ModNumericalTransformations.f90 Mod_InputOutput.f90 ModViscEyring.f90 ModPureViscosPar.f90 ModSRunifac.f90 SubModDefSystem.f90 ModCalcActCoeff.f90 ModZSRvisc.f90 SubModDissociationEquil.f90 ModFiniteDiffSens.f90 zerobracket_inwards.f90 brent.f90 AIOMFAC_inout.f90 Main_IO_driver.f90
 	```
-    - the generated executable file named AIOMFAC-web.out will be placed into the Fortran code folder.
+    - the generated executable file named AIOMFAC-web.out will be generated in the Fortran code folder.
     - The `build_command_line.txt` file includes alternative command lines for debug-mode compilation as well as information on how to activate a recent gfortran version on RedHat and CentOS Linux.
 
-- Alternatively, on [Linux] one can use the included makefile to build the code (on command line, navigate to the FortranCode folder and enter `make`). You could also re-generate a makefile by running the attached Perl script `mkmf.pl` (developed by V. Balaji, v.balaji@noaa.gov); that requires Perl (v5) to be installed and available from command line. I slightly modified an older version of the "make-make-file" `mkmf` application to enable Fortran submodules to help establishing the correct dependencies of modules, submodules and subroutines/functions; see also [information here](https://github.com/NOAA-GFDL/mkmf/tree/main) and read the instructions provided in the `maketarget_commands_info_mkmf_Perl.txt` file included under `FortranCode`.
+- Alternatively, on [Linux] one can use the included makefile to build the code (on command line, navigate to the FortranCode folder and enter `make`). You could also re-generate a makefile by running the attached Perl script `mkmf.pl` (developed by V. Balaji at NOAA); that requires Perl (v5) to be installed and available from command line. I slightly modified an older version of the "make-make-file" `mkmf` application to enable Fortran submodules to help establishing the correct dependencies of modules, submodules and subroutines/functions; see also [information here](https://github.com/NOAA-GFDL/mkmf/tree/main) and read the instructions provided in the `maketarget_commands_info_mkmf_Perl.txt` file included under `FortranCode`.
    
-- Moreover, for in-depth code editing, debugging and development purposes, on [Windows] I recommend using [MS Visual Studio (VS) Community](https://visualstudio.microsoft.com/vs/community/) with Intel's oneAPI Fortran compiler integration. In that case, one can skip the above compilation steps and instead create a new Intel Fortran solution/project in Visual Studio. Once the new solution is created, add the existing Fortran .f90 files to the "source" folder of the VS project. Building the project or solution will then use `ifx` to compile the Fortran code, figure out procedure dependencies and link into an executable.
+- Moreover, for in-depth code editing, debugging and development purposes, on [Windows] I recommend using [MS Visual Studio (VS) Community](https://visualstudio.microsoft.com/vs/community/) with Intel's oneAPI Fortran compiler integration. In that case, one can skip the above compilation steps and instead create a new Intel Fortran solution/project in Visual Studio. Once the new solution is created, add the existing Fortran .f90 files to the "source" folder of the VS project. Building the project or solution will then use `ifx` to compile the Fortran code, figure out procedure dependencies and link into an executable. Multiple text editors and IDEs, including VS Code, can be configured for Fortran compilation on Linux (see information [here](https://fortran-lang.org/compilers/)).
 
 ### (5) Test the Fortran program
--To be added...
+After step (4) is completed, you can verify that the AIOMFAC-web executable works as intended by running it with one of the provided example input files.
+- On [Windows] (from command prompt):
+	- change directory to the program's parent `AIOMFAC` folder, then run
+   	```
+	.\FortranCode\AIOMFAC-web.exe .\Inputfiles\input_0001.txt
+   	```
+- On [Linux] (bash terminal):
+	- change directory to the parent `AIOMFAC` folder, then run
+	```
+	./FortranCode/AIOMFAC-web.out ./Inputfiles/input_0001.txt
+	```
+- The above command lines indicate as first argument the relative path to the executable file and as second argument the relative path to an input file.
+- If the test run was successful, you should see a message in the terminal indicating "MESSAGE from AIOMFAC: end of program; final error indicator: 0". In the `Outputfiles` folder, you will find a few generated files, including a `AIOMFAC_output_0001.txt` and an `Errorlog_0001.txt` file. You can inspect the contents of these text files using any text editor (on Windows, [Notepad++](https://notepad-plus-plus.org) is an excellent option for this).
 
 
 ----
