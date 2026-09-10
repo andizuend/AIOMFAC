@@ -2,7 +2,7 @@
 This public repository provides the AIOMFAC model Fortran code (AIOMFAC-web, version 2.20 and newer) and additional information about building and running the model on your own system. May it be of use to you.
 
 ## About AIOMFAC
-AIOMFAC stands for Aerosol Inorganic&ndash;Organic Mixtures Functional groups Activity Coefficients, it is a thermodynamic group-contribution model to describe non-ideal mixing in liquid solutions. If you are unfamiliar with the purpose and applications of AIOMFAC, please visit the AIOMFAC website https://aiomfac.lab.mcgill.ca for more information.
+AIOMFAC stands for Aerosol Inorganic&ndash;Organic Mixtures Functional groups Activity Coefficients; it is a thermodynamic group-contribution model to describe non-ideal mixing in liquid solutions (phases). If you are unfamiliar with the purpose and applications of AIOMFAC, please visit the [AIOMFAC website](https://aiomfac.lab.mcgill.ca) for more information.
 
 ----
 > [!TIP]
@@ -12,13 +12,13 @@ AIOMFAC stands for Aerosol Inorganic&ndash;Organic Mixtures Functional groups Ac
 Information associated with specific model versions, including comments on major AIOMFAC-web changes and new features, are provided on the page accompanying that release; see under [releases](https://github.com/andizuend/AIOMFAC/releases). 
 
 ## Applications, Modifications and Citation
-If you use any of our AIOMFAC code in your own projects / code, following the GNU license restrictions, we would appreciate hearing about it. In scientific or other publications, we also request that you reference the main peer-reviewed publications which describe the theoretical underpinning of the AIOMFAC model and its parameterizations, as described in more detail on the AIOMFAC website: https://aiomfac.lab.mcgill.ca/citation.html.
+If you use any of our AIOMFAC code in your own projects / code, following the GNU license restrictions, we would appreciate hearing about it. In scientific or other publications, we also request that you reference the main peer-reviewed publications which describe the theoretical underpinning of the AIOMFAC model and its parameterizations, as described in more detail on the AIOMFAC website under: https://aiomfac.lab.mcgill.ca/citation.html.
 
 ### License
 All files presented here are covered under the GNU GPL license v3.0. For more information, please read the license file. A brief overview of the viable permissions can be found here: https://choosealicense.com/licenses/.
 
 ## Dependencies
-- Starting with AIOMFAC-web v3.14, which introduced the support of pure-component viscosity predictions via a machine learning method implemented in Python, there are several specific Python packages that will need to be installed alongside the Fortran program using a dedicated virtual environment (see installation instructions below).
+- Starting with AIOMFAC-web v3.14, which introduced the support of pure-component viscosity predictions via a machine learning method by [Armeli et al. (2023)](https://dx.doi.org/10.1021/acsomega.2c08146) implemented in Python, there are several specific Python packages that will need to be installed alongside the Fortran program using a dedicated virtual environment (follow the installation instructions provided below).
 - The Fortran code itself is dependency-free. It requires a compiler supporting the Fortran 2008 standard (or newer). For example, the gfortran v9 and newer (v12, v15) and the Intel oneAPI ifx compilers have been tested and work as expected for our code, but any other recent Fortran compiler should be able to compile the Fortran sources.
 
 ## Installation instructions
