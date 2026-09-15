@@ -97,7 +97,7 @@ warningind = 0          !0 means no warnings found
 call get_command_argument(1, txtfilein)
 
 if (len_trim(txtfilein) < 4) then                   !no command line argument; so, use specific input file for tests
-    txtfilein = './Inputfiles/input_0001.txt'       !just use this for debugging with a specific input file
+    txtfilein = './Inputfiles/input_0466.txt'       !just use this for debugging with a specific input file
 endif
 
 filepath = adjustl(trim(txtfilein))
@@ -105,7 +105,7 @@ write(*,*) ""
 write(*,'(A,A)') "MESSAGE from AIOMFAC-web: program started, command line argument 1 = ", trim(filepath)
 write(*,*) ""
 
-allocate(cpsubg(ninpmax,topsubno), cpnameinp(ninpmax), composition(maxpoints,ninpmax), T_K(maxpoints), STAT=allocstat)
+allocate(cpsubg(ninpmax,topsubno), cpnameinp(ninpmax), composition(maxpoints,ninpmax), T_K(maxpoints), stat=allocstat)
 !--
 call nametab()  !initialize component names matched to SMILES equivalents
 !--
@@ -125,15 +125,15 @@ if (filevalid) then
     endif
     
     !load the MR and SR interaction parameter data:
-    call MRdata()         !initialize the MR data for the interaction coeff. calculations
-    call SRdata()         !initialize data for the SR part coefficient calculations
-    call SubgroupNames()  !initialize the subgroup names for the construction of component subgroup strings
+    call MRdata()                                   !initialize the MR data for the interaction coeff. calculations
+    call SRdata()                                   !initialize data for the SR part coefficient calculations
+    call SubgroupNames()                            !initialize the subgroup names for the construction of component subgroup strings
     call SubgroupAtoms()
     
     !load the pure-component properties table:
     if (armeliON) then
-        call load_purecomp_table()          !initialize pure component data for SMILES-PC matching    
-        isWindowsOS = f_query_OS()          !determine whether we are on Windows or Linux (likely)
+        call load_purecomp_table()                  !initialize pure component data for SMILES-PC matching    
+        isWindowsOS = f_query_OS()                  !determine whether we are on Windows or Linux (likely)
     endif
     !reallocate smiles array to actual number of components:
     cpsmiles = [cpsmiles(1:ncp)]
@@ -146,25 +146,25 @@ if (filevalid) then
     if (waterpresent) then
         watercompno = maxloc(cpsubg(1:ncp,16), dim=1)   !usually = 1
     endif
-    if (idCO2 > 0) then             !add CO2 as a (non-input) neutral component name
+    if (idCO2 > 0) then                             !add CO2 as a (non-input) neutral component name
         cpnameinp(idCO2+1:ncp+1) = cpnameinp(idCO2:ncp)
         cpnameinp(idCO2) = 'CO2(aq)'   
     endif
     !transfer composition data to adequate array size:
-    allocate(compos2(npoints,ncp), STAT=allocstat)
+    allocate(compos2(npoints,ncp), stat=allocstat)
     do nc = 1,ncp
         compos2(1:npoints,nc) = composition(1:npoints,nc)
     enddo
-    deallocate(cpsubg, composition, STAT=allocstat)
+    deallocate(cpsubg, composition, stat=allocstat)
     
-    if (errorflagmix /= 0) then     !a mixture-related error occurred:
+    if (errorflagmix /= 0) then                     !a mixture-related error occurred:
         call RepErrorWarning(unito, errorflagmix, warningflag, errflag_list, i, errorind, warningind)
     endif
 
-    if (errorind == 0) then         !perform AIOMFAC calculations; else jump to termination section
+    if (errorind == 0) then                         !perform AIOMFAC calculations; else jump to termination section
         !--
         allocate(inputconc(nindcomp), outputvars(6,NKNpNGS), outputviscvars(2), outnames(NKNpNGS), &
-            & out_data(7,npoints,NKNpNGS), out_viscdata(3,npoints), STAT=allocstat)
+            & out_data(7,npoints,NKNpNGS), out_viscdata(3,npoints), stat=allocstat)
         inputconc = 0.0_wp
         out_data = 0.0_wp
         out_viscdata = 0.0_wp
@@ -189,9 +189,9 @@ if (filevalid) then
                 call RepErrorWarning(unito, errorflagmix, warningflag, errflag_list, pointi, errorind, warningind)
                 !$OMP end CRITICAL errwriting
             endif
-            nspecmax = max(nspecmax, nspecies)  !figure out the maximum number of different species in mixture (accounting for the 
-                                                !possibility of HSO4- dissoc. and different species at different data points due to zero mole fractions).
-            do nc = 1,nspecmax                  !loop over species (ions dissociated and treated as individual species):
+            nspecmax = max(nspecmax, nspecies)      !figure out the maximum number of different species in mixture (accounting for the 
+                                                    !possibility of HSO4- dissoc. and different species at different data points due to zero mole fractions).
+            do nc = 1,nspecmax                      !loop over species (ions dissociated and treated as individual species):
                 out_data(1:6,pointi,nc) = outputvars(1:6,nc)                !out_data general structure: | data columns 1:7 | data point | component no.|
                 out_data(7,pointi,nc) = real(findloc(errflag_list(:), value = .true., dim=1), kind=wp)
                 out_viscdata(3,pointi) = real(findloc(errflag_list(:), value = .true., dim=1), kind=wp)
@@ -239,9 +239,9 @@ if (filevalid) then
         !==== TERMINATION section ==========================================================
         !
         deallocate(inputconc, outputvars, outputviscvars, outnames, out_data, out_viscdata, T_K, &
-            & cpnameinp, cpsmiles, STAT=allocstat)
+            & cpnameinp, cpsmiles, stat=allocstat)
         if (allocated(compos2)) then
-            deallocate(compos2, STAT=allocstat)
+            deallocate(compos2, stat=allocstat)
         endif
     endif !errorind
 endif !file valid

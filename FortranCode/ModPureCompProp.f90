@@ -116,9 +116,9 @@ private     !as default
             if (istat /= 0 ) exit           !file end reached
             nlines = nlines + 1             !count smiles rows
         enddo
+        allocate(purecomp_table(nlines))    !set amount of entries
         rewind(unitx)                       !read file from beginning
         read(unitx,*)                       !skip past header
-        allocate(purecomp_table(nlines))    !set amount of entries
         do i = 1, nlines
             read(unitx,*) purecomp_table(i)%smiles, purecomp_table(i)%Tg
         enddo

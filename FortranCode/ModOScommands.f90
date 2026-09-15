@@ -9,22 +9,25 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2020                                                            *
-!*   -> latest changes: 2026-09-03                                                      *
+!*   -> latest changes: 2026-09-15                                                      *
 !*                                                                                      *
 !*   :: List of subroutines and functions contained in this module:                     *
 !*   --------------------------------------------------------------                     *
 !*   -  subroutine copy_file                                                            *
 !*   -  function   f_query_OS                                                           *
 !*   -  function   f_replace_text                                                       *
+!*   -  function   f_epoch_time                                                         *
 !*                                                                                      *
 !****************************************************************************************
 module ModOScommands
+
+use Mod_kind_param, only : wp
 
 implicit none
     
 logical,public :: isWindowsOS
     
-public :: copy_file, f_query_OS, f_replace_text
+public :: copy_file, f_query_OS, f_replace_text, f_epoch_time
 
     contains
 
@@ -123,6 +126,37 @@ public :: copy_file, f_query_OS, f_replace_text
     enddo
     
     end function f_replace_text
+    !------------------------------------------------------------------------------------
+    
+    
+    !------------------------------------------------------------------------------------
+    !-- Function to return the UNIX-style current epoch time in terms of the integer  
+    !   number of seconds since January 1, 1970. The code interfaces via iso_c_binding   
+    !   with the system's C library to provide a portable OS-independent implementation.
+    function f_epoch_time()  result(time_sec)
+    
+    use, intrinsic :: iso_c_binding, only : c_int64_t
+    
+    implicit none
+    !interface arguments:
+    real(wp) :: time_sec                            ![s] (output) the time in seconds since January 1, 1970
+    !local variables:
+    integer(c_int64_t) :: epoch_seconds
+    !...............................
+
+    !interface block to bind to the standard C 'time' function
+    interface
+        function c_time(t) bind(C, name="time")
+            import :: c_int64_t
+            integer(c_int64_t), intent(in), value :: t
+            integer(c_int64_t) :: c_time
+        end function c_time
+    end interface
+
+    epoch_seconds = c_time(0_c_int64_t)             !passing 0_c_int64_t acts like passing NULL in C
+    time_sec = real(epoch_seconds, kind=wp)
+
+    end function f_epoch_time
     !------------------------------------------------------------------------------------
 
 

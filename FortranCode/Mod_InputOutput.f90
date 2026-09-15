@@ -8,7 +8,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2021-07-26                                                      *
-!*   -> latest changes: 2026-09-04                                                      *
+!*   -> latest changes: 2026-09-10                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -178,7 +178,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     !create an error-logfile associated with the input file name:
     errlogfile = "Errorlog_"//filename(i-4:)
     fname = trim(folderpathout)//trim(errlogfile)
-    open (newunit = unito, file = fname, status ='unknown')             !unito is the error / logfile unit
+    open (newunit = unito, file = fname, action = 'readwrite', status ='unknown')       !unito is the error / logfile unit
     !-----
     
     !check if file exists and read its content if true:
@@ -192,7 +192,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
             read(unitx,*) dummy, dummy, dummy, txtcheck
             close(unitx)
             if (.not. (txtcheck(1:11) == "AIOMFAC-web")) then           !invalid file (likely spam)
-                open (newunit = unitx, file = fname, status='old')
+                open (newunit = unitx, file = fname, action = 'readwrite', status='old')
                 close(unitx, status='delete')                           !close and delete the file
                 fileexists = .false.
             endif
@@ -1020,7 +1020,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
     !*                                                                                      *
     !*   -> created:        2011                                                            *
-    !*   -> latest changes: 2026-09-04                                                      *
+    !*   -> latest changes: 2026-09-15                                                     *
     !*                                                                                      *
     !*   :: License ::                                                                      *
     !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -1256,32 +1256,31 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                     write(unito,*) "======================================================="
                     write(unito,*) ""
                 
-                !other errors 
+                !other errors / warnings
                 case(19)    !error attempting to open pure-component property file
                     write(unito,*) ""
                     write(unito,*) "======================================================="
                     write(unito,'(A)') "AIOMFAC ERROR 19: File access issue."
                     write(unito,'(A)') "Could not open Pure_component_smiles_table.csv &
-                        &in Auxiliary folder. Check file permissions."
+                        &in Auxiliary folder. Check the presence of the folder and file permissions."
                     write(unito,*) "======================================================="
                     write(unito,*) ""
                 case(20)    !TgML method verification through command line failed - webserver specific
                     write(unito,*) ""
                     write(unito,*) "======================================================="
-                    write(unito,'(A)') "AIOMFAC ERROR 20: TgML method unverified."
-                    write(unito,'(A)') "Could not determine whether TgML method is running. &
-                        &Command line may be invalid. Contact admin (Andreas Zuend) at &
-                        &andreas.zuend@mcgill.ca."
+                    write(unito,'(A)') "AIOMFAC WARNING 20: TgML method unverified."
+                    write(unito,'(A)') "Could not determine whether TgML watchdog method is running. &
+                        &Command line may be invalid. If this happens frequently while using AIOMFAC-web&
+                        & online, please inform andreas.zuend@mcgill.ca."
                     !write(unito,*) "Composition point no.: "
                     write(unito,*) "======================================================="
                     write(unito,*) ""
                 case(21)    !TgML method (watchdog) is not running in background - webserver specific
                     write(unito,*) ""
                     write(unito,*) "======================================================="
-                    write(unito,'(A)') "AIOMFAC ERROR 21: TgML method not running."
-                    write(unito,'(A)') "Method is not running in background. Defaulted to &
-                        &more time-consuming TgML method call. Contact admin (Andreas Zuend) at &
-                        &andreas.zuend@mcgill.ca."
+                    write(unito,'(A)') "AIOMFAC WARNING 21: TgML watchdog process not running."
+                    write(unito,'(A)') "Defaulted to slower TgML script call. If this happens &
+                        &frequently, please inform andreas.zuend@mcgill.ca."
                     write(unito,*) "======================================================="
                     write(unito,*) ""
                 case(22)    !error attempting to open pure-component property file

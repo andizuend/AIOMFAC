@@ -179,9 +179,9 @@ do nc = 1,nspecies                              !loop over components/species
         !detect whether it is a cation or an anion:
         if (ion_no > 239) then                  !anion
             i = AnNr(ion_no)                    !the number i anion (storage location in sma(i) etc.)
-            xi_cp = sma(i)/(sum_ms + SumIonMolalities)
+            xi_cp = sma(i) / (sum_ms + SumIonMolalities)
             mi_cp = sma(i)
-            wtf_cp = sma(i)*SMWA(Ianion(i)-240)*1.0E-3_wp/(1.0_wp + sum_miMi)
+            wtf_cp = sma(i)*SMWA(Ianion(i)-240)*1.0E-3_wp / (1.0_wp + sum_miMi)
             if (sma(i) > 0.0_wp) then
                 actcoeff_cp = actcoeff_a(i)     !molal activity coeff.
             else
@@ -195,9 +195,9 @@ do nc = 1,nspecies                              !loop over components/species
             endif
         else !cation
             i = CatNr(ion_no) 
-            xi_cp = smc(i)/(sum_ms + SumIonMolalities)
+            xi_cp = smc(i) / (sum_ms + SumIonMolalities)
             mi_cp = smc(i)
-            wtf_cp = smc(i)*SMWC(Ication(i)-200)*1.0E-3_wp/(1.0_wp + sum_miMi)    
+            wtf_cp = smc(i)*SMWC(Ication(i)-200)*1.0E-3_wp / (1.0_wp + sum_miMi)    
             if (smc(i) > 0.0_wp) then
                 actcoeff_cp = actcoeff_c(i)     !molal activity coeff.
             else
