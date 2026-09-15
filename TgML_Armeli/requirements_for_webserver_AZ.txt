@@ -1,0 +1,75 @@
+AZ notes: 
+- after doing what is described in requirements_console_script_AZ.txt, including pip install watchdog, see the below settings.
+- folders InputFiles and OutputFiles are needed by the Fortran and watchdog programs (TgML_SMILES_watchdog.py monitors InputFiles).
+
+
+=== the following is only for use on a server (or when intentinally option to use watchdog mode for processing large amounts of new SMILES in inputs) ===	
+
+- on a webserver or for frequent and faster use on a workstation, one can use TgML_SMILES_watchdog.py, in other applications simply TgML_SMILES.py
+
+- to run the watchdog process in the background, from a command promt (after chdir to the TgML_Armeli directory) do one of the following:	
+ 
+[Windows]	
+	.venv\Scripts\python.exe  TgML_SMILES_watchdog.py
+
+	
+[Linux laptop, local terminal session]  
+	sudo chmod +x TgML_SMILES_watchdog.py
+	.venv/bin/python  TgML_SMILES_watchdog.py
+
+ 
+[Linux RHEL (apache) webserver, as background process]
+1) make sure that the TgML_Armeli folder and certain subfolders and files are part of the apache user group and that apache has write and execute permissions.
+
+	sudo chown -R andreas:apache .././TgML_Armeli
+	sudo chmod 775 .././TgML_Armeli
+	sudo chown -R andreas:apache ./InputFiles
+	sudo chmod 775 ./InputFiles
+	sudo chown -R andreas:apache ./OutputFiles
+	sudo chmod 775 ./OutputFiles
+	sudo chown -R apache:apache TgML_SMILES_watchdog.py
+	sudo chown -R andreas:apache TgML_SMILES.py
+	sudo chmod +x TgML_SMILES.py
+	
+	
+Also, on a SELinux secure server (navigate to TgML_Armeli folder) then set special security permissions:
+
+	sudo chcon -t httpd_sys_rw_content_t .././TgML_Armeli
+	sudo chcon -t httpd_sys_rw_content_t ./InputFiles
+	sudo chcon -t httpd_sys_rw_content_t ./OutputFiles
+	sudo chcon -t httpd_sys_rw_content_t .././Auxiliary
+	sudo chcon -t httpd_sys_rw_content_t TgML_SMILES.py
+	sudo chcon -t httpd_sys_script_exec_t TgML_SMILES.py
+	sudo chcon -t httpd_sys_rw_content_t ../AIOMFAC-web.out
+	sudo chcon -t httpd_sys_script_exec_t ../AIOMFAC-web.out
+	sudo chcon -R -t httpd_sys_script_exec_t /var/www/html/cgi_bin
+
+	
+added .txt input files for tests should be set to have apache as the group:
+	sudo chown andreas:apache ./*.txt && sudo chmod 775 ./*.txt
+	
+ 
+2a) make sure that TgML_SMILES_watchdog.py has permission set to execute (execute bit) to start it use command:
+	sudo chmod +x TgML_SMILES_watchdog.py
+	
+2b) for initial tests on webserver (e.g. in Putty) terminal:
+	sudo -u apache .venv/bin/python TgML_SMILES_watchdog.py
+	
+then, after testing, stop that watchdog program (or in case of issues use kill command from below).
+	
+3) then run as follows (as apache and in background under nohup mode):
+	sudo -u apache nohup .venv/bin/python TgML_SMILES_watchdog.py > watchdog_output.log 2>&1 &
+	
+4) to investigate whether the process it is still active, run:
+	ps -ef | grep TgML_SMILES_watchdog.py | grep -v grep   (if active, the number returned in the second column is the PID)
+	
+5) or a command to get a true (active) or false (inactive / absent) answer is:
+	pgrep -f "[T]gML_SMILES_watchdog.py" > /dev/null && echo "true" || echo "false"
+	
+6) to kill the process while it runs, find the process ID from the above ps command and then run (replace PID by process ID):
+	sudo pkill -9 -f TgML_SMILES_watchdog.py   	(this should always work)
+
+	
+Optional: to make this an automatic service that restarts itself after server restart, see:
+https://community.hpe.com/t5/software-general/how-i-turned-my-python-script-into-a-linux-service-and-why-you/td-p/7245402?nobounce
+
