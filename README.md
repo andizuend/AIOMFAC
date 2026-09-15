@@ -98,7 +98,7 @@ Briefly, for command line compilation, the following steps need to be completed 
    
 - Moreover, for in-depth code editing, debugging and development purposes, on [Windows] I recommend using [MS Visual Studio (VS) Community](https://visualstudio.microsoft.com/vs/community/) with Intel's oneAPI Fortran compiler integration. In that case, one can skip the above compilation steps and instead create a new Intel Fortran solution/project in Visual Studio. Once the new solution is created, add the existing Fortran .f90 files to the "source" folder of the VS project. Building the project or solution will then use `ifx` to compile the Fortran code, figure out procedure dependencies and link into an executable. Multiple text editors and IDEs, including VS Code, can be configured for Fortran compilation on Linux (see information [here](https://fortran-lang.org/compilers/)).
 
-### 5.Test the Fortran program
+### 5. Test the Fortran program
 After step (4) is completed, you can verify that the AIOMFAC-web executable works as intended by running it with one of the provided example input files.
 - On [Windows] (from command prompt):
 	- change directory to the program's parent `AIOMFAC` folder, then run
@@ -117,8 +117,12 @@ After step (4) is completed, you can verify that the AIOMFAC-web executable work
 - This setup step describes an optional mode of running AIOMFAC; it can be skipped by most users (but it may be good to know it exists).
 - For applications in which the AIOMFAC model is frequently run, and often with new SMILES of organic compounds as inputs, a more responsive mode exists, one that substantially reduces the relatively large loading time overhead associated with launching the `TgML_SMILES.py` Python program for the estimation of the glass transition temperature of organic compounds. For example, using our speedier option is the default mode on the Linux server running the [AIOMFAC-web online model](https://aiomfac.lab.mcgill.ca/model.html). The trick is to constantly run the relevant Python program as a low-latency process in the background; here this refers to running the `TgML_SMILES_watchdog.py` program provided in the `TgML_Armeli` folder. This watchdog Python program imports the large machine learning libraries and third-party dependencies once during its startup phase and is subsequently ready to process new inputs.
 - When active, the "watchdog" process monitors the `InputFiles` folder (the one in the `TgML_Armeli` folder) and processes temporarily generated SMILES input files in that folder on the fly. The presence and active running of the `TgML_SMILES_watchdog.py` process is inquired from within the Fortran subroutine `PureCompViscosity` (part of module `ModPureViscosPar`). If this background process is not running, the SMILES are instead processed on demand by launching the TgML_SMILES.py script &ndash; hence, this step remains optional.
-- To make use of this optional feature, activate the virtual (.venv) Python environment in the command prompt (see [step (2)](#2-generate-a-virtual-python-environment)), then run: 
+- To make use of this optional feature, first activate the virtual (.venv) Python environment in the command prompt (see [step 2.](#2-generate-a-virtual-python-environment)), then run: 
 	- `pip install watchdog`
+- Now you are ready to (test) run the watchdog process from command line. Change directory to the TgML_Armeli folder and execute the command:
+	- [Windows]:   `.venv\Scripts\python.exe  TgML_SMILES_watchdog.py`
+	- [Linux]: 	 `.venv/bin/python  TgML_SMILES_watchdog.py`
+- For information about additional permission settings and for how to run the process independently in the background, e.g. on a server, please refer to the detailed information provided in `requirements_for_webserver_AZ.txt` (TgML_Armeli folder). 
 
 ----
 ## Quick guide to running AIOMFAC from a command prompt
