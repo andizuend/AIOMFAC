@@ -128,7 +128,8 @@ After step (4) is completed, you can verify that the AIOMFAC-web executable work
 ----
 ## Quick guide to running the AIOMFAC model
 After the installation described above is complete, running the AIOMFAC model for your own system of components is a straightforward task. Doing so only requires a valid AIOMFAC-web-style input file that describes the system components, the temperature and specific mixture compositions you wish to run calculations for. 
-That aside, note that in-depth changes and automation are possible by modifying the Fortran program entry point (typically a modification of the main program unit, file `Main_IO_driver.f90` and/or the `AIOMFAC_inout.f90` file). However, outside of those two files, we discourage you from trying to change the AIOMFAC core code unless you know exactly what you are doing. In the following, we only describe the regular mode of running AIOMFAC.
+That aside, note that in-depth changes and automation are possible by modifying the Fortran program entry point (typically a modification of the main program unit, files `Main_IO_driver.f90` and/or the `AIOMFAC_inout.f90`). However, aside from those two files, we strongly discourage modifications of the AIOMFAC core code unless you know exactly what you are doing. In the following, we only describe the regular mode of running AIOMFAC.
+
 ### Generating a customized input file
 - use of examples from AIOMFAC website and use of S2AS...
 
