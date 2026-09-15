@@ -48,7 +48,7 @@ AIOMFAC
 > [!NOTE] 
 > Within folder `TgML_Armeli`, the subfolders `InputFiles` and `OutputFiles` need to exist (with read and write permissions set for the current user). During normal operation of the AIOMFAC program with use of the glass transition temperature prediction based on the machine learning method by [Armeli et al. (2023)](https://dx.doi.org/10.1021/acsomega.2c08146), temporary files may be created in those folders and deleted a moment later. That's why they will look unused, but are needed for the proper functioning of the setup.
 
-### 2. Generate a (virtual) Python environment
+### 2. Generate a virtual Python environment
 For reasons of compatibility with the machine learning methods run in the background (called from the AIOMFAC Fortran program), it is necessary to install Python v3.9, e.g. specific version 3.9.13, in a virtual environment together with the specific Python packages outlined in the following steps:
 - In a command prompt run on [Windows]  `py --list` or on [Linux]  `compgen -c python | grep -E '^python[0-9.]+$' ` to see the Python versions already installed on the system. 
 - If Python 3.9 if not among them, install it on the system (consult a guide for your operating system if it is unclear to you how to do this correctly).
@@ -117,7 +117,7 @@ After step (4) is completed, you can verify that the AIOMFAC-web executable work
 - This setup step describes an optional mode of running AIOMFAC; it can be skipped by most users (but it may be good to know it exists).
 - For applications in which the AIOMFAC model is frequently run, and often with new SMILES of organic compounds as inputs, a more responsive mode exists, one that substantially reduces the relatively large loading time overhead associated with launching the `TgML_SMILES.py` Python program for the estimation of the glass transition temperature of organic compounds. For example, using our speedier option is the default mode on the Linux server running the [AIOMFAC-web online model](https://aiomfac.lab.mcgill.ca/model.html). The trick is to constantly run the relevant Python program as a low-latency process in the background; here this refers to running the `TgML_SMILES_watchdog.py` program provided in the `TgML_Armeli` folder. This watchdog Python program imports the large machine learning libraries and third-party dependencies once during its startup phase and is subsequently ready to process new inputs.
 - When active, the "watchdog" process monitors the `InputFiles` folder (the one in the `TgML_Armeli` folder) and processes temporarily generated SMILES input files in that folder on the fly. The presence and active running of the `TgML_SMILES_watchdog.py` process is inquired from within the Fortran subroutine `PureCompViscosity` (part of module `ModPureViscosPar`). If this background process is not running, the SMILES are instead processed on demand by launching the TgML_SMILES.py script &ndash; hence, this step remains optional.
-- To make use of this optional feature, activate the virtual (.venv) Python environment in the command prompt (see [step (2)](#2-generate-a-(virtual)-python-environment)), then run:
+- To make use of this optional feature, activate the virtual (.venv) Python environment in the command prompt (see [step (2)](#2-generate-a-virtual-python-environment)), then run: 
 	- `pip install watchdog`
 
 ----
