@@ -118,15 +118,19 @@ After step (4) is completed, you can verify that the AIOMFAC-web executable work
 - This setup step describes an optional mode of running AIOMFAC; it can be skipped by most users (but good to know about).
 - For applications in which the AIOMFAC model is frequently run, and often with new SMILES of organic compounds as inputs, a more responsive mode exists, one that substantially reduces the relatively large loading time overhead associated with launching the `TgML_SMILES.py` Python program for the estimation of the glass transition temperature of organic compounds. For example, using our speedier option is the default mode on the Linux server running the [AIOMFAC-web online model](https://aiomfac.lab.mcgill.ca/model.html). The trick is to constantly run the relevant Python program as a low-latency process in the background; here this refers to running the `TgML_SMILES_watchdog.py` program provided in the `TgML_Armeli` folder. This watchdog Python program imports the large machine learning libraries and third-party dependencies once during its startup phase and is subsequently ready to process new inputs.
 - When active, the "watchdog" process monitors the `InputFiles` folder (the one in the `TgML_Armeli` folder) and processes temporarily generated SMILES input files in that folder "on the fly". The presence and active running of the `TgML_SMILES_watchdog.py` process is inquired from within the Fortran subroutine `PureCompViscosity` (part of module `ModPureViscosPar`). If this background process is not running, the SMILES are instead processed on demand by launching the TgML_SMILES.py script &ndash; hence, this step remains optional.
-- To make use of this optional feature, first activate the virtual (.venv) Python environment in the command prompt (see [step 2.](#2-generate-a-virtual-python-environment)), then run: 
+- To make use of this optional feature, first activate the virtual (.venv) Python environment from the command line (see [step 2.](#2-generate-a-virtual-python-environment)), then run: 
 	- `pip install watchdog`
-- Now you are ready to (test) run the watchdog process from command line. Change directory to the TgML_Armeli folder and execute the command:
+- Now you are ready to (test) run the watchdog process. Change directory to the TgML_Armeli folder and execute the command:
 	- [Windows]:   `.venv\Scripts\python.exe  TgML_SMILES_watchdog.py`
 	- [Linux]: 	 `.venv/bin/python  TgML_SMILES_watchdog.py`
 - For information about additional permission settings and for how to run the process independently in the background, e.g. on a server, please refer to the detailed information provided in `requirements_for_webserver_AZ.txt` (TgML_Armeli folder). 
 
 ----
-## Quick guide to running AIOMFAC from a command prompt
-To run the AIOMFAC program for your own system of components, this is a relatively straightforward task. The following inputs need to be provided.
+## Quick guide to running the AIOMFAC model
+After the installation described above is complete, running the AIOMFAC model for your own system of components is a straightforward task. Doing so only requires a valid AIOMFAC-web-style input file that describes the system components, the temperature and specific mixture compositions you wish to run calculations for. 
+That aside, note that in-depth changes and automation are possible by modifying the Fortran program entry point (typically a modification of the main program unit, file `Main_IO_driver.f90` and/or the `AIOMFAC_inout.f90` file). However, outside of those two files, we discourage you from trying to change the AIOMFAC core code unless you know exactly what you are doing. In the following, we only describe the regular mode of running AIOMFAC.
+### Generating a customized input file
+- use of examples from AIOMFAC website and use of S2AS...
+
 
 -To be added...
