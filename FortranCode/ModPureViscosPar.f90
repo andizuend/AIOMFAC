@@ -166,6 +166,7 @@ private :: VogelTemp, DeRieux_Tno_Est, Tg_ML_Armeli
             &script inside subfolder "TgML_Armeli". '
         write(*,'(A,I0,/)') 'Cstat = ', Cstat
         call sleep(1)
+        !$OMP end critical 
     endif
     
     end subroutine Tg_ML_Armeli
@@ -389,7 +390,7 @@ private :: VogelTemp, DeRieux_Tno_Est, Tg_ML_Armeli
                         enddo
                         close(unsmiles)
                     
-                        inquire(file = trim(tmp_file), size = fsize, readwrite = rdwr_status)  !take initial size of temporary file (= initial size input file)
+                        inquire(file = trim(tmp_file), size = fsize, readwrite = rdwr_status)  !take initial size of temporary file (= initial size of input file)
 
                         !set file access permissions to permissive, then 
                         !move the .tmp file to .txt so that watchdog may process it:
@@ -446,7 +447,7 @@ private :: VogelTemp, DeRieux_Tno_Est, Tg_ML_Armeli
                             enddo
                         endif
                         
-                        if (.not. watchdog_alive) then                              !watchdog isn't running, default to calling Tg_ML_Armeli script
+                        if (.not. watchdog_alive) then                              !watchdog isn't running, default to calling regular Tg_ML_Armeli script
                             call Tg_ML_Armeli(trim(SMILES_input_file), trim(TgML_output_file))
                             if (.not. isWindowsOS) errorflag_clist(21) = .true.     !on Linux (server), send the user a warning to contact admin (since watchdog is down)
                         endif
