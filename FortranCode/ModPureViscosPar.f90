@@ -236,7 +236,7 @@ private :: VogelTemp, DeRieux_Tno_Est, Tg_ML_Armeli
     integer,intent(out) :: iflag
     !local variables:
     integer :: cpn, equationNo, i, ind_water, unsmiles, un1, nlines, istat, num, fsize, newfsize, &
-        clockstart, clockcount, clockrate, exstat, cmdstat, unhb, unresult
+        clockstart, clockcount, clockrate, exstat, cmdstat, unhb
     real(wp),parameter :: ln10 = log(10.0_wp), ln_bwater = log(1.3788E-4_wp)
     real(wp) :: a, b, c, d, e, ln_b, Tg, Tvog, Tgest, Tg_value, Tg_read, r, heartbeat_time, &
         & elapsed_s, current_time
@@ -244,8 +244,7 @@ private :: VogelTemp, DeRieux_Tno_Est, Tg_ML_Armeli
     character(len=100) :: SMILES_input_file, TgML_output_file
     character(len=4) :: casenumber
     character(len=7) :: rdwr_status
-    character(len=5) :: cmd_res
-    character(len=500) :: watchdog_cmd, cmd_line, tmp_file, inp_file, outp_file, tmp2, inp2
+    character(len=500) :: cmd_line, tmp_file, inp_file, outp_file, tmp2, inp2
     character(len=maxsmileslength) :: smiles_input, smiles_read, smiles_batch
     !..................................
 
