@@ -97,7 +97,7 @@ warningind = 0          !0 means no warnings found
 call get_command_argument(1, txtfilein)
 
 if (len_trim(txtfilein) < 4) then                   !no command line argument; so, use specific input file for tests
-    txtfilein = './Inputfiles/input_0466.txt'       !just use this for debugging with a specific input file
+    txtfilein = './Inputfiles/input_0001.txt'       !just use this for debugging with a specific input file
 endif
 
 filepath = adjustl(trim(txtfilein))
@@ -135,8 +135,6 @@ if (filevalid) then
         call load_purecomp_table()                  !initialize pure component data for SMILES-PC matching    
         isWindowsOS = f_query_OS()                  !determine whether we are on Windows or Linux (likely)
     endif
-    !reallocate smiles array to actual number of components:
-    cpsmiles = [cpsmiles(1:ncp)]
     
     !set mixture system properties (composition-independent properties) based on the data from the input file:
     call SetSystem(1, .true., ncp, cpnameinp(1:ncp), cpsubg(1:ncp,1:topsubno) )

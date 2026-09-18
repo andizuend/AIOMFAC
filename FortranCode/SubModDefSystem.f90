@@ -58,13 +58,14 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2018-05-24                                                      *
-    !*   -> latest changes: 2026-08-24                                                      *
+    !*   -> latest changes: 2026-09-17                                                      *
     !*                                                                                      *
     !****************************************************************************************
     module subroutine SetSystem(ndi, datafromfile, ninp, cpnameinp, cpsubginp)
 
     use ModSystemProp, only : ninput, topsubno, bisulfsyst, definemixtures, frominpfile, cpname, &
         & bicarbsyst, noCO2input, maxsmileslength
+    use Mod_InputOutput, only : cpsmiles
 
     implicit none
     !interface variables:
@@ -72,7 +73,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
     logical,intent(in) :: datafromfile      !set .true. if the system components are provided from an input file
     integer,intent(in) :: ninp              !value known at input only in the case of input from a file
     !optional input arguments:
-    character(len=7+maxsmileslength),dimension(:),intent(in), optional :: cpnameinp
+    character(len=maxsmileslength +7),dimension(:),intent(in), optional :: cpnameinp
     integer,dimension(:,:),intent(in), optional :: cpsubginp
     !...
     !local variables
@@ -82,7 +83,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
     !........................................................
 
     frominpfile = datafromfile
-    if (.NOT. datafromfile) then 
+    if (.not. datafromfile) then 
         !define dataset via call to dataset_components
     else
         !(1b) allocate temporary arrays to contain the component information of the system:
@@ -98,6 +99,9 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
         cpname(1:ninputcomp) = cpnameinp(1:ninputcomp)
     endif
     ninput = ninputcomp !save original number of cpsubg-defined input components; i.e. prior to potential automatic changes to ITAB.
+    
+    !reallocate smiles array to actual number of components:
+    cpsmiles = [cpsmiles(1:ninp)]
     
     !(4) check whether H+, HSO4- and SO4-- are part of the system or could be forming, 
     !    which may then require an adjustment to cpsubg.
@@ -336,7 +340,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2005                                                            *
-    !*   -> latest changes: 2018-05-30                                                      *
+    !*   -> latest changes: 2026-09-17                                                      *
     !*                                                                                      *
     !****************************************************************************************
     module subroutine definemixtures(ndi, ninputcomp, compID, cpsubg)
@@ -346,6 +350,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
     use ModMRpart, only : MRinteractcoeff
     use ModSRunifac, only : SRsystm
     use ModComponentNames, only : names_mix
+    use Mod_InputOutput, only : cpsmiles
 
     implicit none
     !Interface variables:
@@ -699,7 +704,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
     endif
     allocate( OtoCratio(nindcomp), HtoCratio(nindcomp), compname(nindcomp), compnameTeX(nindcomp), ionname(NGS), ionnameTeX(NGS) )
     !set the name strings for the different independent components and the O:C ratio of the neutrals (when set already):
-    call names_mix(CompN, compname, compnameTeX, ionname, ionnameTeX, OtoCratio, HtoCratio)     
+    call names_mix(CompN, compname, compnameTeX, cpsmiles, ionname, ionnameTeX, OtoCratio, HtoCratio)     
     !now compname contains the name strings of all independent components of the present mixture nd;
 
     call cpsubgrstring() !generate for each component a subgroup-string stored in compsubgroups, compsubgroupsTeX, and compsubgroupsHTML

@@ -39,11 +39,12 @@ implicit none
 private
 
 !public variables
-character(len=maxsmileslength),dimension(:),allocatable,public :: cpsmiles      !list of smiles components indexed to total components
+character(len=maxsmileslength),dimension(:),allocatable,public :: cpsmiles      !list of smiles of components indexed to total components
 logical,public :: armeliON                                                      !declare TgML Armeli method selection
 
 public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
 
+!$OMP THREADPRIVATE(armeliON, cpsmiles)
 
 !============================================================================================
     contains
@@ -295,7 +296,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                             write(unito,'(A, A, A, I0.1)') "MESSAGE from AIOMFAC: identified smiles = ", trim(cpsmiles(cpno)), " at component cpno = ", cpno
                         endif
                     endif
-                elseif (any(NKname == trim(cp_inp_name))) then
+                elseif (any(NKname(:) == trim(cp_inp_name))) then
                     ind = findloc(NKname, trim(cp_inp_name), dim=1)     !extract index
                     cpnameinp(cpno) = trim(cp_inp_name)
                     if (NKsmiles(ind) /= "not_defined") then
@@ -306,7 +307,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                         endif
                     endif
                 else
-                    !cpsmiles(cpno) = "" by default (via initialization)
+                    cpnameinp(cpno) = trim(cp_inp_name)
                 endif
                 
                 do !until exit

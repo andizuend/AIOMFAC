@@ -249,6 +249,8 @@ private :: VogelTemp, DeRieux_Tno_Est, Tg_ML_Armeli
     !..................................
 
     !initialize:
+    fragility = 30.0_wp
+    
     if (ind > 0) then
         if (ITAB(ind,16) > 0) then          !is water
             cpn = 401
