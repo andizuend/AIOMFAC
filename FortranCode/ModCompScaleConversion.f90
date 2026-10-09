@@ -9,7 +9,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2004 (non-module versions)                                      *
-!*   -> latest changes: 2021-10-01                                                      *
+!*   -> latest changes: 2026-10-09                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -139,7 +139,7 @@ public
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2012                                                            *
-    !*   -> latest changes: 2019-10-29                                                      *
+    !*   -> latest changes: 2026-09-29                                                      *
     !*                                                                                      *
     !**************************************************************************************** 
     pure subroutine MoleFrac2MassFrac(xin, Mmass, wout) 
@@ -152,32 +152,35 @@ public
     integer :: nc, nmaxindex
     real(wp) :: totmass, sum1, sum2
     !...................................................
+    
     !the conversion assumes that the mole fractions in xin sum to exactly 1.0_wp and makes sure 
     !that also the sum of the mass fractions equals 1.0_wp, i.e., by using this constraint to 
     !avoid potential round-off inaccuracies within machine precision:
     nc = size(xin)
     nmaxindex = maxloc(xin, dim=1)
-    totmass = sum(xin*Mmass)
+    totmass = dot_product(xin, Mmass) != sum(xin*Mmass)
     if (totmass > 0.0_wp) then
         if (nmaxindex > 1) then
-            wout(1:nmaxindex-1) = xin(1:nmaxindex-1)*Mmass(1:nmaxindex-1)/totmass
+            wout(1:nmaxindex-1) = xin(1:nmaxindex-1)*Mmass(1:nmaxindex-1) / totmass
             sum1 = sum(wout(1:nmaxindex-1))
         else
             sum1 = 0.0_wp
         endif
         if (nmaxindex < nc) then
-            wout(nmaxindex+1:) = xin(nmaxindex+1:)*Mmass(nmaxindex+1:)/totmass
+            wout(nmaxindex+1:) = xin(nmaxindex+1:)*Mmass(nmaxindex+1:) / totmass
             sum2 = sum(wout(nmaxindex+1:))
         else
             sum2 = 0.0_wp
         endif
     else !zero total mass; assign artificial mass fraction distribution
-        wout = 1.0_wp/real(nc, kind=wp)
-        sum1 = sum(wout(1:nc-1))
-        sum2 = 0.0_wp
+        error stop "ERROR in MoleFrac2MassFrac: zero total mass encountered!"
+        !wout = 1.0_wp / real(nc, kind=wp)
+        !sum1 = sum(wout(1:nc-1))
+        !sum2 = 0.0_wp
     endif
+    
     !set the mass fraction value of the most abundant component, which is least sensitive to a tiny rounding error:
-    wout(nmaxindex) = max(1.0_wp-sum1-sum2, 0.0_wp) !max() to ensure that wout is never a negative value.
+    wout(nmaxindex) = max(1.0_wp -sum1 -sum2, 0.0_wp)   !max() to ensure that wout is never a negative value.
 
     end subroutine MoleFrac2MassFrac
 !==========================================================================================================
@@ -233,8 +236,8 @@ public
     real(wp) :: SumIonMolalities, sum_molal
     !.........................................
     
-    SumIonMolalities = sum(SMA(1:NGI)) +sum(SMC(1:NGI))
-    sum_molal = sum(m_neutral) +SumIonMolalities        !sum of all molalities
+    SumIonMolalities = sum(SMA(1:NGI)) + sum(SMC(1:NGI))
+    sum_molal = sum(m_neutral) + SumIonMolalities       !sum of all molalities
     xout = m_neutral / sum_molal                        !mole fraction of the neutral components 
                                                         !(on the basis of partially/fully dissociated electrolytes)    
     end subroutine Molality2SolvMoleFrac
@@ -252,10 +255,12 @@ public
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2005                                                            *
-    !*   -> latest changes: 2018-05-28                                                      *
+    !*   -> latest changes: 2026-09-30                                                      *
     !*                                                                                      *
     !****************************************************************************************  
-    subroutine Inputconc_to_wtf(inputconc, mixingratio, wtfdry, xinput, wtf)
+    pure subroutine Inputconc_to_wtf(inputconc, mixingratio, wtfdry, xinput, wtf)
+    
+    use ModNumericalTransformations, only : neumaier_sum
 
     implicit none
     !interface variables:
@@ -264,49 +269,56 @@ public
     logical,intent(in) :: xinput                                 !"true" indicates input is in mole fraction ("false" indicates mass fraction input)
     real(wp),dimension(nindcomp),intent(out) :: wtf
     !local variables:
+    character(len=100) :: chout
     integer :: minlocwtf, maxlocwtf
-    real(wp),parameter :: lowval = 1.0E2_wp*epsilon(1.0_wp)
+    real(wp),parameter :: lowval = 1.0E2_wp*epsilon(1.0_wp), small = sqrt(epsilon(1.0_wp))
     real(wp),dimension(nindcomp) :: x 
     logical :: defaultcase
     !...................................
+    
     wtf = 0.0_wp
     defaultcase = .true.
+    
     !===
     !consider special cases that need a scaling of input amounts (e.g. to distribute among multiple salts or PEG-oligomer components);
     !this is not needed for general customized input (e.g. remove for AIOMFAC-web version)
     call SpecialInputConcConversion(inputconc, mixingratio, wtfdry, xinput, wtf, defaultcase)
     !===
-    if (defaultcase) then                           !(defaultcase should be set .true. if SpecialInputConcConversion is not used)
+    
+    if (defaultcase) then                                   !("defaultcase" should be set .true. if SpecialInputConcConversion is not used)
         if (xinput) then
-            x(2:nindcomp) = inputconc(2:nindcomp)   !mole fraction (with respect to salts not dissociated into ions) of other components including salts!
-            x(1) = 1.0_wp-sum(x(2:nindcomp))         !for component water usually
+            x(2:nindcomp) = inputconc(2:nindcomp)           !mole fraction (with respect to salts not dissociated into ions) of components, including salts!
+            x(1) = 1.0_wp - neumaier_sum(x(2:nindcomp))     !for component 1
             call MoleFrac2MassFrac(x, Mmass, wtf)
         else
             wtf(2:nindcomp) = inputconc(2:nindcomp)
-            wtf(1) = 1.0_wp-sum(wtf(2:nindcomp))
+            wtf(1) = 1.0_wp - neumaier_sum(wtf(2:nindcomp))
         endif
     endif
                     
     !check and correct mixture composition if necessary (avoiding floating point exceptions):
     if (any(wtf(1:nindcomp) < 0.0_wp)) then
-        if (abs(minval(wtf(1:nindcomp))) < 1.0E-8_wp) then     !correct floating point rounding problem
+        if (abs(minval(wtf(1:nindcomp))) < small) then      !correct floating point rounding problem
             minlocwtf = minloc(wtf(1:nindcomp), dim=1)
             maxlocwtf = maxloc(wtf(1:nindcomp), dim=1)
-            wtf(maxlocwtf) = wtf(maxlocwtf)+wtf(minlocwtf)
+            wtf(maxlocwtf) = wtf(maxlocwtf) + wtf(minlocwtf)
             wtf(minlocwtf) = 0.0_wp
-        else !there is something wrong...
+        else    !there is something wrong...
             minlocwtf = minloc(wtf(1:nindcomp), dim=1)
-            write(*,*) ""
-            write(*,*) "WARNING from Inputconc_to_wtf: mass fraction of a component is less then 0.0 !!"
-            write(*,*) "nd, wtf(minlocwtf): ", nd, wtf(minlocwtf)
-            write(*,*) ""
-            !  read(*,*)
-            return
+            !!$omp critical
+            !write(*,*) "WARNING from Inputconc_to_wtf: mass fraction of a component is less then 0.0!"
+            !write(*,*) "nd, wtf(minlocwtf): ", nd, wtf(minlocwtf)
+            !!  read(*,*)
+            !return
+            !!$omp end critical
+            write(chout,*) "nd, wtf(minlocwtf): ", nd, wtf(minlocwtf)
+            error stop "ERROR in Inputconc_to_wtf: mass fraction of a component is less then 0.0! "//chout
         endif
     endif
+    
     if (sum(wtf(1:nneutral)) < lowval .and. sum(wtf(nneutral+1:nindcomp)) > lowval) then  !there has to be some water in the mixture or some organic solvent!!
-        wtf(2:nindcomp) = wtf(2:nindcomp)*(1.0_wp -lowval)
-        wtf(1) = 1.0_wp - sum(wtf(2:nindcomp))
+        wtf(2:nindcomp) = wtf(2:nindcomp)*(1.0_wp - lowval)
+        wtf(1) = 1.0_wp - neumaier_sum(wtf(2:nindcomp))
     endif
 
     end subroutine Inputconc_to_wtf
@@ -341,7 +353,7 @@ public
     real(wp),dimension(nindcomp) :: x 
     !..........................................
 
-    defaultcase = .false. !initialize
+    defaultcase = .false.   !initialize
 
     !weightfractions of the read in data:
     if (.not. xinput) then !data is read in in mass fraction scale
@@ -415,14 +427,14 @@ public
             x(nneutral+1:nindcomp) = inputconc(2)*mixingratio(1:nelectrol)
             x(1) = 1.0_wp-sum(x(nneutral+1:nindcomp))
             totalweight = sum(Mmass(1:nneutral)*x(1:nneutral))
-            totalweight = totalweight+sum(Mmass(nneutral+1:nindcomp)*x(nneutral+1:nindcomp))
-            wtf(nneutral+1:nindcomp) = x(nneutral+1:nindcomp)*Mmass(nneutral+1:nindcomp)/totalweight
+            totalweight = totalweight +sum(Mmass(nneutral+1:nindcomp)*x(nneutral+1:nindcomp))
+            wtf(nneutral+1:nindcomp) = x(nneutral+1:nindcomp)*Mmass(nneutral+1:nindcomp) / totalweight
             wtf(1) = 1.0_wp-sum(wtf(2:nindcomp))
         case(196:198)
             x(1) = 1.0_wp-inputconc(2)-inputconc(3)
-            x(nneutral+1:nindcomp) = inputconc(2)*mixingratio(1:nelectrol)/sum(mixingratio(1:nelectrol))
+            x(nneutral+1:nindcomp) = inputconc(2)*mixingratio(1:nelectrol) / sum(mixingratio(1:nelectrol))
             totalweight = sum(Mmass(1:nneutral)*x(1:nneutral))
-            totalweight = totalweight+sum(Mmass(nneutral+1:nindcomp)*x(nneutral+1:nindcomp))
+            totalweight = totalweight +sum(Mmass(nneutral+1:nindcomp)*x(nneutral+1:nindcomp))
             wtf(1:nneutral) = x(1:nneutral)*Mmass(1:nneutral)/totalweight
             wtf(nneutral+1:nindcomp) = x(nneutral+1:nindcomp)*Mmass(nneutral+1:nindcomp)/totalweight
         case(203:204) !PEG-400 molar ratios
@@ -432,7 +444,7 @@ public
             totalweight = sum(Mmass(1:nneutral)*x(1:nneutral))
             wtf(1:nneutral) = x(1:nneutral)*Mmass(1:nneutral)/totalweight
         case(205:209,219:221) !PEG-400 molar ratios
-            x(1) = 1.0_wp-inputconc(2)-inputconc(3)
+            x(1) = 1.0_wp -inputconc(2) -inputconc(3)
             x(2) = inputconc(2)*(1.0_wp/3.0_wp) !PEG-400 n = 7
             x(3) = inputconc(2)*(2.0_wp/3.0_wp) !PEG-400 n = 8
             x(4) = inputconc(3) !AS
@@ -518,7 +530,7 @@ public
     implicit none
     !interface variables:
     real(wp),dimension(:),intent(in)  :: wtf         !mass fractions (input); typically these are mass fractions with electrolytes
-                                                    !expressed as undissociated ions (matters for the output XrespSalt values)
+                                                     !expressed as undissociated ions (matters for the output XrespSalt values)
     real(wp),dimension(:),intent(out) :: XrespSalt   !mole fraction of the components with respect to undissociated electrolytes
     real(wp),dimension(:),intent(out) :: mrespSalt   !molality of the (undissociated) components
     !local variables:
@@ -527,10 +539,10 @@ public
     real(wp),dimension(size(wtf)) :: saltfreeWTF, wtfbyMmass
     !................................................................
 
-    nnp1 = nneutral+1
+    nnp1 = nneutral + 1
     XrespSalt = 0.0_wp
     mrespSalt = 0.0_wp
-    wtfbyMmass = wtf/Mmass              !this is equivalent to sum(n_j) / sum(n_j M_j)
+    wtfbyMmass = wtf / Mmass              !this is equivalent to sum(n_j) / sum(n_j M_j)
     sum_wtfbyMmass = sum(wtfbyMmass)
 
     saltfreeWTF = 0.0_wp
@@ -538,10 +550,12 @@ public
     if (sum_saltfreeWTF > 0.0_wp) then
         saltfreeWTF(1:nneutral) = wtf(1:nneutral) / sum_saltfreeWTF
     endif
+    
     !total number of moles of substances is known, now one can calculate the mole fraction:
     !for the neutrals:
     XrespSalt(1:nneutral) = wtfbyMmass(1:nneutral) / sum_wtfbyMmass
     mrespSalt(1:nneutral) = wtfbyMmass(1:nneutral) / sum_saltfreeWTF
+    
     !for the electrolytes
     if (nelectrol > 0) then
         XrespSalt(nnp1:) = wtfbyMmass(nnp1:) / sum_wtfbyMmass
@@ -597,17 +611,17 @@ public
     !................................
     ml = 0.0_wp
     !liquid solvent mass:
-    Msolv = sum(zl(1:nneutral)*Mmass(1:nneutral))
+    Msolv = dot_product(zl(1:nneutral), Mmass(1:nneutral))
     !molality of solvent components:
-    ml(1:nneutral) = zl(1:nneutral)/Msolv
+    ml(1:nneutral) = zl(1:nneutral) / Msolv
     !molality of individual ions:
     do i = 1,nelectrol  
         cn = ElectComps(i,1)    !the cation of this electrolyte
         an = ElectComps(i,2)    !the anion
         cid = CatNr(cn)         !the cation index ID within the cations of this mixture
         aid = AnNr(an)          !the anion index ID
-        ml(nneutral+cid) = ml(nneutral+cid) + zl(nneutral+i)*ElectNues(i,1)/Msolv
-        ml(nneutral+Ncation+aid) = ml(nneutral+Ncation+aid) + zl(nneutral+i)*ElectNues(i,2)/Msolv
+        ml(nneutral+cid) = ml(nneutral+cid) + zl(nneutral+i)*ElectNues(i,1) / Msolv
+        ml(nneutral+Ncation+aid) = ml(nneutral+Ncation+aid) + zl(nneutral+i)*ElectNues(i,2) / Msolv
     enddo
     
     end subroutine zSolution2SpeciesMolality

@@ -80,7 +80,7 @@ character(len=16),dimension(:),allocatable,public :: ionname, ionnameTeX
 character(len=3000),dimension(:),allocatable,public :: compsubgroups, compsubgroupsTeX, compsubgroupsHTML
 !--
 logical,public :: calcviscosity, elpresent, frominpfile, waterpresent, solvmixrefnd
-logical,public :: bisulfsyst, bicarbsyst, malosyst, glutsyst, succsyst, dicarbsyst
+logical,public :: bisulfsyst, bicarbsyst, malosyst, glutsyst, succsyst, dicarbsyst, MeOSsyst, EtOSsyst, IsopreneOSsyst, OSsyst
 logical,public :: noCO2input, noH2Ainput, noOSHinput
 logical,public :: incl_bisulfate = .false.
 logical,public :: is_heat_transfer                              !default will be .false. but if true will enable smooth temperature transitions
@@ -133,7 +133,7 @@ interface
     !$OMP & frominpfile, bisulfsyst, waterpresent, calcviscosity, elpresent, is_heat_transfer, isPEGsystem, maingrindexofsubgr,   &
     !$OMP & ElectComps, ElectNues, ElectVolatile, IAPcoeffs, KVLE_298K, K_el, SubGroupMW, ElectO2Cequiv, cationZ,  &
     !$OMP & anionZ, errorflagmix, errorflag_clist, nuestoich, idHCO3, idCO3, idOH, idCO2, idCa, bicarbsyst, &
-    !$OMP & noCO2input, noH2Ainput, noOSHinput, malosyst, glutsyst, succsyst, dicarbsyst, &
+    !$OMP & noCO2input, noH2Ainput, noOSHinput, malosyst, glutsyst, succsyst, dicarbsyst, MeOSsyst, EtOSsyst, IsopreneOSsyst, OSsyst,  &
     !$OMP & idHmalo, idmalo, idHglut, idglut, idHsucc, idsucc,  idMeOS, idEtOS, idIsopreneOS, incl_bisulfate, id_H2Adicarb, id_OSH)
     
 end module ModSystemProp

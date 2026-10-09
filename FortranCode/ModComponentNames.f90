@@ -33,15 +33,19 @@
 
 module ModComponentNames
 
+use ModSystemProp, only : maxsmileslength
+
 implicit none
 
 !module public vars:
 character(len=60),dimension(:),allocatable,public :: NKname, NKnameTeX
-character(len=500),dimension(:),allocatable,public :: NKsmiles
+character(len=maxsmileslength),dimension(:),allocatable,public :: NKsmiles
+
 
 !========================================================================================================== 
     contains
 !========================================================================================================== 
+ 
     
     !****************************************************************************************
     !*   :: Purpose ::                                                                      *

@@ -85,7 +85,7 @@ logical,dimension(size(errorflag_clist)) :: errflag_list
 !
 !==== INITIALIZATION section =======================================================
 !
-VersionNo = "3.14"      !AIOMFAC-web version number (change here if minor or major changes warrant a version number change)
+VersionNo = "3.15"      !AIOMFAC-web version number (change here if minor or major changes warrant a version number change)
 verbose = .true.        !if true, some debugging information will be printed to the unit "unito" (errorlog file)
 nspecmax = 0
 errorind = 0            !0 means no errors found

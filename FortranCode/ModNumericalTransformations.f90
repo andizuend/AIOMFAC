@@ -8,7 +8,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2022-11-02                                                      *
-!*   -> latest changes: 2024-01-29                                                      *
+!*   -> latest changes: 2026-09-29                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -30,6 +30,7 @@
 !*   -  pure elemental function sigmoidal_map                                           *
 !*   -  pure elemental function inverse_sigmoidal_map                                   *  
 !*   -  pure elemental function extended_sigmoidal_map                                  *
+!*   -  pure function neumaier_sum                                                      *
 !*   -  pure subroutine comp_weighting                                                  *
 !*   -  pure subroutine bounded_fweighting                                              *
 !*                                                                                      *
@@ -37,20 +38,9 @@
 module ModNumericalTransformations
 
 use Mod_kind_param, only : wp
-use ModSystemProp, only : Mmass
 
 implicit none
-private                 !set default as private for subroutines and module variables
-
-!public procedures from this module:
-public  ::  safe_exp
-public  ::  soft_bounds
-public  ::  soft_bounds_external
-public  ::  sigmoidal_map
-public  ::  inverse_sigmoidal_map
-public  ::  extended_sigmoidal_map
-public  ::  comp_weighting
-public  ::  bounded_fweighting
+public                 !set public as default for subroutines and functions from this module
 
 contains
 
@@ -285,6 +275,42 @@ contains
     end function extended_sigmoidal_map
     !------------------------------------------------------------------------------------------------------------
     
+        
+    !--------------------------------------------------------------------------------------------------
+    !Utility function:
+    !** A robust way for summing a list of values that potentially differ substantially in magnitude 
+    !   and loss of significant digits could be an issue. The implementation is based on the 
+    !   Neumaier (1974, https://doi.org/10.1002/zamm.19740540106) algorithm, an improved Kahan-type 
+    !   method for pairwise summation.                                                                 **
+    pure function neumaier_sum(list)  result(s)
+    
+    implicit none
+    !interface arguments:
+    real(wp),intent(in) :: list(:)              !input array that may contain elements of vastly variing magnitudes
+    real(wp) :: s                               !Neumaier sum of elements
+    !local arguments
+    integer  :: i
+    real(wp) :: c, t
+    !...........................
+
+    s = 0.0_wp
+    c = 0.0_wp
+
+    do i = 1, size(list)
+        t = s + list(i)
+        if ( abs(s) >= abs(list(i)) ) then
+            c = c + ((s - t) + list(i))
+        else
+            c = c + ((list(i) - t) + s)
+        endif
+        s = t
+    enddo
+
+    s = s + c
+
+    end function neumaier_sum
+    !--------------------------------------------------------------------------------------------------
+    
     
     !!!********************************************************************************************
     !!!*   :: Purpose ::                                                                          *
@@ -426,6 +452,7 @@ contains
     
     end subroutine comp_weighting
     !------------------------------------------------------------------------------------------------------------
+    
     
     !********************************************************************************************
     !*   :: Purpose ::                                                                          *

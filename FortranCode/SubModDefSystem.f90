@@ -64,7 +64,8 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
     module subroutine SetSystem(ndi, datafromfile, ninp, cpnameinp, cpsubginp)
 
     use ModSystemProp, only : ninput, topsubno, bisulfsyst, definemixtures, frominpfile, cpname, &
-        & bicarbsyst, noCO2input, maxsmileslength
+        & bicarbsyst, malosyst, glutsyst, succsyst, dicarbsyst, MeOSsyst, EtOSsyst, IsopreneOSsyst, &
+        & OSsyst, noCO2input, maxsmileslength
     use Mod_InputOutput, only : cpsmiles
 
     implicit none
@@ -114,6 +115,14 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
     HCO3exists = .false. 
     CO3exists = .false. 
     bicarbsyst = .false.
+    malosyst = .false.
+    glutsyst = .false.
+    succsyst = .false.
+    dicarbsyst = .false. 
+    MeOSsyst = .false.
+    EtOSsyst = .false.
+    IsopreneOSsyst = .false.
+    OSsyst = .false.
     noCO2input = .false. !check if CO2 is an input or not
     updbicarb = .false.
     if ( any(cpsubg(1:ninputcomp,205) > 0) ) then
@@ -134,7 +143,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
         CO3exists = .true.
     endif
     if (HSO4exists) then
-        if ( (.NOT. Hexists) .OR. (.NOT. SO4exists) ) then
+        if ( (.not. Hexists) .or. (.not. SO4exists) ) then
             updbisulf = .true.                                              !HSO4- present but H+ and/or SO4-- not yet present at input
         endif
     else if ( Hexists .and. SO4exists ) then
@@ -153,7 +162,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
                 exit !leave loop
             endif
         enddo
-        if (.NOT. Hexists) then                                             !there was no H+ before the dissociation:
+        if (.not. Hexists) then                                             !there was no H+ before the dissociation:
             !Find first "new" component in cpsubg that could contain the new cation:
             if (all(cpsubg(ninputcomp+1,201:240) == 0)) then                !found first cation-free cpsubg component
                 CatFree = ninputcomp+1                                      !possibly anion free component...
@@ -161,7 +170,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
                 ninputcomp = ninputcomp+1
             endif
         endif
-        if (.NOT. SO4exists) then !there was no SO4-- before the dissociation = > create a new anion number group:
+        if (.not. SO4exists) then !there was no SO4-- before the dissociation = > create a new anion number group:
             do i = nnp1,ninputcomp+1
                 !Find first "new" component in cpsubg that could contain the new anion:
                 if (all(cpsubg(i,241:topsubno) == 0)) then                  !found first anion-free cpsubg component
@@ -172,7 +181,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
                 endif
             enddo
         endif
-        if (.NOT. HSO4exists) then                                          !there was no HSO4- before the dissociation:
+        if (.not. HSO4exists) then                                          !there was no HSO4- before the dissociation:
             do i = nnp1,ninputcomp+1
                 !Find first "new" component in cpsubg that could contain the new anion:
                 if (all(cpsubg(i,241:topsubno) == 0)) then                  !found first anion-free cpsubg component
@@ -208,7 +217,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
     !(5) H+, HCO3- and CO3-- are part of the system or could be forming, 
     !    which may then require an adjustment to cpsubg.
     if (HCO3exists) then
-        if ( (.NOT. Hexists) .OR. (.NOT. CO3exists) ) then
+        if ( (.not. Hexists) .or. (.not. CO3exists) ) then
             updbicarb = .true.                                              !HCO3- present but H+ and/or CO3-- not yet present at input
         endif
     else if ( Hexists .and. CO3exists ) then
@@ -218,7 +227,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
     endif
     
     !determine the component number of the first electrolyte component:
-    if (bicarbsyst .OR. updbicarb) then
+    if (bicarbsyst .or. updbicarb) then
         do i = 1,ninputcomp 
             if ( any(cpsubg(i,201:240) > 0) ) then                          !loop over all cations (as one must be part of first electrolyte component);
                 nnp1 = i
@@ -230,7 +239,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
         bicarbsyst = .true.
         CatFree = 0
         AnFree = 0
-        if (.NOT. Hexists) then !there was no H+ before the dissociation:
+        if (.not. Hexists) then !there was no H+ before the dissociation:
             !Find first "new" component in cpsubg that could contain the new cation:
             if (all(cpsubg(ninputcomp+1,201:240) == 0)) then                !found first cation-free cpsubg component
                 CatFree = ninputcomp+1                                      !possibly anion free component...
@@ -238,7 +247,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
                 ninputcomp = ninputcomp +1
             endif
         endif
-        if (.NOT. CO3exists) then !there was no CO3-- before the dissociation = > create a new anion number group:
+        if (.not. CO3exists) then !there was no CO3-- before the dissociation = > create a new anion number group:
             do i = nnp1,ninputcomp+1
                 !Find first "new" component in cpsubg that could contain the new anion:
                 if (all(cpsubg(i,241:topsubno) == 0)) then                  !found first anion-free cpsubg component
@@ -249,7 +258,7 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
                 endif
             enddo
         endif
-        if (.NOT. HCO3exists) then !there was no HCO3- before the dissociation:
+        if (.not. HCO3exists) then !there was no HCO3- before the dissociation:
             do i = nnp1,ninputcomp+1
                 !Find first "new" component in cpsubg that could contain the new anion:
                 if (all(cpsubg(i,241:topsubno) == 0)) then                  !found first anion-free cpsubg component
@@ -284,12 +293,12 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
     
     !Add CO2(aq) as an additional component if bicarbsys = .true.    
     if (bicarbsyst) then
-        if (.NOT. any(cpsubg(1:ninputcomp,247) > 0)) then                   !Check for OH- existence
+        if (.not. any(cpsubg(1:ninputcomp,247) > 0)) then                   !Check for OH- existence
             ninputcomp = ninputcomp + 1
             cpsubg(ninputcomp,247) = 1                                      !1x OH-
             cpsubg(ninputcomp,205) = 1                                      !1x H+
         endif
-        if (.NOT. any(cpsubg(1:nnp1,173) > 0)) then   
+        if (.not. any(cpsubg(1:nnp1,173) > 0)) then   
             noCO2input = .true.
             allocate(cpsubgdat(nnp1+1:ninputcomp+1,201:topsubno))
             cpsubgdat(nnp1+1:ninputcomp+1,201:topsubno) = cpsubg(nnp1:ninputcomp,201:topsubno)   !make a temporary array for the electrolytes

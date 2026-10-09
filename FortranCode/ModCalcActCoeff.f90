@@ -10,7 +10,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2018                                                            *
-!*   -> latest changes: 2025-07-03                                                      *
+!*   -> latest changes: 2026-10-09                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -64,11 +64,6 @@ interface
         real(wp),intent(inout) :: rset
         real(wp),intent(in) :: lowerbound, ntiny, maxlim
     end subroutine rboundsCheck
-    !--
-    pure module function sum_sorted(list) result(summed)
-        real(wp),dimension(:),intent(in) :: list
-        real(wp) :: summed
-    end function sum_sorted
     !-- 
 end interface
     
@@ -255,13 +250,13 @@ end interface
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
     !*                                                                                      *
     !*   -> created:        2004                                                            *
-    !*   -> latest changes: 2026-07-19                                                      *
+    !*   -> latest changes: 2026-10-09                                                      *
     !*                                                                                      *
     !**************************************************************************************** 
     subroutine Gammas()
     
-    use ModSystemProp, only : nneutral, NKNpNGS, Ncation, Nanion, Mmass, bisulfsyst, &
-        & bicarbsyst, is_heat_transfer
+    use ModSystemProp, only : nneutral, NKNpNGS, Ncation, Nanion, Mmass, bisulfsyst, bicarbsyst, &
+        & dicarbsyst, OSsyst, is_heat_transfer
     use ModSRunifac, only : SRsystm, SRunifac
     use ModMRpart, only : LR_MR_activity, GammaCO2
     use ModAIOMFACvar, only : meanSolventMW
@@ -278,34 +273,36 @@ end interface
     !........................................................................................................
     
     nnp1 = nneutral +1
+    
     !initialize the mole fraction composition arrays:
     X = 0.0_wp
     XN = 0.0_wp
-    !Calculation of the electrolyte-free mole fractions of the neutral components, XN:
-    wtfbycompMW(1:nneutral) = wtf(1:nneutral)/Mmass(1:nneutral)
-    sumXN = sum(wtfbycompMW)
-    XN(1:nneutral) = wtfbycompMW/sumXN
     
-    meanSolventMW = sum(Mmass(1:nneutral)*XN(1:nneutral))           !mean molar mass of the solvent mixture (only non-electrolytes)
-    mNeutral = XN(1:nneutral)/meanSolventMW                         ![mol/kg], the molalities of the neutrals
+    !Calculation of the electrolyte-free mole fractions of the neutral components, XN:
+    wtfbycompMW(1:nneutral) = wtf(1:nneutral) / Mmass(1:nneutral)
+    sumXN = sum(wtfbycompMW)
+    XN(1:nneutral) = wtfbycompMW / sumXN
+    
+    meanSolventMW = sum(Mmass(1:nneutral)*XN(1:nneutral))               !mean molar mass of the solvent mixture (only non-electrolytes)
+    mNeutral = XN(1:nneutral) / meanSolventMW                           ![mol/kg], the molalities of the neutrals
 
     !Addition of the moles of substance (neutral and ionic) per 1 kg of electrolyte-free solvent mixture
-    if (bisulfsyst) then    !update since it changes in DiffKsulfuricDissoc and DiffKcarbonateDissoc
-        SumIonMolalities = sum(SMA(1:Nanion)) +sum(SMC(1:Ncation))
+    if (bisulfsyst .or. bicarbsyst .or. dicarbsyst .or. OSsyst) then    !update since it changes in DiffKsulfuricDissoc and DiffKcarbonateDissoc
+        SumIonMolalities = sum(SMA(1:Nanion)) + sum(SMC(1:Ncation))
     endif
-    sum_molalities = sum(mNeutral) + SumIonMolalities               !sum of all molalities
+    sum_molalities = sum(mNeutral) + SumIonMolalities                   !sum of all molalities
 
     !Calculation of the mole fraction (X) of the neutral components and the ions with respect to dissociated electrolytes/ions.
     !==> the structure of the mole fraction array X is: 
     !1) neutral components in component order,
     !2) ions: first the cations, then the anions
-    X(1:nneutral) = mNeutral/sum_molalities                         !mole fraction of the neutral components (on the basis of dissociated electrolytes)    
+    X(1:nneutral) = mNeutral / sum_molalities                           !mole fraction of the neutral components (on the basis of dissociated electrolytes)    
     NKNpNcat = nneutral + Ncation
-    X(nnp1:NKNpNcat) = SMC(1:Ncation)/sum_molalities                !mole fractions of the cations
-    X(NKNpNcat+1:NKNpNcat+Nanion) = SMA(1:Nanion)/sum_molalities    !mole fractios of the anions
+    X(nnp1:NKNpNcat) = SMC(1:Ncation) / sum_molalities                  !mole fractions of the cations
+    X(NKNpNcat+1:NKNpNcat+Nanion) = SMA(1:Nanion) / sum_molalities      !mole fractios of the anions
 
     !check whether temperature-dependent parameters need to be updated in SR and LR parts:
-    if (is_heat_transfer .or. abs(T_K - lastTK) > 1.0E2*deps) then      !detected a change in temperature --> PsiT and other coeff. need to be updated
+    if (is_heat_transfer .or. abs(T_K - lastTK) > 1.0E2_wp*deps) then   !detected a change in temperature --> PsiT and other coeff. need to be updated
         refreshgref = .true.
         DebyeHrefresh = .true.
         lastTK = T_K
@@ -313,10 +310,11 @@ end interface
         refreshgref = .false.
         DebyeHrefresh = .false.
     endif
+    
     !calculate the LR and MR activity coefficient contributions (gammas):  
     call LR_MR_activity()
     
-    !call the UNIFAC model part for the short-range interaction contributions.
+    !call the UNIFAC model part for the short-range interaction contributions
     call SRunifac(NKNpNGS, T_K, X, XN, refreshgref, lnGaSR) 
     gnsrln(1:nneutral) = lnGaSR(1:nneutral)
     gcsrln(1:Ncation)  = lnGaSR(nnp1:NKNpNcat)

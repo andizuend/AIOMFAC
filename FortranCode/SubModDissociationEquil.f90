@@ -11,7 +11,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2018    (originally as non-submodule part of ModCalcActCoeff)   *
-!*   -> latest changes: 2024-08-30                                                      *
+!*   -> latest changes: 2026-09-30                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -33,7 +33,6 @@
 !*   -  subroutine HSO4_and_HCO3_dissociation                                           *
 !*   -  subroutine DiffK_carb_sulf                                                      *
 !*   -  pure elemental subroutine rboundsCheck                                          *
-!*   -  pure function sum_sorted                                                        *
 !*                                                                                      *
 !****************************************************************************************
 submodule (ModCalcActCoeff) SubModDissociationEquil
@@ -442,7 +441,7 @@ logical :: use_CO2gas_equil
     !Local variables and parameters:
     integer :: k, n, nrd, info, iflag, iloop, maxiloop
     !real parameters:    
-    real(wp),parameter :: T0 = 298.15_wp              ![k] reference temperature for dissociation constant temperature dependency calculation
+    real(wp),parameter :: T0 = 298.15_wp              ![K] reference temperature for dissociation constant temperature dependency calculation
     real(wp),parameter :: fa1 = -8.204327E+02_wp, fa2 = -1.4027266E-01_wp, fa3 = 5.027549E+04_wp, fa4 = 1.268339E+02_wp, fa5 = -3.879660E+06_wp !terms/factors for the temperature dependent bicarbonate1 dissociation constant calculation.
     real(wp),parameter :: fb1 = -2.484192E+02_wp, fb2 = -7.489962E-02_wp, fb3 = 1.186243E+04_wp, fb4 = 3.892561E+01_wp, fb5 = -1.297999E+06_wp  !terms/factors for the temperature dependent bicarbonate2 dissociation constant calculation.
     real(wp),parameter :: fc1 = 2.495691E+02_wp, fc2 = 4.570806E-02_wp, fc3 = -1.593281E+04_wp, fc4 = -4.045154E+01_wp, fc5 = 1.541270E+06_wp   !terms/factors for the temperature dependent CO2 Henry's law constant
@@ -594,7 +593,7 @@ logical :: use_CO2gas_equil
             wfHSO4max = nSulfmax*MolarMassHSO4/(nSulfmax*MolarMassHSO4 + mfHSO4maxinions*wtf(1)/sum(wtf(1:nneutral)))
             !(B) calculate the predicted degree of dissociation at this wfHSO4max value based on the parameterization:
             alphaHSO4pred = 1.0_wp - 1.0_wp/(1.0_wp + (1.0_wp/wfHSO4max**c1 - 1.0_wp/wfHSO4max**c2))**c4 &
-                & + c3*wfHSO4max**c5*(1.0_wp-wfHSO4max)**1.75_wp
+                & + c3*wfHSO4max**c5*(1.0_wp -wfHSO4max)**1.75_wp
             alphaHSO4pred = min(alphaHSO4pred, 1.0_wp-deps) !prevent values larger than 1.0_wp
             alphaHSO4pred = max(alphaHSO4pred, deps)
         endif
@@ -669,7 +668,7 @@ logical :: use_CO2gas_equil
                 call random_number(randomval)
                 randomval = -1.0_wp +2.0_wp*randomval
                 dperturb = 2.0E-2_wp*iloop
-                solve_var = solve_var*(1.0_wp-dperturb +2.0_wp*randomval*dperturb)
+                solve_var = solve_var*(1.0_wp -dperturb +2.0_wp*randomval*dperturb)
                 call rboundsCheck( solve_var(1:n), minlim, ntiny, solve_var_maxval(1:n) )
             endif
             !--
@@ -770,6 +769,7 @@ logical :: use_CO2gas_equil
     use ModSystemProp, only : nneutral, idH, idHCO3, idCO3, idOH, idCO2, idSO4, idHSO4, NGI, topsubno, &
         & waterpresent, Mmass, Ianion, Ication
     use ModSubgroupProp, only : SMWC, SMWA
+    use ModNumericalTransformations, only : neumaier_sum
 
     implicit none
 
@@ -1056,27 +1056,28 @@ logical :: use_CO2gas_equil
         !write(*,'(*(ES13.6,1X))') [nHCO3, nCarb, nCO2, nOH, nHSO4, nH, nCO2gas, V]
         solve_var = log([nHCO3, nCarb, nCO2, nOH, nHSO4, nH, nCO2gas, V])
         diffK(5) = mCO2*exp(min(lngammaCO2, logval_threshold))*2.5E3_wp - exp(lnKCO2atT)
-        diffK(6) = 1.0E2_wp*(sum_sorted([nHmax, -nHCO3, -nH, -nCO2, -nCO2, -nCO2gas, -nCO2gas, -nHSO4, -nOHmax, nOH]))
-        diffK(7) = 1.0E2_wp*(sum_sorted([nCarbmax, -nHCO3, -nCarb, -nCO2, -nCO2gas]))                   !molar balance
+        diffK(6) = 1.0E2_wp*(neumaier_sum([nHmax, -nHCO3, -nH, -nCO2, -nCO2, -nCO2gas, -nCO2gas, -nHSO4, -nOHmax, nOH]))
+        diffK(7) = 1.0E2_wp*(neumaier_sum([nCarbmax, -nHCO3, -nCarb, -nCO2, -nCO2gas]))                   !molar balance
         diffK(8) = target_CO2gas_ppm*1.0E-6_wp*V -nCO2gas*Rgas_atm*T_K
     else if (bisulfsyst) then
         solve_var = log([nHCO3, nCarb, nCO2, nOH, nHSO4, nH])
-        diffK(5) = 1.0E2_wp*(sum_sorted([nCarbmax, -nHCO3, -nCarb, -nCO2]))                            !nCarbmax -nHCO3 -nCarb -nCO2 !mass balance
-        diffK(6) = 1.0E2_wp*(sum_sorted([nHmax, -nHCO3, -nH, -nCO2, -nCO2, -nHSO4, -nOHmax, nOH]))     !nHmax -nHCO3 -nH -2.0_wp*nCO2 -nHSO4 -nOHmax + nOH !mass balance
+        diffK(5) = 1.0E2_wp*(neumaier_sum([nCarbmax, -nHCO3, -nCarb, -nCO2]))                            !nCarbmax -nHCO3 -nCarb -nCO2 !mass balance
+        diffK(6) = 1.0E2_wp*(neumaier_sum([nHmax, -nHCO3, -nH, -nCO2, -nCO2, -nHSO4, -nOHmax, nOH]))     !nHmax -nHCO3 -nH -2.0_wp*nCO2 -nHSO4 -nOHmax + nOH !mass balance
     else if (use_CO2gas_equil) then
         solve_var = log([nHCO3, nCarb, nCO2, nOH, nH, nCO2gas, V])
         diffK(4) = mCO2*exp(min(lngammaCO2, logval_threshold))*2.5E3_wp - exp(lnKCO2atT)
-        diffK(5) = 1.0E2_wp*(sum_sorted([nHmax, -nHCO3, -nH, -nCO2, -nCO2, -nCO2gas, -nCO2gas, -nOHmax, nOH]))
-        diffK(6) = 1.0E2_wp*(sum_sorted([nCarbmax, -nHCO3, -nCarb, -nCO2, -nCO2gas]))                   !molar balance
+        diffK(5) = 1.0E2_wp*(neumaier_sum([nHmax, -nHCO3, -nH, -nCO2, -nCO2, -nCO2gas, -nCO2gas, -nOHmax, nOH]))
+        diffK(6) = 1.0E2_wp*(neumaier_sum([nCarbmax, -nHCO3, -nCarb, -nCO2, -nCO2gas]))                   !molar balance
         diffK(7) = target_CO2gas_ppm*1.0E-6_wp*V -nCO2gas*Rgas_atm*T_K
     else
         solve_var = log([nHCO3, nCarb, nCO2, nOH, nH])
-        diffK(4) = 1.0E2_wp*(sum_sorted([nHmax, -nHCO3, -nH, -nCO2, -nCO2, -nOHmax, nOH]))
-        diffK(5) = 1.0E2_wp*(sum_sorted([nCarbmax, -nHCO3, -nCarb, -nCO2]))
+        diffK(4) = 1.0E2_wp*(neumaier_sum([nHmax, -nHCO3, -nH, -nCO2, -nCO2, -nOHmax, nOH]))
+        diffK(5) = 1.0E2_wp*(neumaier_sum([nCarbmax, -nHCO3, -nCarb, -nCO2]))
     endif
 
     end subroutine DiffK_carb_sulf
     !=================================================================================================
+    
     
     
     !Utility subroutine to check, and if necessary adjust, values of variables limited to upper/lower bounds.
@@ -1110,10 +1111,10 @@ logical :: use_CO2gas_equil
         rset = qa
     else if (rset > higherbound) then
         qacorr = (rset -higherbound)*scaleval
-        qa = higherbound -qacorr
+        qa = higherbound - qacorr
         do while (qa < (higherbound -qaband)) !(qa < 0.0_wp)
             qacorr = abs(qacorr)*0.1_wp
-            qa = higherbound -qacorr
+            qa = higherbound - qacorr
         enddo
         rset = qa
     endif
@@ -1121,33 +1122,4 @@ logical :: use_CO2gas_equil
     end subroutine rboundsCheck
     !--------------------------------------------------------------------------------------------------
     
-    
-    !--------------------------------------------------------------------------------------------------
-    !Utility function:
-    !** A safer way for summing a "small" list of values that potentially differ substantially in magnitude ** 
-    !** based on sorting them and summing the elements starting with the smallest absolute value.           **
-    pure module function sum_sorted(list) result(summed)
-        
-    implicit none
-    !interface arguments:
-    real(wp),dimension(:),intent(in) :: list
-    real(wp) :: summed
-    !local arguments
-    integer :: i, k
-    logical,dimension(size(list)) :: available
-    !...........................
-        
-    available = .true.
-    !sort the list from smallest to largest in magnitude (ignoring neg/pos signs):
-    summed = 0.0_wp
-    do i = 1,size(list)
-        k = minloc(abs(list(:)), mask = available(:), dim=1)   
-        available(k) = .false.
-        summed = summed + list(k) 
-    enddo
-        
-    end function sum_sorted
-    !--------------------------------------------------------------------------------------------------
-    
-
 end submodule SubModDissociationEquil
