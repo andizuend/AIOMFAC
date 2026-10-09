@@ -2,7 +2,7 @@
 This public repository provides the AIOMFAC model Fortran code (AIOMFAC-web, version 2.20 and newer) and additional information about building and running the model on your own system. May it be of use to you.
 
 ## About AIOMFAC
-AIOMFAC stands for Aerosol Inorganic&ndash;Organic Mixtures Functional groups Activity Coefficients; it is a thermodynamic group-contribution model to describe non-ideal mixing in liquid solutions (phases). If you are unfamiliar with the purpose and applications of AIOMFAC, please visit the [AIOMFAC website](https://aiomfac.lab.mcgill.ca) for more information.
+AIOMFAC stands for Aerosol Inorganic&ndash;Organic Mixtures Functional groups Activity Coefficients. It is a thermodynamic group-contribution model to describe non-ideal mixing in liquid solutions (phases). If you are unfamiliar with the purpose and applications of AIOMFAC, please visit the [AIOMFAC website](https://aiomfac.lab.mcgill.ca) for more detailed information and related scientific publications.
 
 ----
 > [!TIP]
