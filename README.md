@@ -142,7 +142,7 @@ The generation of a customized input file is best done by one of the following t
 - Option (3): For more complex systems, e.g. with tens to thousands of organic components and when you have a list of SMILES strings describing the structure of the organics, you can run the [SMILES to AIOMFAC subgroups (S2AS) tool](https://github.com/andizuend/S2AS__SMILES_to_AIOMFAC) provided in a separate repository. The main purpose of S2AS is to automate the process of generating valid AIOMFAC molecule (subgroup-level) descriptions using a consistent set of rules applied in a priority-ordered manner (SMARTS list; see [description of S2AS](https://github.com/andizuend/S2AS__SMILES_to_AIOMFAC/blob/88a2bffde1d375f8cb86a6e47ead6c3f0dad1833/README.md)), so that human error in assigning subgroups to molecular structures can be avoided. However, S2AS itself does not include customized input compositions; rather, it will simply list a small mole fraction for each compound as a placeholder. Once the input file is generated, you can further modify (by hand or by your own customized script/program) the file as mentioned under option (2), including the option to add inorganic compounds. That way you can then include the temperature and composition information for the calculations you wish to run.
 
 ### Running the model
-At this point, with a valid input file available, running the AIOMFAC model is analogous to step 5. of the installation instructions. 
+At this point, with a valid input file available, running the AIOMFAC model is analogous to step 5 of the installation instructions. 
 - On [Windows] (from command prompt):
 	- change directory to the program's parent `AIOMFAC` folder, then run
    	``` 
