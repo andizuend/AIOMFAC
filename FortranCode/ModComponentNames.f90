@@ -399,7 +399,7 @@ character(len=maxsmileslength),dimension(:),allocatable,public :: NKsmiles
     NKname(651) = "Xylose";                  NKnameTeX(651) = "Xylose";                  NKsmiles(651) = "OCC(O)C(O)C(O)C=O";
     NKname(652) = "Glucose";                 NKnameTeX(652) = "Glucose";                 NKsmiles(652) = "OCC(O)C(O)C(O)C(O)C=O";
     NKname(653) = "Fructose";                NKnameTeX(653) = "Fructose";                NKsmiles(653) = "OCC(O)C(O)C(O)C(O)C(=O)CO";
-    NKname(654) = "Sucrose";                 NKnameTeX(654) = "Sucrose";                 NKsmiles(654) = "OCC1OC(OCC2OC(CO)C(O)C(O)C2O)C(O)C(O)C1O";
+    NKname(654) = "Sucrose";                 NKnameTeX(654) = "Sucrose";                 NKsmiles(654) = "OCC1OC(OC2(CO)OC(CO)C(O)C2O)C(O)C(O)C1O";
     NKname(655) = "D-Glucopyranose";         NKnameTeX(655) = "D-Glucopyranose";         NKsmiles(655) = "C1C(C(C(C(C(O1)O)O)O)O)O";
     NKname(656) = "Raffinose";               NKnameTeX(656) = "Raffinose";               NKsmiles(656) = "OCC1OC(OC2C(O)C(O)C(OC3OC(CO)C(O)C(O)C3O)C(O)O2)C(O)C(O)C1O";
     NKname(657) = "2-Chloro-D-Glucose";      NKnameTeX(657) = "2-Chloro-D-Glucose";      NKsmiles(657) = "C(C1C(C(C(C(O1)O)Cl)O)O)O";
