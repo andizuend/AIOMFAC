@@ -264,12 +264,11 @@ public
 
     implicit none
     !interface variables:
-    real(wp),dimension(nindcomp),intent(in) :: inputconc             !the concentration of a given input point (e.g., at an experimental data point)
+    real(wp),dimension(nindcomp),intent(in)  :: inputconc               !the concentration of a given input point (e.g., at an experimental data point)
     real(wp),dimension(nelectrol),intent(in) :: mixingratio, wtfdry
-    logical,intent(in) :: xinput                                 !"true" indicates input is in mole fraction ("false" indicates mass fraction input)
+    logical,intent(in)                       :: xinput                  !"true" indicates input is in mole fraction ("false" indicates mass fraction input)
     real(wp),dimension(nindcomp),intent(out) :: wtf
     !local variables:
-    character(len=100) :: chout
     integer :: minlocwtf, maxlocwtf
     real(wp),parameter :: lowval = 1.0E2_wp*epsilon(1.0_wp), small = sqrt(epsilon(1.0_wp))
     real(wp),dimension(nindcomp) :: x 
@@ -304,15 +303,12 @@ public
             wtf(maxlocwtf) = wtf(maxlocwtf) + wtf(minlocwtf)
             wtf(minlocwtf) = 0.0_wp
         else    !there is something wrong...
-            minlocwtf = minloc(wtf(1:nindcomp), dim=1)
-            !!$omp critical
-            !write(*,*) "WARNING from Inputconc_to_wtf: mass fraction of a component is less then 0.0!"
-            !write(*,*) "nd, wtf(minlocwtf): ", nd, wtf(minlocwtf)
-            !!  read(*,*)
-            !return
-            !!$omp end critical
-            write(chout,*) "nd, wtf(minlocwtf): ", nd, wtf(minlocwtf)
-            error stop "ERROR in Inputconc_to_wtf: mass fraction of a component is less then 0.0! "//chout
+            block
+                character(len=100) :: chout
+                minlocwtf = minloc(wtf(1:nindcomp), dim=1)
+                !write(chout,*) "nd, wtf(minlocwtf): ", nd, wtf(minlocwtf)
+                !error stop "ERROR in Inputconc_to_wtf: mass fraction of a component is less then 0.0! "//chout
+            end block
         endif
     endif
     
@@ -571,13 +567,13 @@ public
                 mrespSalt(nnp1:nindcomp) = wtfbyMmass(nnp1:nindcomp)*(saltfreewtf(i) / wtf(i))
             else
                 i = 777
-                !!$OMP CRITICAL (MMA1)
+                !!$omp critical (MMA1)
                 !write(*,*) "WARNING from MassFrac2MoleFracMolality: wtf(1) = 0.0 "
                 !write(*,*) "There has to be some water in the mixture when inorganic salts are present!"
                 !write(*,*) "wtf(1:nindcomp): ", wtf(1:nindcomp)
                 !write(*,*) ""
                 !read(*,*)
-                !!$OMP end CRITICAL (MMA1)
+                !!$omp end critical (MMA1)
             endif
         endif
     endif

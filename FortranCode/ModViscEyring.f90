@@ -76,7 +76,7 @@ public :: AqueousElecViscosity, WaterMolefracCorrection
 private     !default setting for procedures and variables
 
 !make certain variables of this module threadprivate for use in parallel execution with openMP:
-!$OMP THREADPRIVATE( ions, delGstar_by_RT_w, Zion, ionicstrengthsave)
+!$omp threadprivate( ions, delGstar_by_RT_w, Zion, ionicstrengthsave)
 
 !=====================================
     contains

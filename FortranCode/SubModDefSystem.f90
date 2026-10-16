@@ -39,7 +39,7 @@ implicit none
 integer,dimension(:),allocatable :: compID, compIDdat
 integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
 
-!$OMP THREADPRIVATE (compID, compIDdat, cpsubg, cpsubgdat)
+!$omp threadprivate (compID, compIDdat, cpsubg, cpsubgdat)
     
 !==========================================================================================================================
     contains
@@ -732,11 +732,11 @@ integer,dimension(:,:),allocatable :: cpsubg, cpsubgdat
     !calculate the molar masses of the different mixture species:
     call SetMolarMass(Mmass)    !Mmass lists the molar mass in [kg/mol] of all mixture components
     if (any(Mmass(:) < 0.0_wp)) then
-        !$OMP CRITICAL
+        !$omp critical
         write(*,'(A)') 'ERROR: A molar mass value is negative indicating a missing value set in ModSubgroupProp.'
         read(*,*)
         STOP
-        !$OMP end CRITICAL
+        !$omp end critical
     endif
 
     !-- allocate several composition-dependent variables from module ModAIOMFACvar:

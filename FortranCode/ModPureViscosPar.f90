@@ -41,7 +41,7 @@ public :: PureCompViscosity
 
 private :: VogelTemp, DeRieux_Tno_Est, Tg_ML_Armeli
 
-!$OMP THREADPRIVATE(Tg_list, TgML, TgScale, TgScalePlot)
+!$omp threadprivate(Tg_list, TgML, TgScale, TgScalePlot)
 
 !========================================================================================================== 
     contains
@@ -143,30 +143,30 @@ private :: VogelTemp, DeRieux_Tno_Est, Tg_ML_Armeli
     call execute_command_line(trim(command2), wait = .true., exitstat=Estat, cmdstat=Cstat)
     
     if (Estat == 0) then
-        !$OMP critical
+        !$omp critical
         write(*,'(A,/)') 'Note from Tg_ML_Armeli: completed the pure-component Tg values update.'
-        !$OMP end critical 
+        !$omp end critical 
     else
         errorflagmix = 26
-        !$OMP critical
+        !$omp critical
         write(*,'(A,/)') ''
         write(*,'(A,/)') 'ERROR in Tg_ML_Armeli: Script access issue. Unsuccessful in running the "TgML_SMILES.py" &
             &script inside subfolder "TgML_Armeli". &
             &Ensure that the folder is present and that a virtual Python environment named ".venv" is present as a &
             &(hidden) subfolder. See also information in "requirements_console_script_AZ.txt".'
             call sleep(1)
-        !$OMP end critical 
+        !$omp end critical 
     endif
     
     if (Cstat /= 0) then
         errorflagmix = 26
-        !$OMP critical
+        !$omp critical
         write(*,'(A,/)') ''
         write(*,'(A,/)') 'ERROR in Tg_ML_Armeli: Script access issue. Unsuccessful in running the "TgML_SMILES.py" &
             &script inside subfolder "TgML_Armeli". '
         write(*,'(A,I0,/)') 'Cstat = ', Cstat
         call sleep(1)
-        !$OMP end critical 
+        !$omp end critical 
     endif
     
     end subroutine Tg_ML_Armeli

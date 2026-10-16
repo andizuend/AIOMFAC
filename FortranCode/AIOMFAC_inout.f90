@@ -81,8 +81,8 @@ errorflag_list = .false.
 warningflag = 0
 outputvars = 0.0_wp
 outputviscvars = 0.0_wp
-NKSinput = ninput -nneutral
-NKSinputp1 = NKSinput+1
+NKSinput = ninput - nneutral
+NKSinputp1 = NKSinput +1
 inputconcZ = inputconc
 if (noCO2input) then
     if (idCO2 > 0) then     !CO2 present, but not as input component;

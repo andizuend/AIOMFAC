@@ -126,14 +126,14 @@ interface
     end interface
 !....................................................................................
 
-!$OMP THREADPRIVATE(nd, nindcomp, nelectrol, nneutral, ninput, NGS, NGN, NGI, NG, NKNpNGS, Nanion,  &
-    !$OMP & Ncation, Mmass, idH, idHSO4, idSO4, CompN, Ication, Ianion, ElectSubs, SolvSubs, AllSubs, &
-    !$OMP & Imaingroup, CatNr, AnNr, ITAB, ITAB_dimflip, ITABsr, ITABMG, OtoCratio, HtoCratio, cpname, compname,  &
-    !$OMP & compnameTeX, compsubgroups, compsubgroupsTeX, compsubgroupsHTML, ionname, ionnameTeX, solvmixrefnd,  &
-    !$OMP & frominpfile, bisulfsyst, waterpresent, calcviscosity, elpresent, is_heat_transfer, isPEGsystem, maingrindexofsubgr,   &
-    !$OMP & ElectComps, ElectNues, ElectVolatile, IAPcoeffs, KVLE_298K, K_el, SubGroupMW, ElectO2Cequiv, cationZ,  &
-    !$OMP & anionZ, errorflagmix, errorflag_clist, nuestoich, idHCO3, idCO3, idOH, idCO2, idCa, bicarbsyst, &
-    !$OMP & noCO2input, noH2Ainput, noOSHinput, malosyst, glutsyst, succsyst, dicarbsyst, MeOSsyst, EtOSsyst, IsopreneOSsyst, OSsyst,  &
-    !$OMP & idHmalo, idmalo, idHglut, idglut, idHsucc, idsucc,  idMeOS, idEtOS, idIsopreneOS, incl_bisulfate, id_H2Adicarb, id_OSH)
+!$omp threadprivate(nd, nindcomp, nelectrol, nneutral, ninput, NGS, NGN, NGI, NG, NKNpNGS, Nanion,  &
+    !$omp & Ncation, Mmass, idH, idHSO4, idSO4, CompN, Ication, Ianion, ElectSubs, SolvSubs, AllSubs, &
+    !$omp & Imaingroup, CatNr, AnNr, ITAB, ITAB_dimflip, ITABsr, ITABMG, OtoCratio, HtoCratio, cpname, compname,  &
+    !$omp & compnameTeX, compsubgroups, compsubgroupsTeX, compsubgroupsHTML, ionname, ionnameTeX, solvmixrefnd,  &
+    !$omp & frominpfile, bisulfsyst, waterpresent, calcviscosity, elpresent, is_heat_transfer, isPEGsystem, maingrindexofsubgr,   &
+    !$omp & ElectComps, ElectNues, ElectVolatile, IAPcoeffs, KVLE_298K, K_el, SubGroupMW, ElectO2Cequiv, cationZ,  &
+    !$omp & anionZ, errorflagmix, errorflag_clist, nuestoich, idHCO3, idCO3, idOH, idCO2, idCa, bicarbsyst, &
+    !$omp & noCO2input, noH2Ainput, noOSHinput, malosyst, glutsyst, succsyst, dicarbsyst, MeOSsyst, EtOSsyst, IsopreneOSsyst, OSsyst,  &
+    !$omp & idHmalo, idmalo, idHglut, idglut, idHsucc, idsucc,  idMeOS, idEtOS, idIsopreneOS, incl_bisulfate, id_H2Adicarb, id_OSH)
     
 end module ModSystemProp

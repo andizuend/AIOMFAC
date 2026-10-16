@@ -69,8 +69,8 @@ real(wp),dimension(201:topsubno),parameter,private :: lambdaIN = real([ &
 & 0.0970D0, (0.0D0, jj = 262,topsubno) ], kind=wp)  
 !....................................................................................
 
-!$OMP THREADPRIVATE(A_DebyeHw, B_DebyeHw, BAC, CAC, omega, omega2, CnAC1, Cnac2, Raa, Rcc, &
-    !$OMP & Ksp, bnc, cnc, bna, cna, omegaNC, omegaNA, Qcca, QccaInteract, RccInteract)
+!$omp threadprivate(A_DebyeHw, B_DebyeHw, BAC, CAC, omega, omega2, CnAC1, Cnac2, Raa, Rcc, &
+    !$omp & Ksp, bnc, cnc, bna, cna, omegaNC, omegaNA, Qcca, QccaInteract, RccInteract)
     
 !==========================================================================================================================
     contains
@@ -438,7 +438,7 @@ real(wp),dimension(201:topsubno),parameter,private :: lambdaIN = real([ &
                     if (BNC(I,J) < -1000.0_wp .or. CNC(I,J) < -1000.0_wp) then    
                         errorflagmix = 1                        !this parameter is not yet estimated nor is a fitparameter set
                         if (.not. frominpfile) then
-                            !$OMP CRITICAL (printingtoscreen2)
+                            !$omp critical (printingtoscreen2)
                             write(*,*) ""
                             write(*,*) "======================================================="
                             write(*,*) "        WARNING from MRinteractcoeff:"
@@ -448,7 +448,7 @@ real(wp),dimension(201:topsubno),parameter,private :: lambdaIN = real([ &
                             write(*,*) "======================================================="
                             write(*,*) ""
                             read(*,*)
-                            !$OMP end CRITICAL (printingtoscreen2)
+                            !$omp end critical (printingtoscreen2)
                         endif
                     endif
                 end if
@@ -466,7 +466,7 @@ real(wp),dimension(201:topsubno),parameter,private :: lambdaIN = real([ &
                     if (BNA(I,J) < -1000.0_wp .or. CNA(I,J) < -1000.0_wp) then !this parameter is not yet estimated nor is a fitparameter set
                         errorflagmix = 2
                         if (.not. frominpfile) then
-                            !$OMP CRITICAL (printingtoscreen3)
+                            !$omp critical (printingtoscreen3)
                             write(*,*) ""
                             write(*,*) "======================================================="
                             write(*,*) "        WARNING from MRinteractcoeff:"
@@ -476,7 +476,7 @@ real(wp),dimension(201:topsubno),parameter,private :: lambdaIN = real([ &
                             write(*,*) "======================================================="
                             write(*,*) ""
                             read(*,*)
-                            !$OMP end CRITICAL (printingtoscreen3)
+                            !$omp end critical (printingtoscreen3)
                         endif
                     endif
                 end if
@@ -513,11 +513,11 @@ real(wp),dimension(201:topsubno),parameter,private :: lambdaIN = real([ &
                     if (.not. (NC == 5 .and. NA == 7)) then  !exclude H+ <--> OH- case
                         errorflagmix = 9
                         if (.not. frominpfile) then
-                            !$OMP CRITICAL (MRI1)
+                            !$omp critical (MRI1)
                             write(*,*) "WARNING from MRinteractcoeff: interaction parameters of a cation--anion pair"
                             write(*,*) "present in the mixture is not defined: cation-ID, anion-ID: ", NC+200, NA+240
                             read(*,*)
-                            !$OMP end CRITICAL (MRI1)
+                            !$omp end critical (MRI1)
                         endif
                     endif
                 endif

@@ -8,7 +8,7 @@
 !*   Dept. Atmospheric and Oceanic Sciences, McGill University                          *
 !*                                                                                      *
 !*   -> created:        2021-07-26                                                      *
-!*   -> latest changes: 2026-09-10                                                      *
+!*   -> latest changes: 2026-10-16                                                      *
 !*                                                                                      *
 !*   :: License ::                                                                      *
 !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -44,7 +44,7 @@ logical,public :: armeliON                                                      
 
 public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
 
-!$OMP THREADPRIVATE(armeliON, cpsmiles)
+!$omp threadprivate(armeliON, cpsmiles)
 
 !============================================================================================
     contains
@@ -61,7 +61,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     !*   Dept. Atmospheric and Oceanic Sciences, McGill University (2013 - present)         *
     !*                                                                                      *
     !*   -> created:        2011                                                            *
-    !*   -> latest changes: 2026-09-04                                                      *
+    !*   -> latest changes: 2026-10-16                                                      *
     !*                                                                                      *
     !*   :: License ::                                                                      *
     !*   This program is free software: you can redistribute it and/or modify it under the  *
@@ -81,6 +81,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
 
     use ModSystemProp, only : topsubno
     use ModComponentNames, only : NKname, NKsmiles
+    use ModStringFunctions, only : char_lower, replace_text_advance
 
     implicit none
 
@@ -104,7 +105,7 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
     character(len=4) :: dashes, equalsigns, pluses, atsigns
     character(len=20) :: dummy, cnformat
     character(len=50) :: txtcheck, inpfolder, outpfolder
-    character(len=maxsmileslength +50) :: cp_inp_name
+    character(len=maxsmileslength +50) :: cp_inp_name, cp_inp_name_rep
     character(len=3000) :: errlogfile, fname
     character(len=20),dimension(ninpmax) :: txtarray
     integer :: cpno, i, inpfilesize, istat, k, kinpf, qty, subg, unitx, ind
@@ -271,6 +272,9 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                     endif
                 endif
                 read(unitx,*) dummy, dummy, cp_inp_name                 !read line with component's name
+                cp_inp_name_rep = char_lower(cp_inp_name)
+                cp_inp_name_rep = replace_text_advance(trim(cp_inp_name_rep), '  ', ' ')
+                cp_inp_name_rep = replace_text_advance(trim(cp_inp_name_rep), ' ', '_')
                 if (len_trim(cp_inp_name) < 1) then                     !no component name was assigned, generate a default name
                     write(cn,cnformat) cpno
                     cp_inp_name = "cp_"//cn
@@ -296,8 +300,8 @@ public :: Output_TXT, Output_HTML, ReadInputFile, RepErrorWarning
                             write(unito,'(A, A, A, I0.1)') "MESSAGE from AIOMFAC: identified smiles = ", trim(cpsmiles(cpno)), " at component cpno = ", cpno
                         endif
                     endif
-                elseif (any(NKname(:) == trim(cp_inp_name))) then
-                    ind = findloc(NKname, trim(cp_inp_name), dim=1)     !extract index
+                else if (any(char_lower(NKname(:)) == trim(cp_inp_name_rep))) then
+                    ind = findloc(char_lower(NKname), trim(cp_inp_name_rep), dim=1)     !extract index
                     cpnameinp(cpno) = trim(cp_inp_name)
                     if (NKsmiles(ind) /= "not_defined") then
                         cpsmiles(cpno) = trim(NKsmiles(ind))            !extract SMILES definition of component

@@ -16,7 +16,7 @@ public :: ZSRviscosity
 private     !default
     
 !make all variables of this module threadprivate for use in parallel execution with openMP:
-!$OMP THREADPRIVATE( WTFsub, WTFsub_old, aw_fullsys, drymass, ZSRviscmix )
+!$omp threadprivate( WTFsub, WTFsub_old, aw_fullsys, drymass, ZSRviscmix )
 
 !==============!
 contains 

@@ -51,8 +51,8 @@ real(wp),dimension(:,:),allocatable,private :: parA, parB, parC, PsiT, PsiT_dimf
 real(wp),dimension(:,:),allocatable,private :: Nvis
 logical,private :: gcombrefresh
 
-!$OMP THREADPRIVATE(parA, parB, parC, PsiT, PsiT_dimflip, grefcallID, SRNY, SRNY_dimflip, R, Q, RS, QS, XL, Nvis, &
-   !$OMP & lnGaCinf, lnGaRref, XieRref, gcombrefresh)
+!$omp threadprivate(parA, parB, parC, PsiT, PsiT_dimflip, grefcallID, SRNY, SRNY_dimflip, R, Q, RS, QS, XL, Nvis, &
+   !$omp & lnGaCinf, lnGaRref, XieRref, gcombrefresh)
 
 !==========================================================================================================================
     contains
@@ -370,12 +370,12 @@ logical,private :: gcombrefresh
                 case(500:800, 1364:1366, 2000:2500)
                     !do nothing for now....
                 case default
-                    !$OMP CRITICAL
+                    !$omp critical
                     write(*,*) ""
                     write(*,*) "WARNING: a pure compound viscosity for component",I, "could not be set due to missing parameters or a temperature outside the available bounds!"
                     write(*,*) "Dataset is nd = ", nd
                     read(*,*)
-                    !$OMP end CRITICAL
+                    !$omp end critical
                 end select
             endif
         enddo
@@ -669,7 +669,7 @@ logical,private :: gcombrefresh
             parC(L,J) = CRR(L1,J1)
             !Apply check to avoid using SR inteaction parameters that are not assigned correctly or were not estimated yet:
             if (ARR(L1,J1) < arr_checkval) then                 !this parameter has not yet been estimated nor is a fitparameter set, so don't use it!!
-                !$OMP critical
+                !$omp critical
                 errorflagmix = 14
                 write(*,*) ""
                 write(*,*) "======================================================="
@@ -681,10 +681,10 @@ logical,private :: gcombrefresh
                 write(*,*) "======================================================="
                 write(*,*) ""
                 read(*,*)                                       !to read(*,*) and wait for user interaction
-                !$OMP end critical
+                !$omp end critical
             endif
             if (L1 == J1 .and. abs(ARR(L1,J1)) > deps) then     !self-interactions among main groups should always be set to 0.0_wp
-                !$OMP critical
+                !$omp critical
                 errorflagmix = 14
                 write(*,*) ""
                 write(*,*) "======================================================="
@@ -696,12 +696,12 @@ logical,private :: gcombrefresh
                 write(*,*) "======================================================="
                 write(*,*) ""
                 read(*,*)                                       !to read(*,*) and wait for user interaction
-                !$OMP end critical
+                !$omp end critical
             endif
             select case(nd)
             case(500:800, 2000:2500)                            !potentially used for 3-parameter AIOMFAC (UNIFAC) part for non-electrolyte systems
                 if (BRR(L1,J1) < arr_checkval .or. CRR(L1,J1) < arr_checkval) then    !this parameter has not yet been estimated nor is a fitparameter set, so don't use it!!
-                    !$OMP critical
+                    !$omp critical
                     errorflagmix = 15
                     write(*,*) ""
                     write(*,*) "======================================================="
@@ -714,7 +714,7 @@ logical,private :: gcombrefresh
                     write(*,*) "======================================================="
                     write(*,*) ""
                     read(*,*)                                   !to read(*,*) and wait for user interaction
-                    !$OMP end critical
+                    !$omp end critical
                 endif
             end select
         enddo

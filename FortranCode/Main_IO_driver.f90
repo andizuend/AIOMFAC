@@ -183,9 +183,9 @@ if (filevalid) then
                 & outnames, errflag_list, warningflag)
             !--
             if (warningflag > 0 .or. any(errflag_list)) then
-                !$OMP CRITICAL errwriting
+                !$omp critical errwriting
                 call RepErrorWarning(unito, errorflagmix, warningflag, errflag_list, pointi, errorind, warningind)
-                !$OMP end CRITICAL errwriting
+                !$omp end critical errwriting
             endif
             nspecmax = max(nspecmax, nspecies)      !figure out the maximum number of different species in mixture (accounting for the 
                                                     !possibility of HSO4- dissoc. and different species at different data points due to zero mole fractions).

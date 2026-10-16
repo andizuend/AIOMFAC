@@ -75,7 +75,7 @@ private     !as default
     use ModSystemProp, only : errorflag_clist
     
     implicit none
-    !local variables
+    !local variables:
     character(len=20) :: dummy
     integer :: unitx, istat, nlines, i
     logical :: fileexists
@@ -147,21 +147,22 @@ private     !as default
     subroutine append_purecomp_entry(smiles_new, Tg_value)
     
     implicit none
-    !local variables
+    !interface arguments:
     character(len=*),intent(in) :: smiles_new
     real(wp),intent(in) :: Tg_value
-    type(purecomp_entry),dimension(:),allocatable :: temp     !temporary entry array
+    !local variables:
+    type(purecomp_entry),dimension(:),allocatable :: temp
     integer :: unitx, n
     !.....................................
     
     !initialize variables
-    n =  size(purecomp_table)               !current row count
+    n =  size(purecomp_table)                   !current row count
     
     !append to custom type
     allocate(temp(n + 1))
     temp(1:n) = purecomp_table(1:n)
-    temp(n + 1)%smiles = smiles_new         !append smiles
-    temp(n + 1)%Tg = Tg_value               !append Tg value
+    temp(n + 1)%smiles = smiles_new             !append smiles
+    temp(n + 1)%Tg = Tg_value                   !append Tg value
     !future: append other PC properties
     call move_alloc(temp, purecomp_table)
     !---
@@ -189,13 +190,14 @@ private     !as default
     pure elemental function find_smiles_index(smiles_string)  result(ind)
     
     implicit none
-    !local variables
+    !interface arguments:
     character(len=*),intent(in) :: smiles_string
+    !local variables
     integer :: ind
     !.....................................
     
     !search for smiles match
-    ind = findloc(purecomp_table(:)%smiles, value=smiles_string, dim=1)
+    ind = findloc(purecomp_table(:)%smiles, value = smiles_string, dim=1)
     if (ind == 0) then
         !no match found
     endif
@@ -220,10 +222,11 @@ private     !as default
     pure subroutine lookup_Tg(smiles_string, Tg_found, found)
     
     implicit none
-    !local variables
+    !interface arguments:
     character(len=*),intent(in) :: smiles_string
     real(wp),intent(out) :: Tg_found
     logical,intent(out) :: found
+    !local variables:
     integer :: ind
     !..............................
     

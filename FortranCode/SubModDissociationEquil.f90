@@ -69,11 +69,11 @@ real(wp),dimension(:),allocatable :: SNA, SNC                   !moles of ions
 real(wp),dimension(:),allocatable :: solve_var, solve_var_maxval, solve_var_saved
 logical :: use_CO2gas_equil
 
-!$OMP THREADPRIVATE(use_CO2gas_equil, solve_var, solve_var_maxval, solve_var_saved, map_solver2molarinp, mCarb, mCO2,   &
-    !$OMP & mH, mHCO3, mHSO4, mOH, mSulf, nCarb, nCO2, nH, nHCO3, nHSO4, nOH, nSulf, mNeutral, molNeutral, lngbisulf,   &
-    !$OMP & lngK1bicarb, lngK2bicarb, lngKbisulf, lngKOH, lnK1HCO3atT, lnK2HCO3atT, lnKCO2atT, lnKH2OatT, lnKHSO4atT,   &
-    !$OMP & ln_maxval_inp, mHmax, mHSO4max, mHSO4min, mSulfmax, nCarbmax, nCO2_init, nCO2gas, nCO2max, nH2O_init,       &
-    !$OMP & nHCO3max, nHmax, nHSO4max, nOH_init, nOHmax, nSulfmax, ntiny, nVmax, SNA, SNC, target_CO2gas_ppm, V)
+!$omp threadprivate(use_CO2gas_equil, solve_var, solve_var_maxval, solve_var_saved, map_solver2molarinp, mCarb, mCO2,   &
+    !$omp & mH, mHCO3, mHSO4, mOH, mSulf, nCarb, nCO2, nH, nHCO3, nHSO4, nOH, nSulf, mNeutral, molNeutral, lngbisulf,   &
+    !$omp & lngK1bicarb, lngK2bicarb, lngKbisulf, lngKOH, lnK1HCO3atT, lnK2HCO3atT, lnKCO2atT, lnKH2OatT, lnKHSO4atT,   &
+    !$omp & ln_maxval_inp, mHmax, mHSO4max, mHSO4min, mSulfmax, nCarbmax, nCO2_init, nCO2gas, nCO2max, nH2O_init,       &
+    !$omp & nHCO3max, nHmax, nHSO4max, nOH_init, nOHmax, nSulfmax, ntiny, nVmax, SNA, SNC, target_CO2gas_ppm, V)
 
 !======================
     contains
@@ -348,12 +348,12 @@ logical :: use_CO2gas_equil
     SMA(idSO4) = mSulf
 
     if (mH*mSulf*mHSO4 < -dtiny) then  !check the values for mistakes in program
-        !$OMP CRITICAL (DKD2)
+        !$omp critical (DKD2)
         write(*,*) "WARNING: negative molality values detected! wtf(water): ", wtf(1)
         write(*,*) "mH, mSulf, mHSO4: ", mH, mSulf, mHSO4
         write(*,*) "mHSO4inp ", mHSO4inp
         write(*,*) ""
-        !$OMP end CRITICAL (DKD2)
+        !$omp end critical (DKD2)
     endif
     !*-*
     call Gammas() !compute the natural log of activity coefficients from SR, MR, & LR parts.
@@ -721,7 +721,7 @@ logical :: use_CO2gas_equil
             if (r > sqrtdeps) then
                 errorflag_clist(17) = .true.
                 !if (.not. frominpfile) then
-                !    !$OMP CRITICAL
+                !    !$omp critical
                 !    write(*,'(A)') "AIOMFAC ERROR 17: Issue with ion dissociation equilibria calculations."
                 !    write(*,'(A)') "The numerical solution of electrolyte/ion dissociation equilibria was &
                 !        &not accomplished to the desired tolerance level. Model output for this data &
@@ -729,7 +729,7 @@ logical :: use_CO2gas_equil
                 !    write(*,'(A,I0,ES13.6)') "iloop, wtf_water_init = ", iloop, wtf_water_init
                 !    write(*,'(A,ES13.6)') "sum(abs(diffK)) = ", r
                 !    write(*,*)
-                !    !$OMP end CRITICAL
+                !    !$omp end critical
                 !endif
             endif
         endif

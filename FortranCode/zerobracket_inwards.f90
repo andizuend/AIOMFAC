@@ -36,9 +36,9 @@ real(wp) :: dx, xtemp
 if (ntry > 0) then
     !check the overall intervall limits:
     if (abs(xlower-xupper) < deps*min(abs(xupper), 1.0_wp)) then
-        !!$OMP CRITICAL
+        !!$omp critical
         !write(*,*) "Interval in zerobracket_inwards is chosen too small (xlower == xupper)."
-        !!$OMP end CRITICAL
+        !!$omp end critical
         success = .false.
         return
     else if (xlower > xupper) then !switch bounds

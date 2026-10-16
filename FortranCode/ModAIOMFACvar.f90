@@ -50,13 +50,13 @@ logical,public :: DebyeHrefresh
 !..................................................
 
 !make all variables of this module threadprivate for use in parallel execution with openMP:
-!$OMP THREADPRIVATE( alphaHSO4, diffKHSO4, lastTK, meanSolventMW, partial_log10_etamix, SumIonMolalities, pH_calc, &
-    !$OMP & T_K, Xwdissoc, actcoeff_a, actcoeff_c, actcoeff_n, activity, ln_eta0, lneta_cpn, fragil, galrln, gamrln, gasrln, &
-    !$OMP & gclrln, gcmrln, gcsrln, gnlrln, gnmrln, gnsrln, ionactivityprod, ionicstrength, lnactcoeff_a, &
-    !$OMP & lnactcoeff_c, lnactcoeff_n, lnmeanmactcoeff, meanmolalactcoeff, mrespSalt, SMA, SMC, actcoeff_ion, molality_ion, &
-    !$OMP & solvmixcorrMRa, solvmixcorrMRc, Tglass0, Tmolal, TmolalSolvMix, wtf, X, XN, XrespSalt, DebyeHrefresh, &
-    !$OMP & alphaHCO3, alphaHmalo, alphaHglut, alphaHsucc, alphaH2malo, alphaH2glut, alphaH2succ, alphaMeOSH, alphaEtOSH, alphaIsopreneOSH, &
-    !$OMP & pCO2, VCO2, ln_etamix, ln_etamixZSR, ln_eta_aquelec, ln_etaZSR_org, ln_etaZSR_inorg, aquelecVar_save, delGstar_save )
+!$omp threadprivate( alphaHSO4, diffKHSO4, lastTK, meanSolventMW, partial_log10_etamix, SumIonMolalities, pH_calc, &
+    !$omp & T_K, Xwdissoc, actcoeff_a, actcoeff_c, actcoeff_n, activity, ln_eta0, lneta_cpn, fragil, galrln, gamrln, gasrln, &
+    !$omp & gclrln, gcmrln, gcsrln, gnlrln, gnmrln, gnsrln, ionactivityprod, ionicstrength, lnactcoeff_a, &
+    !$omp & lnactcoeff_c, lnactcoeff_n, lnmeanmactcoeff, meanmolalactcoeff, mrespSalt, SMA, SMC, actcoeff_ion, molality_ion, &
+    !$omp & solvmixcorrMRa, solvmixcorrMRc, Tglass0, Tmolal, TmolalSolvMix, wtf, X, XN, XrespSalt, DebyeHrefresh, &
+    !$omp & alphaHCO3, alphaHmalo, alphaHglut, alphaHsucc, alphaH2malo, alphaH2glut, alphaH2succ, alphaMeOSH, alphaEtOSH, alphaIsopreneOSH, &
+    !$omp & pCO2, VCO2, ln_etamix, ln_etamixZSR, ln_eta_aquelec, ln_etaZSR_org, ln_etaZSR_inorg, aquelecVar_save, delGstar_save )
 
 !==========================================================================================================================
     contains
